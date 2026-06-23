@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>FanDuel DFS — Card Layout</title>
+<link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin />
+<style>
+  /* All styles scoped to .wrap so the host page's theme (background, fonts, CSS vars) is never touched. */
+  .wrap{--brand:#b91c1c;--brand-dark:#991b1b;--page-bg:#eef0f2;--card:#fff;--ink:#15171a;--muted:#6b7280;--muted-2:#9aa1ab;--line:#e6e8eb;--line-2:#eef0f2;--radius:14px;--shadow:0 1px 2px rgba(16,18,22,.06),0 4px 14px rgba(16,18,22,.05);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    max-width:1180px;margin:0 auto;padding:0 12px 48px;background:transparent;color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;}
+  .wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box;}
+  .bar{position:sticky;top:0;z-index:30;background:linear-gradient(135deg,var(--brand),var(--brand-dark));margin:0 -12px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.12);}
+  .bar-top{display:flex;align-items:center;gap:8px;}
+  .title{font-size:15px;font-weight:700;color:#fff;margin-right:auto;display:flex;align-items:baseline;gap:8px;}
+  .title .count{font-size:11px;font-weight:600;color:rgba(255,255,255,.85);background:rgba(255,255,255,.18);padding:2px 7px;border-radius:999px;}
+  .field{background:#fff;border:none;border-radius:9px;font-family:var(--font);font-size:13px;color:var(--ink);padding:8px 10px;height:36px;}
+  .field:focus{outline:2px solid rgba(255,255,255,.65);outline-offset:1px;}
+  .search{flex:1 1 130px;min-width:0;}
+  .icon-btn{height:36px;border:none;border-radius:9px;background:rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:600;padding:0 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .icon-btn:hover{background:rgba(255,255,255,.26);}
+  .badge-dot{background:#fff;color:var(--brand-dark);border-radius:999px;font-size:10px;min-width:16px;height:16px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;}
+  .bar-row2{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;}
+  .seg{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);border-radius:9px;padding:0 10px;height:36px;}
+  .seg label{font-size:11px;font-weight:700;color:rgba(255,255,255,.9);text-transform:uppercase;letter-spacing:.4px;}
+  .seg select{background:transparent;border:none;color:#fff;font-weight:600;font-size:13px;height:34px;max-width:230px;}
+  .seg select option,.seg select optgroup{color:var(--ink);}
+  .dir-btn{width:30px;height:30px;border-radius:7px;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:13px;cursor:pointer;}
+  .tg{display:inline-flex;background:rgba(255,255,255,.16);border-radius:9px;padding:3px;gap:2px;height:36px;align-items:center;}
+  .tg button{border:none;background:transparent;color:rgba(255,255,255,.92);font-family:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:7px;cursor:pointer;white-space:nowrap;}
+  .tg button.t-on{background:#fff;color:var(--brand-dark);}
+  .tg .tg-lab{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:rgba(255,255,255,.85);padding:0 4px 0 6px;}
+  .hint{margin-top:7px;font-size:11px;font-weight:600;color:rgba(255,255,255,.85);}
+  .filters{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-top:12px;padding:14px;display:none;}
+  .filters.open{display:block;}
+  .filters-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 12px;}
+  .fg{display:flex;flex-direction:column;gap:5px;}
+  .fg>label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+  .fg select,.fg input{background:#fff;border:1px solid var(--line);border-radius:8px;font-family:var(--font);font-size:13px;color:var(--ink);padding:8px 9px;height:36px;}
+  .fg select:focus,.fg input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(185,28,28,.18);}
+  .fg-range{display:flex;gap:6px;}
+  .fg-range input{flex:1;min-width:0;width:100%;}
+  .filters-foot{display:flex;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-2);}
+  .clear-btn{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;font-size:12px;font-weight:600;padding:7px 12px;cursor:pointer;}
+  .clear-btn:hover{border-color:var(--brand);color:var(--brand-dark);}
+  .grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px;}
+  @media (min-width:680px){.grid{grid-template-columns:repeat(2,1fr);}}
+  @media (min-width:1020px){.grid{grid-template-columns:repeat(3,1fr);}}
+  .card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;font-variant-numeric:tabular-nums;content-visibility:auto;contain-intrinsic-size:auto 300px;}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--edge-c,var(--line));}
+  .c-head{display:flex;align-items:flex-start;gap:10px;padding:13px 14px 0;cursor:pointer;}
+  .c-main{flex:1;min-width:0;}
+  .c-name{font-size:15px;font-weight:700;line-height:1.2;}
+  .c-sub{margin-top:4px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .tag{font-weight:700;color:var(--ink);background:var(--line-2);border-radius:5px;padding:1px 5px;font-size:10.5px;letter-spacing:.3px;}
+  .tag.lu.conf{background:#dcfce7;color:#15803d;}
+  .tag.lu.proj{background:#fef9c3;color:#a16207;}
+  .vbadge{flex:none;text-align:center;border-radius:10px;padding:5px 10px;background:var(--vb-bg,#f3f4f6);min-width:64px;}
+  .vbadge .v{font-size:17px;font-weight:800;color:var(--vb-fg,var(--ink));line-height:1.05;}
+  .vbadge .k{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+  /* 2x2 split grid — the anchor + the sort control (value ratio per split) */
+  .cgrid{margin:11px 14px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .cell{appearance:none;border:1px solid var(--line);background:var(--cbg,#f3f4f6);border-radius:10px;padding:7px 9px 6px;text-align:left;cursor:pointer;font-family:inherit;color:var(--ink);transition:box-shadow .12s ease;}
+  .cell .cl{font-size:8.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);}
+  .cell .cv{font-size:18px;font-weight:800;line-height:1.05;color:var(--cfg,var(--ink));margin-top:1px;}
+  .cell .cg{font-size:10px;color:var(--muted);font-weight:600;}
+  .cell.active{border-color:var(--brand);box-shadow:0 0 0 2px rgba(185,28,28,.28);}
+  .cell.empty{cursor:default;background:#f6f7f8;opacity:.7;}
+  .cell.empty .cv{color:var(--muted-2);}
+  @media (prefers-reduced-motion:reduce){.cell{transition:none;}}
+  .odds{margin:11px 14px 0;display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line-2);border-radius:9px;overflow:hidden;}
+  .odds.dfsref{grid-template-columns:repeat(4,1fr);}
+  .odds .o{padding:7px 6px 6px;text-align:center;border-right:1px solid var(--line-2);}
+  .odds .o:last-child{border-right:none;}
+  .odds .o .k{font-size:8.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted-2);}
+  .odds .o .v{font-size:14px;font-weight:700;margin-top:2px;}
+  .odds .o .b{font-size:9.5px;color:var(--muted);margin-top:1px;line-height:1.1;}
+  .expand-row{display:flex;align-items:center;justify-content:space-between;margin:11px 14px 13px;}
+  .matchup-mini{font-size:11.5px;color:var(--muted);}
+  .matchup-mini b{color:var(--ink);font-weight:700;}
+  .exp-btn{background:none;border:1px solid var(--line);color:var(--brand-dark);font-weight:700;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;}
+  .exp-btn .car{transition:transform .15s ease;}
+  @media (prefers-reduced-motion:reduce){.exp-btn .car{transition:none;}}
+  .card.open .exp-btn .car{transform:rotate(180deg);}
+  .detail{display:none;border-top:1px solid var(--line-2);background:#fbfbfc;padding:6px 14px 14px;}
+  .card.open .detail{display:block;}
+  .panel{margin-top:12px;}
+  .panel-h{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--brand-dark);margin:0 0 6px;}
+  .mini-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table.mini{width:100%;border-collapse:collapse;font-size:11.5px;}
+  table.mini th,table.mini td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line-2);white-space:nowrap;}
+  table.mini th:first-child,table.mini td:first-child{text-align:left;color:var(--muted);font-weight:600;position:sticky;left:0;background:#fbfbfc;}
+  table.mini thead th{color:var(--muted-2);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line);}
+  table.mini td{font-weight:600;}
+  .pf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px 12px;font-size:11px;margin-top:3px;}
+  .pf-grid>div{display:flex;justify-content:space-between;gap:6px;border-bottom:1px solid var(--line-2);padding:2px 0;}
+  .pf-grid .pfk{color:var(--muted);font-weight:700;}
+  .pf-grid .pfv{font-weight:600;}
+  .note-sm{font-size:10px;color:var(--muted-2);margin-top:5px;line-height:1.3;}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:11.5px;}
+  .kv .k{color:var(--muted);} .kv .v{font-weight:600;text-align:right;}
+  .wx{font-size:11px;color:var(--ink);display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+  .state{text-align:center;padding:60px 20px;color:var(--muted);}
+  .state h3{color:var(--ink);margin:0 0 6px;font-size:16px;}
+  .state code{background:#fff;border:1px solid var(--line);padding:1px 5px;border-radius:4px;}
+  .spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;margin:0 auto 14px;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion:reduce){.spinner{animation-duration:1.6s;}}
+  .sentinel{height:1px;}
+  .loadpill{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--brand-dark);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.22);z-index:50;}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <div class="bar-top">
+        <div class="title"><span id="titleText">FanDuel DFS · Batters</span> <span class="count" id="count">—</span></div>
+        <div class="tg" id="modeToggle"><span class="tg-lab">FanDuel</span>
+          <button data-mode="batter" class="t-on" aria-pressed="true">Batter</button>
+          <button data-mode="pitcher" aria-pressed="false">Pitcher</button>
+        </div>
+      </div>
+      <div class="bar-top" style="margin-top:8px;">
+        <input class="field search" id="search" type="search" placeholder="Search player…" autocomplete="off" aria-label="Search player" />
+        <button class="icon-btn" id="filterToggle" aria-expanded="false">Filters <span class="badge-dot" id="filterCount" hidden>0</span></button>
+      </div>
+      <div class="bar-row2">
+        <div class="seg"><label for="sortSel">Rank by</label>
+          <select id="sortSel">
+            <option value="Full Season|All">Season · all games</option>
+            <option value="Full Season|loc">Season · game location</option>
+            <option value="Last 30 Days|All">Last 30 Days · all games</option>
+            <option value="Last 30 Days|loc">Last 30 Days · game location</option>
+          </select>
+          <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
+        </div>
+      </div>
+      <div class="hint">Ranked by value (projected pts per $1k salary). Tap a split square to rank by it — the in-card stats switch to that window &amp; split.</div>
+    </div>
+
+    <div class="filters" id="filters">
+      <div class="filters-grid">
+        <div class="fg"><label>Team</label><select data-filter="team"><option value="">All</option></select></div>
+        <div class="fg"><label>Position</label><select data-filter="pos"><option value="">All</option></select></div>
+        <div class="fg"><label data-hand-label>Bats</label><select data-filter="hand"><option value="">All</option></select></div>
+        <div class="fg"><label>Price</label>
+          <div class="fg-range">
+            <input type="number" data-filter="prMin" inputmode="numeric" placeholder="Min" />
+            <input type="number" data-filter="prMax" inputmode="numeric" placeholder="Max" />
+          </div>
+        </div>
+        <div class="fg"><label>Min projected pts <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(ranked split)</span></label><input type="number" data-filter="projMin" inputmode="decimal" placeholder="e.g. 8" /></div>
+        <div class="fg"><label>Min value <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(pts per $1k)</span></label><input type="number" data-filter="valMin" inputmode="decimal" placeholder="e.g. 2.5" /></div>
+      </div>
+      <div class="filters-foot"><button class="clear-btn" id="clearFilters">Clear all</button></div>
+    </div>
+
+    <div id="content"><div class="state"><div class="spinner"></div><p>Loading DFS slate…</p></div></div>
+    <div class="grid" id="grid" hidden></div>
+    <div class="sentinel" id="sentinel"></div>
+    <div class="loadpill" id="loadpill" hidden></div>
+  </div>
+
+<script>
+/* ============================================================
+   CONFIG — public anon key. RLS on these tables should be SELECT-only.
+   This file builds from the {BOOK} tables: Batter -> BaseballBatter+BOOK, Pitcher -> BaseballStarter+BOOK.
+   FD and DK are produced from one source; only the book token differs.
+   ============================================================ */
+const SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
+const BOOK = "FD";
+const BOOK_NAME = BOOK==='DK'?'DraftKings':'FanDuel';
+const CACHE_TTL = 3 * 60 * 1000;
+const BATCH = 24;
+const PAGE_SIZE = 1000;
+const MAX_PARALLEL = 6;
+
+const TEAM_NAME_MAP = {'Arizona Diamondbacks':'ARI','Atlanta Braves':'ATL','Baltimore Orioles':'BAL','Boston Red Sox':'BOS','Chicago Cubs':'CHC','Chicago White Sox':'CHW','Cincinnati Reds':'CIN','Cleveland Guardians':'CLE','Colorado Rockies':'COL','Detroit Tigers':'DET','Houston Astros':'HOU','Kansas City Royals':'KC','Los Angeles Angels':'LAA','Los Angeles Dodgers':'LAD','Miami Marlins':'MIA','Milwaukee Brewers':'MIL','Minnesota Twins':'MIN','New York Mets':'NYM','New York Yankees':'NYY','Athletics':'ATH','Philadelphia Phillies':'PHI','Pittsburgh Pirates':'PIT','San Diego Padres':'SD','San Francisco Giants':'SF','Seattle Mariners':'SEA','St. Louis Cardinals':'STL','Tampa Bay Rays':'TB','Texas Rangers':'TEX','Toronto Blue Jays':'TOR','Washington Nationals':'WSH'};
+const TEAM_LC = Object.fromEntries(Object.entries(TEAM_NAME_MAP).map(([k,v])=>[k.toLowerCase(),v]));
+const MATCHUP_RE = new RegExp(Object.keys(TEAM_NAME_MAP).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'gi');
+
+/* Stat-set definitions — [display, columnToken, formatType].
+   Batter & pitcher lines are aligned: the hit ladder (H,1B,2B,3B,HR) sits in the
+   same slots in both, with rates pushed to the end. */
+const SET_BAT = [['PA','PA','int'],['AB','AB','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['RBI','RBI','int'],['R','R','int'],['BB','BB','int'],['SO','SO','int'],['HBP','HBP','int'],['SB','SB','int'],['AVG','AVG','rate'],['H/PA','HpPA','rate']];
+const SET_PIT = [['IP','IP','ip'],['TBF','TBF','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['ER','ER','int'],['R','R','int'],['BB','BB','int'],['SO','SO','int'],['HBP','HBP','int'],['AVG','AVG','rate'],['ERA','ERA','era'],['H/BF','H/BF','rate']];
+const SET_OPP_SP = [['TBF','TBF','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['BB','BB','int'],['HBP','HBP','int'],['AVG','AVG','rate'],['ERA','ERA','era']];
+const SET_OPP_BP = [['IP','IP','ip'],['TBF','TBF','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['BB','BB','int'],['HBP','HBP','int'],['AVG','AVG','rate'],['ERA','ERA','era']];
+const PF_SET = [[BOOK,BOOK+' PF'],['H','H PF'],['1B','1B PF'],['2B','2B PF'],['3B','3B PF'],['HR','HR PF'],['R','R PF'],['SO','SO PF'],['BB','BB PF']];
+
+const MODES = {
+  batter:  { table:"BaseballBatter"+BOOK,  role:"Batter",  title:"Batters",  handLabel:"Bats" },
+  pitcher: { table:"BaseballStarter"+BOOK, role:"Starter", title:"Pitchers", handLabel:"Throws" }
+};
+let mode = 'batter';
+const M = ()=>MODES[mode];
+const ownSet = ()=> mode==='batter' ? SET_BAT : SET_PIT;
+
+/* Column-name map for the active mode. */
+function fieldMap(){
+  const r = M().role, isBat = mode==='batter';
+  return {
+    player:`${r} Name`, team:`${r} Team`, hand:`${r} Handedness`, pos:`${r} ${BOOK} Position`, price:`${r} ${BOOK} Price`,
+    period:'Time Period', split:'Split',
+    projMed:`${r} ${BOOK} Median`, projAvg:`${r} ${BOOK} Average`, projHigh:`${r} ${BOOK} High`, projLow:`${r} ${BOOK} Low`, projMode:`${r} ${BOOK} Mode`,
+    ratioMed:'Player Median Ratio', ratioHigh:'Player High Ratio', rostership:`${BOOK} Rostership`, gp:'Player Games Played',
+    matchup:'Matchup', spread:'Matchup Spread', total:'Matchup Total',
+    lineup: isBat ? 'Lineup Status' : 'Opposing Lineup Status',
+    stadium:'Stadium', dome:'Dome', wx1:'Weather 1', wx2:'Weather 2', wx3:'Weather 3', wx4:'Weather 4'
+  };
+}
+
+/* ---------- State ---------- */
+let GROUPS = [], SORTED = [], VIEW = [], rendered = 0, bootSeq = 0;
+const GMAP = new Map();
+let sortMode = 'Full Season|All', sortDir = 'desc';
+const filters = {search:'',team:'',pos:'',hand:'',prMin:'',prMax:'',projMin:'',valMin:''};
+const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),modeToggle:document.getElementById('modeToggle'),titleText:document.getElementById('titleText')};
+
+/* ---------- Helpers ---------- */
+const num = v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
+const raw = v=>{if(v==null)return '–';const s=String(v).trim();return s===''?'–':s;};
+const fmtAvg = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};                 // projection pts (1 dp)
+const fmt2 = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(2);};                   // ERA (2 dp)
+const fmtRatio = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(2);};               // value ratio
+/* averages: truncate (not round) to 3 places, force 3, MLB no-leading-zero (.308, .200, .000) */
+const fmtAvg3 = v=>{const n=parseFloat(v);if(isNaN(n))return '–';const sign=n<0?'-':'';const t=(Math.trunc(Math.abs(n)*1000)/1000).toFixed(3);return (sign+t).replace(/^(-?)0\./,'$1.');};
+/* innings: keep baseball thirds notation but always show a decimal place (47 -> 47.0) */
+const fmtIP = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.includes('.')?s:s+'.0';};
+/* park factor: turn "102 (7)" into "102 (#7)" */
+const fmtPark = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.replace(/\((\d+)\)/g,' (#$1)');};
+const fmtPrice = v=>{const n=parseFloat(v);return isNaN(n)?'–':'$'+Math.round(n).toLocaleString();};
+const fmtRost = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.includes('%')?s:(s+'%');};
+const fmtType = (t,v)=> t==='rate'?fmtAvg3(v) : t==='era'?fmt2(v) : t==='ip'?fmtIP(v) : raw(v);
+const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const abbrTeam = v=>!v?'':(TEAM_NAME_MAP[v]||v);
+const abbrMatchup = v=>!v?'':String(v).split(',')[0].replace(MATCHUP_RE,m=>TEAM_LC[m.toLowerCase()]||m);
+const order = v=>{const m=String(v||'').match(/\((\d+)\)/);return m?m[1]:null;};
+const lineupTag = v=>{if(!v)return '';const st=/proj/i.test(v)?'Proj':(/conf/i.test(v)?'Conf':'');const o=order(v);if(!st&&!o)return '';return `${st}${o?' #'+o:''}`;};
+const titleCase = s=>String(s).replace(/\b\w/g,c=>c.toUpperCase());
+const capWx = w=>{const parts=String(w).split('|');if(parts.length)parts[parts.length-1]=titleCase(parts[parts.length-1]);return parts.join('|');};
+const handTag = h=>{if(!h)return '';if(mode==='batter')return (h==='B'?'S':h)+'HB';return h+'HP';};
+
+/* Value-ratio color scale (projected pts per $1k). Higher = better value = greener. */
+function valColors(r){
+  if(r==null)return{edge:'var(--line)',bg:'#f3f4f6',fg:'#6b7280'};
+  if(r<1)    return{edge:'#fca5a5',bg:'#fef2f2',fg:'#dc2626'};
+  if(r<1.75) return{edge:'#fed7aa',bg:'#fff7ed',fg:'#c2410c'};
+  if(r<2.5)  return{edge:'#fde68a',bg:'#fefce8',fg:'#a16207'};
+  if(r<3.25) return{edge:'#86efac',bg:'#dcfce7',fg:'#15803d'};
+  return            {edge:'#16a34a',bg:'#bbf7d0',fg:'#14532d'};
+}
+
+/* ---------- Data ---------- */
+function buildQuery(){ return `${SUPABASE_URL}/rest/v1/${M().table}?select=*`; }
+async function fetchPage(url,offset,extra,limit){const lim=limit||PAGE_SIZE;const res=await fetch(url,{headers:{apikey:ANON_KEY,Authorization:"Bearer "+ANON_KEY,Accept:"application/json",'Range-Unit':'items',Range:`${offset}-${offset+lim-1}`,...extra}});if(!res.ok){const e=new Error(`Supabase ${res.status}`);e.status=res.status;throw e;}return {rows:await res.json(),contentRange:res.headers.get('content-range')};}
+async function fetchAll(cb){
+  const url=buildQuery();
+  const first=await fetchPage(url,0,{Prefer:'count=exact'},PAGE_SIZE);
+  const ps=first.rows.length||PAGE_SIZE;
+  const m=/\/(\d+)$/.exec(first.contentRange||'');
+  const total=m?parseInt(m[1],10):(first.rows.length<PAGE_SIZE?first.rows.length:null);
+  let out=first.rows.slice();
+  if(cb)cb(out,total,true,out.length);
+  if(ps===0||(total!=null&&out.length>=total)||(total==null&&first.rows.length<PAGE_SIZE))return out;
+  if(total!=null){
+    const offsets=[];for(let o=ps;o<total;o+=ps)offsets.push(o);
+    const results=new Array(offsets.length);let i=0,loaded=out.length;
+    await Promise.all(Array.from({length:Math.min(MAX_PARALLEL,offsets.length)},async()=>{while(i<offsets.length){const idx=i++;const r=await fetchPage(url,offsets[idx],{},ps);results[idx]=r.rows;loaded+=r.rows.length;if(cb)cb(null,total,false,loaded);}}));
+    for(const r of results) out=out.concat(r);
+  }else{
+    let offset=ps;while(true){const r=await fetchPage(url,offset,{},ps);out=out.concat(r.rows);if(cb)cb(null,null,false,out.length);if(r.rows.length<ps)break;offset+=ps;}
+  }
+  return out;
+}
+
+/* ---------- Grouping ---------- */
+const readCols=(row,fn,set)=>{const o={};for(const t of set)o[t[1]]=row[fn(t[1])];return o;};
+function buildGroups(rows){
+  const F=fieldMap(); const role=M().role; const isBat=mode==='batter';
+  const set=ownSet();
+  const map=new Map();
+  for(const row of rows){
+    const player=row[F.player]; if(!player) continue;
+    let g=map.get(player);
+    if(!g){
+      g={key:player, player, team:row[F.team], hand:row[F.hand], pos:row[F.pos], price:num(row[F.price]),
+        rostership:row[F.rostership], gp:row[F.gp], lineup:row[F.lineup],
+        matchup:row[F.matchup], spread:row[F.spread], total:row[F.total],
+        stadium:row[F.stadium], dome:row[F.dome], wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(Boolean),
+        pf:PF_SET.map(([lbl,col])=>[lbl,row[col]]),
+        variants:{}, _q:String(player).toLowerCase(), _matchupAb:abbrMatchup(row[F.matchup])};
+      if(isBat){
+        g.sp=row['Starter'];
+        g.spO=readCols(row,c=>`Starter ${c}`,SET_OPP_SP);
+        g.spV=readCols(row,c=>`Starter ${c} V`,SET_OPP_SP);
+        g.bpNL=row['Bullpen L Count']; g.bpNR=row['Bullpen R Count'];
+        g.bpL=readCols(row,c=>`Bullpen ${c} L`,SET_OPP_BP);
+        g.bpR=readCols(row,c=>`Bullpen ${c} R`,SET_OPP_BP);
+      }else{
+        g.luNL=row['Lineup Lefties']; g.luNR=row['Lineup Righties']; g.luNS=row['Lineup Switch'];
+        g.luO=readCols(row,c=>`Lineup ${c}`,SET_BAT);
+        g.luV=readCols(row,c=>`Lineup V ${c}`,SET_BAT);
+      }
+      map.set(player,g);
+    }
+    const vk=`${row[F.period]}|${row[F.split]}`;
+    g.variants[vk]={ratio:num(row[F.ratioMed]), ratioHigh:num(row[F.ratioHigh]),
+      med:num(row[F.projMed]), avg:num(row[F.projAvg]), high:num(row[F.projHigh]), low:num(row[F.projLow]), mode:row[F.projMode],
+      prod:{O:readCols(row,c=>`${role} ${c}`,set), L:readCols(row,c=>`${role} L ${c}`,set), R:readCols(row,c=>`${role} R ${c}`,set)}};
+  }
+  const arr=[...map.values()];
+  GMAP.clear();
+  for(const g of arr){
+    const ks=Object.keys(g.variants);
+    g.location=ks.some(k=>k.endsWith('|Home'))?'Home':(ks.some(k=>k.endsWith('|Away'))?'Away':null);
+    g._season=g.variants['Full Season|All']||Object.values(g.variants)[0]||null;
+    GMAP.set(g.key,g);
+  }
+  return arr;
+}
+
+/* variant getters */
+function cellVar(g,period,sp){if(sp==='loc'){if(!g.location)return null;return g.variants[`${period}|${g.location}`]||null;}return g.variants[`${period}|${sp}`]||null;}
+function keyVar(g,key){const [period,sp]=key.split('|');return cellVar(g,period,sp);}
+function activeVar(g){const [period,sp]=sortMode.split('|');return cellVar(g,period,sp)||g.variants[`${period}|All`]||g._season;}
+function recomputeProd(){for(const g of GROUPS){g._prodVar=activeVar(g);}}
+
+/* ---------- Filters / sort ---------- */
+function uniq(getter){return [...new Set(GROUPS.map(getter).filter(v=>v!=null&&v!==''))];}
+function populateFilters(){
+  const set=(sel,vals,fmt)=>{const el=document.querySelector(`select[data-filter="${sel}"]`);if(!el)return;const prev=el.value;el.innerHTML='<option value="">All</option>';vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=fmt?fmt(v):v;el.appendChild(o);});if(prev)el.value=prev;};
+  set('team',uniq(g=>g.team).sort());
+  set('pos',uniq(g=>g.pos).sort());
+  set('hand',uniq(g=>g.hand).sort());
+}
+function applySort(){
+  recomputeProd();
+  const dir=sortDir==='asc'?1:-1;
+  SORTED=GROUPS.slice().sort((a,b)=>{
+    const va=keyVar(a,sortMode),vb=keyVar(b,sortMode);
+    const ra=va?va.ratio:null,rb=vb?vb.ratio:null;
+    if(ra==null&&rb==null) return a._q<b._q?-1:a._q>b._q?1:0;
+    if(ra==null) return 1; if(rb==null) return -1;
+    if(ra!==rb) return (ra-rb)*dir;
+    const pa=va.med==null?-1:va.med, pb=vb.med==null?-1:vb.med;
+    if(pa!==pb) return pb-pa;
+    return a._q<b._q?-1:a._q>b._q?1:0;
+  });
+  applyFilters();
+}
+function applyFilters(){
+  const s=filters.search.trim().toLowerCase();
+  const prMin=filters.prMin!==''?parseFloat(filters.prMin):null, prMax=filters.prMax!==''?parseFloat(filters.prMax):null;
+  const pjMin=filters.projMin!==''?parseFloat(filters.projMin):null;
+  const vMin=filters.valMin!==''?parseFloat(filters.valMin):null;
+  const av=g=>keyVar(g,sortMode);
+  VIEW=SORTED.filter(g=>{
+    if(s&&!g._q.includes(s))return false;
+    if(filters.team&&g.team!==filters.team)return false;
+    if(filters.pos&&g.pos!==filters.pos)return false;
+    if(filters.hand&&g.hand!==filters.hand)return false;
+    if(prMin!=null&&(g.price==null||g.price<prMin))return false;
+    if(prMax!=null&&(g.price==null||g.price>prMax))return false;
+    if(pjMin!=null){const v=av(g);if(!v||v.med==null||v.med<pjMin)return false;}
+    if(vMin!=null){const v=av(g);if(!v||v.ratio==null||v.ratio<vMin)return false;}
+    return true;
+  });
+  rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
+  if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching players</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
+  else{els.content.hidden=true;fillViewport();}
+  const active=['team','pos','hand','prMin','prMax','projMin','valMin'].filter(k=>filters[k]!=='').length;
+  els.filterCount.hidden=active===0;els.filterCount.textContent=active;
+}
+
+/* ---------- Render ---------- */
+function statTable(set, rows){
+  const heads=set.map(([d])=>`<th>${esc(d)}</th>`).join('');
+  const body=rows.map(([lbl,obj])=>{
+    const tds=set.map(([,col,typ])=>`<td>${fmtType(typ,obj?obj[col]:null)}</td>`).join('');
+    return `<tr><td>${esc(lbl)}</td>${tds}</tr>`;
+  }).join('');
+  return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+function valCell(g,key,label){
+  const v=keyVar(g,key);const active=sortMode===key?' active':'';
+  if(!v||v.ratio==null)return `<div class="cell empty${active}"><div class="cl">${esc(label)}</div><div class="cv">–</div><div class="cg">&nbsp;</div></div>`;
+  const c=valColors(v.ratio);
+  return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtRatio(v.ratio)}</div><div class="cg">${v.med==null?'–':fmtAvg(v.med)} pts</div></button>`;
+}
+function cardHTML(g){
+  const isBat=mode==='batter';
+  const hand=g.hand?`<span class="tag">${esc(handTag(g.hand))}</span>`:'';
+  const lu=isBat?lineupTag(g.lineup):''; const luCls=/proj/i.test(g.lineup||'')?'proj':(/conf/i.test(g.lineup||'')?'conf':'');
+  const luTag=lu?`<span class="tag lu ${luCls}" title="${esc(g.lineup||'')}">${esc(lu)}</span>`:'';
+  const loc=g.location||'Loc';
+  const av=keyVar(g,sortMode)||g._season;
+  const c=valColors(av?av.ratio:null);
+  const mini = isBat ? `vs <b>${esc(g.sp||'—')}</b>` : `vs <b>${esc(g.luNL!=null?(raw(g.luNL)+' LHB / '+raw(g.luNR)+' RHB'):'lineup')}</b>`;
+  return `
+  <div class="card" data-key="${esc(g.key)}" style="--edge-c:${c.edge}">
+    <div class="c-head">
+      <div class="c-main"><div class="c-name">${esc(g.player)}</div>
+        <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span>${esc(g._matchupAb)}</span></div></div>
+      <div class="vbadge" style="--vb-bg:${c.bg};--vb-fg:${c.fg}"><div class="v">${av?fmtRatio(av.ratio):'–'}</div><div class="k">Val</div></div>
+    </div>
+    <div class="odds dfsref">
+      <div class="o"><div class="k">Pos</div><div class="v">${esc(g.pos||'–')}</div><div class="b">&nbsp;</div></div>
+      <div class="o"><div class="k">Price</div><div class="v">${fmtPrice(g.price)}</div><div class="b">&nbsp;</div></div>
+      <div class="o"><div class="k">Proj</div><div class="v">${av&&av.med!=null?fmtAvg(av.med):'–'}</div><div class="b">pts</div></div>
+      <div class="o"><div class="k">Rost</div><div class="v">${fmtRost(g.rostership)}</div><div class="b">&nbsp;</div></div>
+    </div>
+    <div class="cgrid">
+      ${valCell(g,'Full Season|All','Season · All')}
+      ${valCell(g,'Full Season|loc','Season · '+loc)}
+      ${valCell(g,'Last 30 Days|All','L30 Days · All')}
+      ${valCell(g,'Last 30 Days|loc','L30 Days · '+loc)}
+    </div>
+    <div class="expand-row"><div class="matchup-mini">${mini}</div>
+      <button class="exp-btn" type="button">Detail <span class="car">▾</span></button></div>
+    <div class="detail"></div>
+  </div>`;
+}
+
+/* ---------- Detail (lazy) ---------- */
+function detailHTML(g){
+  const isBat=mode==='batter';
+  const [perRaw,spRaw]=sortMode.split('|');
+  const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
+  const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
+  const v=g._prodVar||g._season;
+  const oppA=isBat?'vs LHP':'vs LHB', oppB=isBat?'vs RHP':'vs RHB';
+  const prodH=isBat?'Hitter production':'Pitcher production';
+  const prodPanel = `<div class="panel"><div class="panel-h">${prodH} — ${perLbl}${splitLbl}</div>${v?statTable(ownSet(),[['Overall',v.prod.O],[oppA,v.prod.L],[oppB,v.prod.R]]):''}</div>`;
+  let oppPanel;
+  if(isBat){
+    const spHand=/\(L\)/i.test(g.sp||'')?'L':(/\(R\)/i.test(g.sp||'')?'R':null);
+    const faceHand=g.hand==='B'?(spHand==='R'?'L':spHand==='L'?'R':null):(g.hand==='L'?'L':g.hand==='R'?'R':null);
+    const faceLbl=faceHand==='L'?'vs LHB':faceHand==='R'?'vs RHB':'Platoon';
+    const batsLbl=g.hand==='L'?'LHB':(g.hand==='R'?'RHB':'switch hitters');
+    oppPanel=`
+    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')}</div>
+      ${statTable(SET_OPP_SP,[['Overall',g.spO],[faceLbl,g.spV]])}</div>
+    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.bpNL)} LH / ${raw(g.bpNR)} RH</div>
+      ${statTable(SET_OPP_BP,[['LH relievers',g.bpL],['RH relievers',g.bpR]])}
+      <div class="note-sm">Each row is that reliever group's results vs ${esc(batsLbl)}.</div></div>`;
+  }else{
+    const myHand=g.hand==='L'?'L':g.hand==='R'?'R':null;
+    const vsLbl=myHand?('vs '+myHand+'HB'):'vs hand';
+    const sw=(g.luNS&&String(g.luNS)!=='0')?(' / '+raw(g.luNS)+' S'):'';
+    oppPanel=`
+    <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.luNL)} LHB / ${raw(g.luNR)} RHB${sw}</div>
+      ${statTable(SET_BAT,[['Overall',g.luO],[vsLbl,g.luV]])}</div>`;
+  }
+  const pf=`<div class="panel-h" style="margin-top:10px">Park factors (rank)</div>
+    <div class="pf-grid">${g.pf.map(([lbl,val])=>`<div><span class="pfk">${esc(lbl)}</span><span class="pfv">${esc(fmtPark(val))}</span></div>`).join('')}</div>`;
+  return `
+    ${prodPanel}
+    ${oppPanel}
+    <div class="panel"><div class="panel-h">Environment</div>
+      <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread||'–')}</span>
+        <span class="k">Total</span><span class="v">${esc(g.total||'–')}</span>
+        <span class="k">Games played</span><span class="v">${raw(g.gp)}</span>
+        <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}</span>
+        <span class="k">Dome</span><span class="v">${esc(g.dome||'–')}</span></div>
+      ${pf}
+      ${g.wx.length?`<div class="wx">${g.wx.map(w=>`<div>${esc(capWx(w))}</div>`).join('')}</div>`:''}
+    </div>`;
+}
+
+function renderMore(){if(rendered>=VIEW.length)return;const slice=VIEW.slice(rendered,rendered+BATCH);els.grid.insertAdjacentHTML('beforeend',slice.map(cardHTML).join(''));rendered+=slice.length;}
+function fillViewport(){let guard=0;do{renderMore();guard++;}while(rendered<VIEW.length&&els.sentinel.getBoundingClientRect().top<window.innerHeight+700&&guard<50);}
+const io=new IntersectionObserver(e=>{if(e[0].isIntersecting)fillViewport();},{rootMargin:'700px'});io.observe(els.sentinel);
+
+/* ---------- Events ---------- */
+function setSort(mode_){sortMode=mode_;sortDir='desc';if(els.sortSel.value!==mode_)els.sortSel.value=mode_;els.sortDir.textContent='▼';applySort();}
+els.grid.addEventListener('click',e=>{
+  const cell=e.target.closest('.cell[data-sortkey]');
+  if(cell){setSort(cell.dataset.sortkey);window.scrollTo({top:0,behavior:'smooth'});return;}
+  if(e.target.closest('a'))return;
+  const card=e.target.closest('.card');if(!card)return;
+  if(!e.target.closest('.exp-btn')&&!e.target.closest('.c-head'))return;
+  const opening=!card.classList.contains('open');
+  if(opening){const d=card.querySelector('.detail');if(!d.firstChild){const g=GMAP.get(card.dataset.key);if(g)d.innerHTML=detailHTML(g);}}
+  card.classList.toggle('open');
+});
+let searchTimer;
+els.search.addEventListener('input',e=>{filters.search=e.target.value;clearTimeout(searchTimer);searchTimer=setTimeout(applyFilters,120);});
+els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.toggle('open');els.filterToggle.setAttribute('aria-expanded',open);});
+document.querySelectorAll('[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;applyFilters();});});
+els.clearFilters.addEventListener('click',()=>{Object.keys(filters).forEach(k=>{if(k!=='search')filters[k]='';});document.querySelectorAll('[data-filter]').forEach(el=>{el.value='';});applyFilters();});
+els.sortSel.addEventListener('change',e=>setSort(e.target.value));
+els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
+
+function applyModeUI(){
+  els.titleText.textContent=BOOK_NAME+' DFS · '+M().title;
+  const hl=document.querySelector('[data-hand-label]'); if(hl) hl.textContent=M().handLabel;
+}
+els.modeToggle.addEventListener('click',e=>{
+  const btn=e.target.closest('button[data-mode]'); if(!btn) return;
+  const next=btn.getAttribute('data-mode'); if(next===mode) return;
+  mode=next;
+  [...els.modeToggle.querySelectorAll('button')].forEach(b=>{const on=b===btn;b.classList.toggle('t-on',on);b.setAttribute('aria-pressed',on);});
+  Object.keys(filters).forEach(k=>{if(k!=='search')filters[k]='';});
+  document.querySelectorAll('[data-filter]').forEach(el=>{el.value='';});
+  applyModeUI();
+  GROUPS=[];SORTED=[];GMAP.clear();els.grid.innerHTML='';els.grid.hidden=true;
+  els.content.hidden=false;els.content.innerHTML='<div class="state"><div class="spinner"></div><p>Loading DFS slate…</p></div>';
+  boot();
+});
+
+/* ---------- Cache (Cache API) ---------- */
+async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))return null;try{const c=await caches.open('bbdfs-v1');const r=await c.match('/'+key);return r?await r.json():null;}catch(e){return null;}}
+async function cacheSet(key,obj){if(location.protocol==='file:'||!('caches'in self))return;try{const c=await caches.open('bbdfs-v1');await c.put('/'+key,new Response(JSON.stringify(obj),{headers:{'Content-Type':'application/json'}}));}catch(e){}}
+
+/* ---------- Boot (stream the full table; cache; stale-while-revalidate) ---------- */
+function fmtN(n){return n>=1000?(((n/1000).toFixed(n>=10000?0:1)).replace(/\.0$/,''))+'k':String(n);}
+function setProg(loaded,total){if(!els.loadpill)return;els.loadpill.hidden=false;els.loadpill.textContent=total?`Loading ${fmtN(loaded)} / ${fmtN(total)} rows…`:`Loading ${fmtN(loaded)} rows…`;}
+function setProgDone(){if(els.loadpill)els.loadpill.hidden=true;}
+function ingest(rows){GROUPS=buildGroups(rows);populateFilters();applySort();}
+async function boot(){
+  const seq=++bootSeq;
+  const table=M().table, cacheKey='bbdfs_'+BOOK+'_'+mode;
+  const cached=await cacheGet(cacheKey);
+  if(seq!==bootSeq)return;
+  if(cached&&Array.isArray(cached.rows)&&cached.rows.length){ingest(cached.rows);if((Date.now()-cached.t)<=CACHE_TTL)return;}
+  try{
+    const rows=await fetchAll((firstRows,total,isFirst,loaded)=>{
+      if(seq!==bootSeq)return;
+      if(isFirst&&firstRows&&firstRows.length&&!GROUPS.length) ingest(firstRows);
+      setProg(loaded,total);
+    });
+    if(seq!==bootSeq)return;
+    ingest(rows); setProgDone();
+    if(!GROUPS.length){
+      els.grid.hidden=true;els.content.hidden=false;
+      els.content.innerHTML = `<div class="state"><h3>No players yet</h3><p>The query to <code>${esc(table)}</code> returned no rows. ${BOOK==='DK'&&mode==='pitcher'?'This table is being repaired in Supabase — it will populate automatically once data lands.':'If this slate should have players, check the RLS policy in Supabase.'}</p></div>`;
+      return;
+    }
+    console.log(`[load] ${table}: pulled ${rows.length} rows -> ${GROUPS.length} cards`);
+    cacheSet(cacheKey,{t:Date.now(),rows});
+  }catch(err){
+    if(seq!==bootSeq)return;
+    setProgDone();
+    if(!GROUPS.length){els.content.innerHTML=`<div class="state"><h3>Couldn't load data</h3><p>Check the table name (currently <code>${esc(table)}</code>).<br>${esc(err.message)}</p></div>`;els.content.hidden=false;}
+  }
+}
+applyModeUI();
+boot();
+</script>
+</body>
+</html>
