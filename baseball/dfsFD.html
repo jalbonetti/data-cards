@@ -136,8 +136,12 @@
           </select>
           <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
         </div>
+        <div class="tg" id="basisToggle"><span class="tg-lab">Value</span>
+          <button data-basis="med" class="t-on" aria-pressed="true">Median</button>
+          <button data-basis="high" aria-pressed="false">High</button>
+        </div>
       </div>
-      <div class="hint">Ranked by value (projected pts per $1k salary). Tap a split square to rank by it — the in-card stats switch to that window &amp; split.</div>
+      <div class="hint">Ranked by value (projected pts per $1k salary), using the Median or High projection. Tap a split square to rank by it — the in-card stats switch to that window &amp; split.</div>
     </div>
 
     <div class="filters" id="filters">
@@ -196,6 +200,7 @@ const MODES = {
   pitcher: { table:"BaseballStarter"+BOOK, role:"Starter", title:"Pitchers", handLabel:"Throws" }
 };
 let mode = 'batter';
+let valBasis = 'med';   // 'med' | 'high' — which projection drives the value ratio
 const M = ()=>MODES[mode];
 const ownSet = ()=> mode==='batter' ? SET_BAT : SET_PIT;
 
@@ -218,7 +223,7 @@ let GROUPS = [], SORTED = [], VIEW = [], rendered = 0, bootSeq = 0;
 const GMAP = new Map();
 let sortMode = 'Full Season|All', sortDir = 'desc';
 const filters = {search:'',team:'',pos:'',hand:'',prMin:'',prMax:'',projMin:'',valMin:''};
-const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),modeToggle:document.getElementById('modeToggle'),titleText:document.getElementById('titleText')};
+const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),modeToggle:document.getElementById('modeToggle'),basisToggle:document.getElementById('basisToggle'),titleText:document.getElementById('titleText')};
 
 /* ---------- Helpers ---------- */
 const num = v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
@@ -329,6 +334,8 @@ function buildGroups(rows){
 function cellVar(g,period,sp){if(sp==='loc'){if(!g.location)return null;return g.variants[`${period}|${g.location}`]||null;}return g.variants[`${period}|${sp}`]||null;}
 function keyVar(g,key){const [period,sp]=key.split('|');return cellVar(g,period,sp);}
 function activeVar(g){const [period,sp]=sortMode.split('|');return cellVar(g,period,sp)||g.variants[`${period}|All`]||g._season;}
+const ratioOf=v=>v?(valBasis==='high'?v.ratioHigh:v.ratio):null;   // value ratio for active basis
+const projOf =v=>v?(valBasis==='high'?v.high:v.med):null;          // matching projection
 function recomputeProd(){for(const g of GROUPS){g._prodVar=activeVar(g);}}
 
 /* ---------- Filters / sort ---------- */
@@ -344,11 +351,11 @@ function applySort(){
   const dir=sortDir==='asc'?1:-1;
   SORTED=GROUPS.slice().sort((a,b)=>{
     const va=keyVar(a,sortMode),vb=keyVar(b,sortMode);
-    const ra=va?va.ratio:null,rb=vb?vb.ratio:null;
+    const ra=ratioOf(va),rb=ratioOf(vb);
     if(ra==null&&rb==null) return a._q<b._q?-1:a._q>b._q?1:0;
     if(ra==null) return 1; if(rb==null) return -1;
     if(ra!==rb) return (ra-rb)*dir;
-    const pa=va.med==null?-1:va.med, pb=vb.med==null?-1:vb.med;
+    const pa=projOf(va)==null?-1:projOf(va), pb=projOf(vb)==null?-1:projOf(vb);
     if(pa!==pb) return pb-pa;
     return a._q<b._q?-1:a._q>b._q?1:0;
   });
@@ -367,8 +374,8 @@ function applyFilters(){
     if(filters.hand&&g.hand!==filters.hand)return false;
     if(prMin!=null&&(g.price==null||g.price<prMin))return false;
     if(prMax!=null&&(g.price==null||g.price>prMax))return false;
-    if(pjMin!=null){const v=av(g);if(!v||v.med==null||v.med<pjMin)return false;}
-    if(vMin!=null){const v=av(g);if(!v||v.ratio==null||v.ratio<vMin)return false;}
+    if(pjMin!=null){const v=av(g);const p=projOf(v);if(p==null||p<pjMin)return false;}
+    if(vMin!=null){const v=av(g);const r=ratioOf(v);if(r==null||r<vMin)return false;}
     return true;
   });
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
@@ -389,9 +396,9 @@ function statTable(set, rows){
 }
 function valCell(g,key,label){
   const v=keyVar(g,key);const active=sortMode===key?' active':'';
-  if(!v||v.ratio==null)return `<div class="cell empty${active}"><div class="cl">${esc(label)}</div><div class="cv">–</div><div class="cg">&nbsp;</div></div>`;
-  const c=valColors(v.ratio);
-  return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtRatio(v.ratio)}</div><div class="cg">${v.med==null?'–':fmtAvg(v.med)} pts</div></button>`;
+  if(!v||ratioOf(v)==null)return `<div class="cell empty${active}"><div class="cl">${esc(label)}</div><div class="cv">–</div><div class="cg">&nbsp;</div></div>`;
+  const c=valColors(ratioOf(v));
+  return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtRatio(ratioOf(v))}</div><div class="cg">${projOf(v)==null?'–':fmtAvg(projOf(v))} pts</div></button>`;
 }
 function cardHTML(g){
   const isBat=mode==='batter';
@@ -400,19 +407,19 @@ function cardHTML(g){
   const luTag=lu?`<span class="tag lu ${luCls}" title="${esc(g.lineup||'')}">${esc(lu)}</span>`:'';
   const loc=g.location||'Loc';
   const av=keyVar(g,sortMode)||g._season;
-  const c=valColors(av?av.ratio:null);
+  const c=valColors(ratioOf(av));
   const mini = isBat ? `vs <b>${esc(g.sp||'—')}</b>` : `vs <b>${esc(g.luNL!=null?(raw(g.luNL)+' LHB / '+raw(g.luNR)+' RHB'):'lineup')}</b>`;
   return `
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${c.edge}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
         <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span>${esc(g._matchupAb)}</span></div></div>
-      <div class="vbadge" style="--vb-bg:${c.bg};--vb-fg:${c.fg}"><div class="v">${av?fmtRatio(av.ratio):'–'}</div><div class="k">Val</div></div>
+      <div class="vbadge" style="--vb-bg:${c.bg};--vb-fg:${c.fg}"><div class="v">${ratioOf(av)!=null?fmtRatio(ratioOf(av)):'–'}</div><div class="k">Val</div></div>
     </div>
     <div class="odds dfsref">
       <div class="o"><div class="k">Pos</div><div class="v">${esc(g.pos||'–')}</div><div class="b">&nbsp;</div></div>
       <div class="o"><div class="k">Price</div><div class="v">${fmtPrice(g.price)}</div><div class="b">&nbsp;</div></div>
-      <div class="o"><div class="k">Proj</div><div class="v">${av&&av.med!=null?fmtAvg(av.med):'–'}</div><div class="b">pts</div></div>
+      <div class="o"><div class="k">Proj</div><div class="v">${projOf(av)!=null?fmtAvg(projOf(av)):'–'}</div><div class="b">pts</div></div>
       <div class="o"><div class="k">Rost</div><div class="v">${fmtRost(g.rostership)}</div><div class="b">&nbsp;</div></div>
     </div>
     <div class="cgrid">
@@ -496,6 +503,7 @@ document.querySelectorAll('[data-filter]').forEach(el=>{const k=el.getAttribute(
 els.clearFilters.addEventListener('click',()=>{Object.keys(filters).forEach(k=>{if(k!=='search')filters[k]='';});document.querySelectorAll('[data-filter]').forEach(el=>{el.value='';});applyFilters();});
 els.sortSel.addEventListener('change',e=>setSort(e.target.value));
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
+els.basisToggle.addEventListener('click',e=>{const btn=e.target.closest('button[data-basis]');if(!btn)return;const next=btn.getAttribute('data-basis');if(next===valBasis)return;valBasis=next;[...els.basisToggle.querySelectorAll('button')].forEach(b=>{const on=b===btn;b.classList.toggle('t-on',on);b.setAttribute('aria-pressed',on);});applySort();});
 
 function applyModeUI(){
   els.titleText.textContent=BOOK_NAME+' DFS · '+M().title;
