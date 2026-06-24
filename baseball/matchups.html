@@ -72,7 +72,12 @@
   .card.open .exp-btn .car{transform:rotate(180deg);}
   .detail{display:none;border-top:1px solid var(--line);background:var(--inset);padding:6px 14px 14px;}
   .card.open .detail{display:block;}
-  .ctx{font-size:10.5px;font-weight:600;color:var(--muted-2);margin-top:10px;}
+  .lp-row{cursor:pointer;}
+  .lp-row .car-sm{display:inline-block;color:var(--muted-2);font-size:9px;transition:transform .12s ease;}
+  .lp-row.open .car-sm{transform:rotate(90deg);}
+  .lp-sub td{color:var(--muted);font-weight:500;}
+  .lp-sub td:first-child{padding-left:18px;color:var(--muted-2);}
+  @media (prefers-reduced-motion:reduce){.lp-row .car-sm{transition:none;}}
   .panel{margin-top:12px;}
   .panel-h{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--brand);margin:0 0 6px;}
   .mini-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -113,15 +118,7 @@
             <option value="Last 30 Days|loc">Last 30 Days · game location</option>
           </select>
         </div>
-        <div class="seg"><label for="handSel">Hand</label>
-          <select id="handSel">
-            <option value="">Overall</option>
-            <option value="vL">vs Left</option>
-            <option value="vR">vs Right</option>
-          </select>
-        </div>
       </div>
-      <div class="hint">Each card is one team's lineup vs the pitching it faces. Pick a window, split &amp; handedness — every stat below follows it.</div>
     </div>
 
     <div class="filters" id="filters">
@@ -150,7 +147,7 @@ const BATCH = 12;
 const PAGE_SIZE = 1000;
 const MAX_PARALLEL = 6;
 
-const TEAM_NAME_MAP = {'Arizona Diamondbacks':'ARI','Atlanta Braves':'ATL','Baltimore Orioles':'BAL','Boston Red Sox':'BOS','Chicago Cubs':'CHC','Chicago White Sox':'CHW','Cincinnati Reds':'CIN','Cleveland Guardians':'CLE','Colorado Rockies':'COL','Detroit Tigers':'DET','Houston Astros':'HOU','Kansas City Royals':'KC','Los Angeles Angels':'LAA','Los Angeles Dodgers':'LAD','Miami Marlins':'MIA','Milwaukee Brewers':'MIL','Minnesota Twins':'MIN','New York Mets':'NYM','New York Yankees':'NYY','Athletics':'ATH','Philadelphia Phillies':'PHI','Pittsburgh Pirates':'PIT','San Diego Padres':'SD','San Francisco Giants':'SF','Seattle Mariners':'SEA','St. Louis Cardinals':'STL','Tampa Bay Rays':'TB','Texas Rangers':'TEX','Toronto Blue Jays':'TOR','Washington Nationals':'WSH'};
+const TEAM_NAME_MAP = {'Arizona Diamondbacks':'ARI','Atlanta Braves':'ATL','Baltimore Orioles':'BAL','Boston Red Sox':'BOS','Chicago Cubs':'CHC','Chicago White Sox':'CHW','Cincinnati Reds':'CIN','Cleveland Guardians':'CLE','Colorado Rockies':'COL','Detroit Tigers':'DET','Houston Astros':'HOU','Kansas City Royals':'KCR','Los Angeles Angels':'LAA','Los Angeles Dodgers':'LAD','Miami Marlins':'MIA','Milwaukee Brewers':'MIL','Minnesota Twins':'MIN','New York Mets':'NYM','New York Yankees':'NYY','Athletics':'ATH','Philadelphia Phillies':'PHI','Pittsburgh Pirates':'PIT','San Diego Padres':'SDP','San Francisco Giants':'SFG','Seattle Mariners':'SEA','St. Louis Cardinals':'STL','Tampa Bay Rays':'TBR','Texas Rangers':'TEX','Toronto Blue Jays':'TOR','Washington Nationals':'WSN'};
 
 /* Stat-set definitions — [display, columnToken, formatType] */
 const SET_BAT = [['G','Games','int'],['PA','PA','int'],['AB','AB','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['RBI','RBI','int'],['R','R','int'],['BB','BB','int'],['IBB','IBB','int'],['SO','SO','int'],['HBP','HBP','int'],['SB','SB','int'],['CS','CS','int'],['SF','SF','int'],['SH','SH','int'],['GDP','GDP','int'],['AVG','AVG','rate'],['OBP','OBP','rate'],['SLG','SLG','rate'],['H/PA','H/PA','rate']];
@@ -163,9 +160,8 @@ const SET_PF = PF_STATS.map(s=>[s,s,'park']);
 let CARDS = [], VIEW = [], rendered = 0;
 const GMAP = new Map();
 let split = 'Full Season|All';   // window + location
-let hand = '';                   // '' | 'vL' | 'vR'
 const filters = {search:'',team:'',game:'',side:''};
-const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),splitSel:document.getElementById('splitSel'),handSel:document.getElementById('handSel'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill')};
+const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),splitSel:document.getElementById('splitSel'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill')};
 
 /* ---------- Helpers ---------- */
 const num = v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
@@ -177,7 +173,9 @@ const fmtIP = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s=
 const fmtPark = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.replace(/\((\d+)\)/g,' (#$1)');};
 const fmtType = (t,v)=> t==='rate'?fmtAvg3(v) : t==='era'?fmt2(v) : t==='ip'?fmtIP(v) : t==='park'?fmtPark(v) : raw(v);
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const abbrTeam = v=>{if(!v)return '';const s=String(v).trim();return TEAM_NAME_MAP[s]||s;};
+const CODE_ALIAS={SD:'SDP',SF:'SFG',TB:'TBR',WSH:'WSN',KC:'KCR',CWS:'CHW'};   // tolerate short-code variants
+const canonTeam=c=>{const u=String(c||'').trim().toUpperCase();return CODE_ALIAS[u]||u;};
+const abbrTeam=v=>{if(!v)return '';const s=String(v).trim();return TEAM_NAME_MAP[s]||canonTeam(s);};
 function etTz(){const d=new Date(),y=d.getFullYear();const m1=new Date(y,2,1),n1=new Date(y,10,1);const dstStart=new Date(y,2,1+((7-m1.getDay())%7)+7);const dstEnd=new Date(y,10,1+((7-n1.getDay())%7));return (d>=dstStart&&d<dstEnd)?'EDT':'EST';}
 const ET_TZ = etTz();
 const fmtTime = v=>!v?'':String(v).replace(/\b(EST|EDT)\b/g,ET_TZ);
@@ -233,20 +231,20 @@ function buildCards(games,batters,starters,bullpen){
   }
   const BAT=new Map();
   for(const r of batters){
-    const id=String(r['Matchup ID']),team=r['Team'],player=r['Player']; if(!id||!team||!player)continue;
+    const id=String(r['Matchup ID']),team=abbrTeam(r['Team']),player=r['Player']; if(!id||!team||!player)continue;
     const k=id+'|'+team; let arr=BAT.get(k); if(!arr){arr=new Map();BAT.set(k,arr);}
     let p=arr.get(player); if(!p){p={player,bats:r['Bats'],pos:num(r['Lineup Pos']),status:r['Lineup Status'],oppSP:r['Opposing SP'],variants:{}};arr.set(player,p);}
     p.variants[`${r['Time Period']}|${r['Stat Split']}`]=readCols(r,c=>c,SET_BAT);
   }
   const SP=new Map();
   for(const r of starters){
-    const id=String(r['Matchup ID']),team=r['Team']; if(!id||!team)continue;
+    const id=String(r['Matchup ID']),team=abbrTeam(r['Team']); if(!id||!team)continue;
     const k=id+'|'+team; let sp=SP.get(k); if(!sp){sp={name:r['SP Name'],throws:r['Throws'],variants:{}};SP.set(k,sp);}
     sp.variants[`${r['Time Period']}|${r['Stat Split']}`]=readCols(r,c=>c,SET_SP);
   }
   const BP=new Map();
   for(const r of bullpen){
-    const id=String(r['Matchup ID']),team=r['Team']; if(!id||!team)continue;
+    const id=String(r['Matchup ID']),team=abbrTeam(r['Team']); if(!id||!team)continue;
     const k=id+'|'+team; let bp=BP.get(k); if(!bp){bp={variants:{}};BP.set(k,bp);}
     bp.variants[`${r['Time Period']}|${r['Stat Split']}`]={
       L:readCols(r,c=>`L ${c}`,SET_BP),R:readCols(r,c=>`R ${c}`,SET_BP),Comb:readCols(r,c=>`Comb ${c}`,SET_BP)};
@@ -279,12 +277,13 @@ function buildCards(games,batters,starters,bullpen){
 }
 
 /* variant getter — builds the Stat Split string from window + location + handedness */
-function statSplit(loc){ if(!hand) return loc; if(loc==='All') return hand; return loc+' '+hand; }
-function getVar(variants,loc){
+function splitKey(loc,h){ return !h ? loc : (loc==='All' ? h : loc+' '+h); }
+function getVar(variants,loc,h){
   if(!variants) return null;
   const [period,locMode]=split.split('|');
   const actualLoc = locMode==='loc' ? loc : 'All';
-  return variants[`${period}|${statSplit(actualLoc)}`] || variants[`${period}|${actualLoc}`] || variants[`${period}|All`] || null;
+  if(h) return variants[`${period}|${splitKey(actualLoc,h)}`] || variants[`${period}|${h}`] || null;  // handed: exact only
+  return variants[`${period}|${actualLoc}`] || variants[`${period}|All`] || null;
 }
 
 /* ---------- Filters ---------- */
@@ -321,6 +320,19 @@ function statTable(set,rows){
 }
 function lineCountStr(c){const p=[];if(has(c.L))p.push(raw(c.L)+' LHB');if(has(c.R))p.push(raw(c.R)+' RHB');if(has(c.S)&&String(c.S)!=='0')p.push(raw(c.S)+' SWH');return p.join(' / ');}
 function bpCountStr(c){const p=[];if(has(c.bpL))p.push(raw(c.bpL)+' LH');if(has(c.bpR))p.push(raw(c.bpR)+' RH');return p.join(' / ');}
+function lineupTable(c){
+  const heads=SET_BAT.map(([d])=>`<th>${esc(d)}</th>`).join('');
+  const cells=o=>SET_BAT.map(([,col,typ])=>`<td>${fmtType(typ,o?o[col]:null)}</td>`).join('');
+  let body='';
+  c.lineup.forEach((p,i)=>{
+    const O=getVar(p.variants,c.loc,''),L=getVar(p.variants,c.loc,'vL'),R=getVar(p.variants,c.loc,'vR');
+    const lbl=`${p.pos!=null?p.pos:'–'} ${esc(p.player)}${p.bats?' ('+esc(p.bats)+')':''}`;
+    body+=`<tr class="lp-row" data-idx="${i}"><td><span class="car-sm">▸</span> ${lbl}</td>${cells(O)}</tr>`;
+    body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>↳ vs LHP</td>${cells(L)}</tr>`;
+    body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>↳ vs RHP</td>${cells(R)}</tr>`;
+  });
+  return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
 function cardHTML(c){
   const sideTag=c.isHome?'<span class="tag home">Home</span>':'<span class="tag away">Away</span>';
   const edge=c.isHome?'var(--good)':'var(--away)';
@@ -346,20 +358,21 @@ function detailHTML(c){
   const [perRaw,locMode]=split.split('|');
   const perLbl=perRaw==='Full Season'?'Full season':'Last 30 days';
   const locLbl=locMode==='loc'?(c.loc==='Home'?'home games':'away games'):'all games';
-  const handLbl=hand===''?'':(hand==='vL'?' · vs left-handed':' · vs right-handed');
-  const ctx=`<div class="ctx">Stats shown: ${esc(perLbl)} · ${esc(locLbl)}${esc(handLbl)}</div>`;
-  // lineup (own)
+  const splitNote=`${perLbl} · ${locLbl}`;
+  // lineup (own) — each batter expands to vs LHP / vs RHP
   const lineCnt=lineCountStr(c.lineCnt||{});
-  const batRows=c.lineup.map(p=>{const v=getVar(p.variants,c.loc);const lbl=`${p.pos!=null?p.pos:'–'} ${p.player}${p.bats?' ('+p.bats+')':''}`;return [lbl,v];});
-  const lineupPanel=`<div class="panel"><div class="panel-h">Lineup${lineCnt?' — '+esc(lineCnt):''}</div>${batRows.length?statTable(SET_BAT,batRows):'<div class="note-sm">No lineup for this split.</div>'}</div>`;
-  // opposing starter (uses opponent's home/away location)
-  const spVar=c.oppSP?getVar(c.oppSP.variants,c.oppLoc):null;
-  const spRowLbl=hand===''?'Overall':(hand==='vL'?'vs LHB':'vs RHB');
-  const spPanel=`<div class="panel"><div class="panel-h">Opposing starter — ${esc(c.oppSPName||'—')}${c.oppSPHand?' ('+esc(c.oppSPHand)+')':''}</div>${spVar?statTable(SET_SP,[[spRowLbl,spVar]]):'<div class="note-sm">No starter data for this split.</div>'}</div>`;
+  const lineupPanel=`<div class="panel"><div class="panel-h">Lineup${lineCnt?' — '+esc(lineCnt):''}</div>${c.lineup.length?lineupTable(c):'<div class="note-sm">No lineup for this split.</div>'}<div class="note-sm">${esc(splitNote)} · tap a batter for vs-LHP / vs-RHP.</div></div>`;
+  // opposing starter — Overall / vs LHB / vs RHB all visible (uses opponent's home/away location)
+  let spPanel;
+  if(!c.oppSP){spPanel=`<div class="panel"><div class="panel-h">Opposing starter — ${esc(c.oppSPName||'—')}</div><div class="note-sm">No starter data for this split.</div></div>`;}
+  else{
+    const O=getVar(c.oppSP.variants,c.oppLoc,''),L=getVar(c.oppSP.variants,c.oppLoc,'vL'),R=getVar(c.oppSP.variants,c.oppLoc,'vR');
+    spPanel=`<div class="panel"><div class="panel-h">Opposing starter — ${esc(c.oppSPName||'—')}${c.oppSPHand?' ('+esc(c.oppSPHand)+')':''}</div>${statTable(SET_SP,[['Overall',O],['vs LHB',L],['vs RHB',R]])}</div>`;
+  }
   // opposing bullpen
-  const bpVar=c.oppBP?getVar(c.oppBP.variants,c.oppLoc):null;
+  const bpVar=c.oppBP?getVar(c.oppBP.variants,c.oppLoc,''):null;
   const bpCnt=bpCountStr(c.oppBpCnt||{});
-  const bpPanel=`<div class="panel"><div class="panel-h">Opposing bullpen${bpCnt?' — '+esc(bpCnt):''}</div>${bpVar?statTable(SET_BP,[['LH pen',bpVar.L],['RH pen',bpVar.R],['Combined',bpVar.Comb]]):'<div class="note-sm">No bullpen data for this split.</div>'}${hand?`<div class="note-sm">Each reliever group ${hand==='vL'?'vs left-handed':'vs right-handed'} batters.</div>`:''}</div>`;
+  const bpPanel=`<div class="panel"><div class="panel-h">Opposing bullpen${bpCnt?' — '+esc(bpCnt):''}</div>${bpVar?statTable(SET_BP,[['LH pen',bpVar.L],['RH pen',bpVar.R],['Combined',bpVar.Comb]]):'<div class="note-sm">No bullpen data for this split.</div>'}</div>`;
   // park factors
   const pf=c.game.pf;
   const pfPanel=`<div class="panel"><div class="panel-h">Park factors (rank)</div>${statTable(SET_PF,[['All',pf.All],['vL',pf.L],['vR',pf.R]])}
@@ -372,7 +385,7 @@ function detailHTML(c){
       <span class="k">Stadium</span><span class="v">${esc(c.game.stadium||'–')}</span>
       <span class="k">Dome</span><span class="v">${esc(c.game.dome||'–')}</span></div>
     ${c.game.wx.length?`<div class="wx">${c.game.wx.map(w=>`<div>${esc(w)}</div>`).join('')}</div>`:''}</div>`;
-  return ctx+lineupPanel+spPanel+bpPanel+pfPanel+envPanel;
+  return lineupPanel+spPanel+bpPanel+pfPanel+envPanel;
 }
 
 function renderMore(){if(rendered>=VIEW.length)return;const slice=VIEW.slice(rendered,rendered+BATCH);els.grid.insertAdjacentHTML('beforeend',slice.map(cardHTML).join(''));rendered+=slice.length;}
@@ -382,6 +395,8 @@ const io=new IntersectionObserver(e=>{if(e[0].isIntersecting)fillViewport();},{r
 /* ---------- Events ---------- */
 function refreshOpen(){document.querySelectorAll('.card.open').forEach(card=>{const c=GMAP.get(card.dataset.key);if(c)card.querySelector('.detail').innerHTML=detailHTML(c);});}
 els.grid.addEventListener('click',e=>{
+  const lp=e.target.closest('.lp-row');
+  if(lp){const t=lp.closest('table');const i=lp.getAttribute('data-idx');t.querySelectorAll('.lp-sub[data-idx="'+i+'"]').forEach(r=>{r.hidden=!r.hidden;});lp.classList.toggle('open');return;}
   const card=e.target.closest('.card');if(!card)return;
   if(!e.target.closest('.exp-btn')&&!e.target.closest('.c-head'))return;
   const opening=!card.classList.contains('open');
@@ -394,7 +409,6 @@ els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.
 document.querySelectorAll('[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;applyFilters();});});
 els.clearFilters.addEventListener('click',()=>{Object.keys(filters).forEach(k=>{if(k!=='search')filters[k]='';});document.querySelectorAll('[data-filter]').forEach(el=>{el.value='';});applyFilters();});
 els.splitSel.addEventListener('change',e=>{split=e.target.value;refreshOpen();});
-els.handSel.addEventListener('change',e=>{hand=e.target.value;refreshOpen();});
 
 /* ---------- Cache ---------- */
 async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))return null;try{const c=await caches.open('bbmatch-v2');const r=await c.match('/'+key);return r?await r.json():null;}catch(e){return null;}}
