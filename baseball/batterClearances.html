@@ -461,8 +461,8 @@ els.sortSel.addEventListener('change',e=>setSort(e.target.value));
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
 
 /* ---------- Cache (Cache API) ---------- */
-async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))return null;try{const c=await caches.open('bbclear-v3');const r=await c.match('/'+key);return r?await r.json():null;}catch(e){return null;}}
-async function cacheSet(key,obj){if(location.protocol==='file:'||!('caches'in self))return;try{const c=await caches.open('bbclear-v3');await c.put('/'+key,new Response(JSON.stringify(obj),{headers:{'Content-Type':'application/json'}}));}catch(e){}}
+async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))return null;try{const c=await caches.open('bbclear-v4');const r=await c.match('/'+key);return r?await r.json():null;}catch(e){return null;}}
+async function cacheSet(key,obj){if(location.protocol==='file:'||!('caches'in self))return;try{const c=await caches.open('bbclear-v4');await c.put('/'+key,new Response(JSON.stringify(obj),{headers:{'Content-Type':'application/json'}}));}catch(e){}}
 
 /* ---------- Boot (stream the full table; cache; stale-while-revalidate) ---------- */
 function fmtN(n){return n>=1000?(((n/1000).toFixed(n>=10000?0:1)).replace(/\.0$/,''))+'k':String(n);}
@@ -470,7 +470,7 @@ function setProg(loaded,total){if(!els.loadpill)return;els.loadpill.hidden=false
 function setProgDone(){if(els.loadpill)els.loadpill.hidden=true;}
 function ingest(rows){GROUPS=buildGroups(rows);populateFilters();applySort();}
 async function boot(){
-  const cacheKey='__CK__';
+  const cacheKey=TABLE;
   const cached=await cacheGet(cacheKey);
   if(cached&&Array.isArray(cached.rows)&&cached.rows.length){ingest(cached.rows);if((Date.now()-cached.t)<=CACHE_TTL)return;}
   try{
