@@ -7,42 +7,44 @@
 <link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin />
 <style>
   /* All styles scoped to .wrap so the host page's theme (background, fonts, CSS vars) is never touched. */
-  .wrap{--brand:#b91c1c;--brand-dark:#991b1b;--page-bg:#eef0f2;--card:#fff;--ink:#15171a;--muted:#6b7280;--muted-2:#9aa1ab;--line:#e6e8eb;--line-2:#eef0f2;--radius:14px;--shadow:0 1px 2px rgba(16,18,22,.06),0 4px 14px rgba(16,18,22,.05);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  .wrap{--brand:#06b6d4;--brand-dark:#0891b2;--glow:rgba(6,182,212,.28);--accent-soft:rgba(6,182,212,.14);--page-bg:#1a1028;--card:#231536;--inset:#1d1230;--surface:#2d1b45;--surface-2:#33204d;--ink:#e8e0f0;--muted:#a89bbe;--muted-2:#7a6b8f;--line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.06);--good:#6ee7b7;--good-bg:rgba(52,211,153,.16);--warn:#fcd34d;--warn-bg:rgba(251,191,36,.14);--away:#a5b4fc;--away-bg:rgba(129,140,248,.18);--radius:14px;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.28);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     max-width:1180px;margin:0 auto;padding:0 12px 48px;background:transparent;color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;}
   .wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box;}
-  .bar{position:sticky;top:0;z-index:30;background:linear-gradient(135deg,var(--brand),var(--brand-dark));margin:0 -12px;padding:10px 12px;box-shadow:0 2px 10px rgba(0,0,0,.12);}
+  .bar{position:sticky;top:0;z-index:30;background:rgba(26,16,40,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);margin:0 -12px;padding:10px 12px;border-radius:0 0 14px 14px;}
   .bar-top{display:flex;align-items:center;gap:8px;}
-  .title{font-size:15px;font-weight:700;color:#fff;margin-right:auto;display:flex;align-items:baseline;gap:8px;}
-  .title .count{font-size:11px;font-weight:600;color:rgba(255,255,255,.85);background:rgba(255,255,255,.18);padding:2px 7px;border-radius:999px;}
-  .field{background:#fff;border:none;border-radius:9px;font-family:var(--font);font-size:13px;color:var(--ink);padding:8px 10px;height:36px;}
-  .field:focus{outline:2px solid rgba(255,255,255,.65);outline-offset:1px;}
+  .title{font-size:15px;font-weight:700;color:var(--ink);margin-right:auto;display:flex;align-items:baseline;gap:8px;}
+  .title .count{font-size:11px;font-weight:600;color:var(--brand);background:var(--accent-soft);padding:2px 7px;border-radius:999px;}
+  .field{background:var(--surface);border:1px solid var(--line);border-radius:9px;font-family:var(--font);font-size:13px;color:var(--ink);padding:8px 10px;height:36px;}
+  .field::placeholder{color:var(--muted-2);}
+  .field:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px var(--glow);}
   .search{flex:1 1 130px;min-width:0;}
-  .icon-btn{height:36px;border:none;border-radius:9px;background:rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:600;padding:0 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
-  .icon-btn:hover{background:rgba(255,255,255,.26);}
-  .badge-dot{background:#fff;color:var(--brand-dark);border-radius:999px;font-size:10px;min-width:16px;height:16px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;}
+  .icon-btn{height:36px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font-size:13px;font-weight:600;padding:0 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+  .icon-btn:hover{border-color:var(--brand);color:var(--brand);}
+  .badge-dot{background:var(--brand);color:#06222a;border-radius:999px;font-size:10px;min-width:16px;height:16px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;}
   .bar-row2{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;}
-  .seg{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);border-radius:9px;padding:0 10px;height:36px;}
-  .seg label{font-size:11px;font-weight:700;color:rgba(255,255,255,.9);text-transform:uppercase;letter-spacing:.4px;}
-  .seg select{background:transparent;border:none;color:#fff;font-weight:600;font-size:13px;height:34px;max-width:230px;}
-  .seg select option,.seg select optgroup{color:var(--ink);}
-  .dir-btn{width:30px;height:30px;border-radius:7px;border:none;background:rgba(255,255,255,.22);color:#fff;font-size:13px;cursor:pointer;}
-  .tg{display:inline-flex;background:rgba(255,255,255,.16);border-radius:9px;padding:3px;gap:2px;height:36px;align-items:center;}
-  .tg button{border:none;background:transparent;color:rgba(255,255,255,.92);font-family:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:7px;cursor:pointer;white-space:nowrap;}
-  .tg button.t-on{background:#fff;color:var(--brand-dark);}
-  .tg .tg-lab{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:rgba(255,255,255,.85);padding:0 4px 0 6px;}
-  .hint{margin-top:7px;font-size:11px;font-weight:600;color:rgba(255,255,255,.85);}
-  .filters{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-top:12px;padding:14px;display:none;}
+  .seg{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:0 10px;height:36px;}
+  .seg label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+  .seg select{background:transparent;border:none;color:var(--ink);font-weight:600;font-size:13px;height:34px;max-width:230px;}
+  .seg select option,.seg select optgroup{color:var(--ink);background:var(--surface);}
+  .dir-btn{width:30px;height:30px;border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:13px;cursor:pointer;}
+  .tg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px;height:36px;align-items:center;}
+  .tg button{border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:7px;cursor:pointer;white-space:nowrap;}
+  .tg button.t-on{background:var(--brand);color:#06222a;}
+  .tg .tg-lab{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);padding:0 4px 0 6px;}
+  .hint{margin-top:7px;font-size:11px;font-weight:600;color:var(--muted);}
+  .filters{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-top:12px;padding:14px;display:none;}
   .filters.open{display:block;}
   .filters-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 12px;}
   .fg{display:flex;flex-direction:column;gap:5px;}
   .fg>label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
-  .fg select,.fg input{background:#fff;border:1px solid var(--line);border-radius:8px;font-family:var(--font);font-size:13px;color:var(--ink);padding:8px 9px;height:36px;}
-  .fg select:focus,.fg input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px rgba(185,28,28,.18);}
+  .fg select,.fg input{background:var(--surface);border:1px solid var(--line);border-radius:8px;font-family:var(--font);font-size:13px;color:var(--ink);padding:8px 9px;height:36px;}
+  .fg select:focus,.fg input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 2px var(--glow);}
+  .fg select option{background:var(--surface);color:var(--ink);}
   .fg-range{display:flex;gap:6px;}
   .fg-range input{flex:1;min-width:0;width:100%;}
   .filters-foot{display:flex;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-2);}
   .clear-btn{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;font-size:12px;font-weight:600;padding:7px 12px;cursor:pointer;}
-  .clear-btn:hover{border-color:var(--brand);color:var(--brand-dark);}
+  .clear-btn:hover{border-color:var(--brand);color:var(--brand);}
   .grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px;}
   @media (min-width:680px){.grid{grid-template-columns:repeat(2,1fr);}}
   @media (min-width:1020px){.grid{grid-template-columns:repeat(3,1fr);}}
@@ -53,18 +55,18 @@
   .c-name{font-size:15px;font-weight:700;line-height:1.2;}
   .c-sub{margin-top:4px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .tag{font-weight:700;color:var(--ink);background:var(--line-2);border-radius:5px;padding:1px 5px;font-size:10.5px;letter-spacing:.3px;}
-  .tag.lu.conf{background:#dcfce7;color:#15803d;}
-  .tag.lu.proj{background:#fef9c3;color:#a16207;}
+  .tag.lu.conf{background:var(--good-bg);color:var(--good);}
+  .tag.lu.proj{background:var(--warn-bg);color:var(--warn);}
   .bet-line{margin:10px 14px 0;font-size:13.5px;font-weight:600;}
   .bet-line .side{font-weight:700;}
   /* 2x2 clearance grid — the anchor + the sort control */
   .cgrid{margin:11px 14px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px;}
-  .cell{appearance:none;border:1px solid var(--line);background:var(--cbg,#f3f4f6);border-radius:10px;padding:7px 9px 6px;text-align:left;cursor:pointer;font-family:inherit;color:var(--ink);transition:box-shadow .12s ease;}
+  .cell{appearance:none;border:1px solid var(--line);background:var(--cbg,var(--surface));border-radius:10px;padding:7px 9px 6px;text-align:left;cursor:pointer;font-family:inherit;color:var(--ink);transition:box-shadow .12s ease;}
   .cell .cl{font-size:8.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);}
   .cell .cv{font-size:18px;font-weight:800;line-height:1.05;color:var(--cfg,var(--ink));margin-top:1px;}
   .cell .cg{font-size:10px;color:var(--muted);font-weight:600;}
-  .cell.active{border-color:var(--brand);box-shadow:0 0 0 2px rgba(185,28,28,.28);}
-  .cell.empty{cursor:default;background:#f6f7f8;opacity:.7;}
+  .cell.active{border-color:var(--brand);box-shadow:0 0 0 2px var(--glow);}
+  .cell.empty{cursor:default;background:var(--surface);opacity:.7;}
   .cell.empty .cv{color:var(--muted-2);}
   @media (prefers-reduced-motion:reduce){.cell{transition:none;}}
   .odds{margin:11px 14px 0;display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line-2);border-radius:9px;overflow:hidden;}
@@ -76,14 +78,14 @@
   .expand-row{display:flex;align-items:center;justify-content:space-between;margin:11px 14px 13px;}
   .matchup-mini{font-size:11.5px;color:var(--muted);}
   .matchup-mini b{color:var(--ink);font-weight:700;}
-  .exp-btn{background:none;border:1px solid var(--line);color:var(--brand-dark);font-weight:700;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;}
+  .exp-btn{background:none;border:1px solid var(--line);color:var(--brand);font-weight:700;font-size:12px;border-radius:8px;padding:6px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;}
   .exp-btn .car{transition:transform .15s ease;}
   @media (prefers-reduced-motion:reduce){.exp-btn .car{transition:none;}}
   .card.open .exp-btn .car{transform:rotate(180deg);}
-  .detail{display:none;border-top:1px solid var(--line-2);background:#fbfbfc;padding:6px 14px 14px;}
+  .detail{display:none;border-top:1px solid var(--line);background:var(--inset);padding:6px 14px 14px;}
   .card.open .detail{display:block;}
   .panel{margin-top:12px;}
-  .panel-h{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--brand-dark);margin:0 0 6px;}
+  .panel-h{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--brand);margin:0 0 6px;}
   table.mini{width:100%;border-collapse:collapse;font-size:11.5px;}
   table.mini th,table.mini td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line-2);}
   table.mini th:first-child,table.mini td:first-child{text-align:left;color:var(--muted);font-weight:600;}
@@ -95,12 +97,12 @@
   .wx{font-size:11px;color:var(--ink);display:flex;flex-direction:column;gap:2px;margin-top:6px;}
   .state{text-align:center;padding:60px 20px;color:var(--muted);}
   .state h3{color:var(--ink);margin:0 0 6px;font-size:16px;}
-  .state code{background:#fff;border:1px solid var(--line);padding:1px 5px;border-radius:4px;}
+  .state code{background:var(--surface);border:1px solid var(--line);padding:1px 5px;border-radius:4px;}
   .spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;margin:0 auto 14px;animation:spin .7s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
   @media (prefers-reduced-motion:reduce){.spinner{animation-duration:1.6s;}}
   .sentinel{height:1px;}
-  .loadpill{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--brand-dark);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.22);z-index:50;}
+  .loadpill{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--surface);color:var(--ink);border:1px solid var(--line);font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:50;}
 </style>
 </head>
 <body>
@@ -155,7 +157,7 @@
       <div class="filters-foot"><button class="clear-btn" id="clearFilters">Clear all</button></div>
     </div>
 
-    <div id="content"><div class="state"><div class="spinner"></div><p>Loading clearances…</p></div></div>
+    <div id="content"><div class="state"><div class="spinner"></div><p>Loading…</p></div></div>
     <div class="grid" id="grid" hidden></div>
     <div class="sentinel" id="sentinel"></div>
     <div class="loadpill" id="loadpill" hidden></div>
@@ -163,7 +165,7 @@
 
 <script>
 /* ============================================================
-   CONFIG — public anon key. RLS on this table should be SELECT-only.
+   CONFIG — public anon key. Read-only public access.
    ============================================================ */
 const SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
@@ -173,7 +175,7 @@ const BATCH = 24;
 const PAGE_SIZE = 1000;
 const MAX_PARALLEL = 6;
 
-const TEAM_NAME_MAP = {'Arizona Diamondbacks':'ARI','Atlanta Braves':'ATL','Baltimore Orioles':'BAL','Boston Red Sox':'BOS','Chicago Cubs':'CHC','Chicago White Sox':'CHW','Cincinnati Reds':'CIN','Cleveland Guardians':'CLE','Colorado Rockies':'COL','Detroit Tigers':'DET','Houston Astros':'HOU','Kansas City Royals':'KC','Los Angeles Angels':'LAA','Los Angeles Dodgers':'LAD','Miami Marlins':'MIA','Milwaukee Brewers':'MIL','Minnesota Twins':'MIN','New York Mets':'NYM','New York Yankees':'NYY','Athletics':'ATH','Philadelphia Phillies':'PHI','Pittsburgh Pirates':'PIT','San Diego Padres':'SD','San Francisco Giants':'SF','Seattle Mariners':'SEA','St. Louis Cardinals':'STL','Tampa Bay Rays':'TB','Texas Rangers':'TEX','Toronto Blue Jays':'TOR','Washington Nationals':'WSH'};
+const TEAM_NAME_MAP = {'Arizona Diamondbacks':'ARI','Atlanta Braves':'ATL','Baltimore Orioles':'BAL','Boston Red Sox':'BOS','Chicago Cubs':'CHC','Chicago White Sox':'CHW','Cincinnati Reds':'CIN','Cleveland Guardians':'CLE','Colorado Rockies':'COL','Detroit Tigers':'DET','Houston Astros':'HOU','Kansas City Royals':'KCR','Los Angeles Angels':'LAA','Los Angeles Dodgers':'LAD','Miami Marlins':'MIA','Milwaukee Brewers':'MIL','Minnesota Twins':'MIN','New York Mets':'NYM','New York Yankees':'NYY','Athletics':'ATH','Philadelphia Phillies':'PHI','Pittsburgh Pirates':'PIT','San Diego Padres':'SDP','San Francisco Giants':'SFG','Seattle Mariners':'SEA','St. Louis Cardinals':'STL','Tampa Bay Rays':'TBR','Texas Rangers':'TEX','Toronto Blue Jays':'TOR','Washington Nationals':'WSN'};
 const TEAM_LC = Object.fromEntries(Object.entries(TEAM_NAME_MAP).map(([k,v])=>[k.toLowerCase(),v]));
 const MATCHUP_RE = new RegExp(Object.keys(TEAM_NAME_MAP).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'gi');
 const PROP_ABBR = {'Strikeouts':'K','Outs':'Outs','Outs Recorded':'Outs','Pitching Outs':'Outs','Hits Allowed':'Hits','Walks':'BB','Earned Runs':'ER','Win':'Win','Record a Win':'Win'};
@@ -205,7 +207,9 @@ const raw = v=>{if(v==null)return '–';const s=String(v).trim();return s===''?'
 const fmtAvg = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};
 const fmtRate = v=>{if(v==null)return '–';const s=String(v).trim();if(s==='')return '–';return s.replace(/^(-?)0\.(?=\d)/,'$1.');};
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const abbrTeam = v=>!v?'':(TEAM_NAME_MAP[v]||v);
+const CODE_ALIAS={SD:'SDP',SF:'SFG',TB:'TBR',WSH:'WSN',KC:'KCR',CWS:'CHW'};
+const canonTeam=c=>{const u=String(c||'').trim().toUpperCase();return CODE_ALIAS[u]||u;};
+const abbrTeam=v=>{if(!v)return '';const s=String(v).trim();return TEAM_NAME_MAP[s]||canonTeam(s);};
 const abbrProp = v=>!v?'':(PROP_ABBR[v]||v);
 const abbrMatchup = v=>!v?'':String(v).split(',')[0].replace(MATCHUP_RE,m=>TEAM_LC[m.toLowerCase()]||m);
 const order = v=>{const m=String(v||'').match(/\((\d+)\)/);return m?m[1]:null;};
@@ -213,7 +217,7 @@ const lineupTag = v=>{if(!v)return '';const st=/proj/i.test(v)?'Proj':(/conf/i.t
 const fmtPark = v=>!v?'–':String(v).replace(/\((\d+)\)/g,' (#$1)');
 const titleCase = s=>String(s).replace(/\b\w/g,c=>c.toUpperCase());
 const capWx = w=>{const parts=String(w).split('|');if(parts.length)parts[parts.length-1]=titleCase(parts[parts.length-1]);return parts.join('|');};
-function clrColors(p){if(p==null)return{edge:'var(--line)',bg:'#f3f4f6',fg:'#6b7280'};if(p<25)return{edge:'#fca5a5',bg:'#fef2f2',fg:'#dc2626'};if(p<40)return{edge:'#fed7aa',bg:'#fff7ed',fg:'#c2410c'};if(p<55)return{edge:'#fde68a',bg:'#fefce8',fg:'#a16207'};if(p<70)return{edge:'#86efac',bg:'#dcfce7',fg:'#15803d'};return{edge:'#16a34a',bg:'#bbf7d0',fg:'#14532d'};}
+function clrColors(p){if(p==null)return{edge:'var(--line)',bg:'rgba(255,255,255,.05)',fg:'#7a6b8f'};if(p<25)return{edge:'#f87171',bg:'rgba(248,113,113,.16)',fg:'#fca5a5'};if(p<40)return{edge:'#fb923c',bg:'rgba(251,146,60,.16)',fg:'#fdba74'};if(p<55)return{edge:'#fbbf24',bg:'rgba(251,191,36,.15)',fg:'#fcd34d'};if(p<70)return{edge:'#34d399',bg:'rgba(52,211,153,.16)',fg:'#6ee7b7'};return{edge:'#10b981',bg:'rgba(16,185,129,.24)',fg:'#34d399'};}
 
 /* ---------- Data ---------- */
 function buildQuery(lean){const select=lean?[...new Set(Object.values(F))].map(c=>`"${c}"`).join(','):'*';return `${SUPABASE_URL}/rest/v1/${TABLE}?select=${encodeURIComponent(select)}`;}
@@ -451,7 +455,7 @@ async function cacheSet(key,obj){if(location.protocol==='file:'||!('caches'in se
 
 /* ---------- Boot (stream the full table; cache; stale-while-revalidate) ---------- */
 function fmtN(n){return n>=1000?(((n/1000).toFixed(n>=10000?0:1)).replace(/\.0$/,''))+'k':String(n);}
-function setProg(loaded,total){if(!els.loadpill)return;els.loadpill.hidden=false;els.loadpill.textContent=total?`Loading ${fmtN(loaded)} / ${fmtN(total)} rows…`:`Loading ${fmtN(loaded)} rows…`;}
+function setProg(loaded,total){if(!els.loadpill)return;els.loadpill.hidden=false;els.loadpill.textContent='Loading…';}
 function setProgDone(){if(els.loadpill)els.loadpill.hidden=true;}
 function ingest(rows){GROUPS=buildGroups(rows);populateFilters();applySort();}
 async function boot(){
@@ -468,15 +472,13 @@ async function boot(){
     if(!GROUPS.length){
       els.grid.hidden=true;els.content.hidden=false;
       els.content.innerHTML = rows.length
-        ? `<div class="state"><h3>Fetched ${rows.length} rows, but grouped 0</h3><p>Data came back but didn't match the expected columns (Player / Prop / Line / Time Period / Stat Split). First-row keys are logged to the console.</p></div>`
-        : `<div class="state"><h3>0 rows returned</h3><p>The query to <code>${esc(TABLE)}</code> succeeded but returned no rows — most likely row-level security on that table isn't exposing rows to the anon role. Check the RLS policy in Supabase.</p></div>`;
-      if(rows.length) console.log('[diag] first row keys:',Object.keys(rows[0]));
+        ? `<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`
+        : `<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`;
       return;
     }
-    console.log(`[load] pulled ${rows.length} rows -> ${GROUPS.length} cards`);
     cacheSet(cacheKey,{t:Date.now(),rows});
   }
-  catch(err){setProgDone();if(!GROUPS.length){els.content.innerHTML=`<div class="state"><h3>Couldn't load data</h3><p>Check the table name (currently <code>${esc(TABLE)}</code>).<br>${esc(err.message)}</p></div>`;els.content.hidden=false;}}
+  catch(err){setProgDone();if(!GROUPS.length){els.content.innerHTML=`<div class="state"><h3>Couldn't load right now</h3><p>Please refresh in a moment.</p></div>`;els.content.hidden=false;}}
 }
 boot();
 </script>
