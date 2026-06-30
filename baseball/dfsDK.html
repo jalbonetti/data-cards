@@ -458,7 +458,7 @@ function detailHTML(g){
       <div class="note-sm">Each row is that reliever group's results vs ${esc(batsLbl)}.</div></div>`;
   }else{
     const myHand=g.hand==='L'?'L':g.hand==='R'?'R':null;
-    const vsLbl=myHand?('vs '+myHand+'HB'):'vs hand';
+    const vsLbl=myHand?('vs '+myHand+'HP'):'vs hand';
     const sw=(g.luNS&&String(g.luNS)!=='0')?(' / '+raw(g.luNS)+' S'):'';
     oppPanel=`
     <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.luNL)} LHB / ${raw(g.luNR)} RHB${sw}</div>
