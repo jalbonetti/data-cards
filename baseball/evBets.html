@@ -378,6 +378,8 @@ async function fetchPage(url, offset, extraHeaders, limit){
   return { rows: await res.json(), contentRange: res.headers.get('content-range') };
 }
 
+/* count-only probe used to confirm the table isn't mid-upload */
+async function countOnly(url){try{const r=await fetchPage(url,0,{Prefer:'count=exact'},1);const m=/\/(\d+)$/.exec(r.contentRange||'');return m?parseInt(m[1],10):null;}catch(e){return null;}}
 async function fetchAll(table, onFirst){
   let lean = true, url = buildQuery(table, true), first;
   try {
@@ -396,7 +398,7 @@ async function fetchAll(table, onFirst){
   const total = m ? parseInt(m[1], 10) : (first.rows.length < PAGE_SIZE ? first.rows.length : null);
 
   if (onFirst && out.length) onFirst(out, total);
-  if (ps === 0 || (total != null && out.length >= total) || (total == null && first.rows.length < PAGE_SIZE)) return out;
+  if (ps === 0 || (total != null && out.length >= total) || (total == null && first.rows.length < PAGE_SIZE)) return {rows:out, total, url};
 
   if (total != null) {
     // Known total → fire remaining pages in parallel, stepping by the real page size
@@ -420,7 +422,22 @@ async function fetchAll(table, onFirst){
       more = rows.length === ps; offset += ps;
     }
   }
-  return out;
+  return {rows:out, total, url};
+}
+
+/* Load the full table, retrying if we catch it mid-upload. A stable table reports the
+   same count before and after paging through it and the rows match that count; a table
+   being wiped/refilled doesn't. Only a passing read is treated as complete/cacheable. */
+async function fetchVerified(table, onFirst){
+  const TRIES=4; let last=[];
+  for(let t=0;t<TRIES;t++){
+    const {rows,total,url}=await fetchAll(table, t===0?onFirst:undefined);
+    last=rows;
+    const after=await countOnly(url);
+    if(total!=null && rows.length===total && after===total) return {rows, complete:true};
+    await new Promise(r=>setTimeout(r, 400*(t+1)));   // caught mid-upload — back off and retry
+  }
+  return {rows:last, complete:false};
 }
 
 function normalize(rows) {
@@ -684,19 +701,22 @@ async function boot(){
 
   const cached = await cacheGet(cacheKey);
   if (seq !== bootSeq) return;
-  if (cached && Array.isArray(cached.rows) && cached.rows.length){
+  const warm = cached && Array.isArray(cached.rows) && cached.rows.length;
+  if (warm){
     ingest(cached.rows);
     if ((Date.now() - cached.t) <= CACHE_TTL) return;
   }
 
   try {
-    const rows = await fetchAll(table, (firstPage)=>{
-      // Page 1 arrives ordered by EV desc — render it immediately
-      if (seq === bootSeq && !RAW.length) ingest(firstPage);
+    const { rows, complete } = await fetchVerified(table, (firstPage)=>{
+      // Page 1 arrives ordered by EV desc — render immediately (cold load only)
+      if (seq === bootSeq && !warm && !RAW.length) ingest(firstPage);
     });
     if (seq !== bootSeq) return;
-    ingest(rows);                        // render full set — never blocked by caching
-    cacheSet(cacheKey, { t: Date.now(), rows });
+    if (complete) ingest(rows);          // verified full read → adopt it
+    else if (!warm) ingest(rows);        // cold load we couldn't verify → show it, but don't cache
+    // (!complete && warm) → leave the good cached view untouched
+    if (complete && rows.length) cacheSet(cacheKey, { t: Date.now(), rows });   // only cache a verified full read
   } catch(err){
     if (seq !== bootSeq) return;
     if (!RAW.length){
