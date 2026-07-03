@@ -240,9 +240,9 @@ let filters = newFilters();
 const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),modeToggle:document.getElementById('modeToggle'),basisToggle:document.getElementById('basisToggle'),titleText:document.getElementById('titleText')};
 
 /* ---------- Filters: persistence + multi-select + positions (#9/#10/#11) ---------- */
-function fkey(){return 'bbf_'+BOOK+'_'+mode;}
-function saveFilters(){try{const o={search:filters.search};CAT.forEach(k=>o[k]=[...filters[k]]);NUM.forEach(k=>o[k]=filters[k]);sessionStorage.setItem(fkey(),JSON.stringify(o));}catch(e){}}
-function loadFilters(){filters=newFilters();try{const raw=sessionStorage.getItem(fkey());if(raw){const o=JSON.parse(raw);if(o&&o.search!=null)filters.search=o.search;CAT.forEach(k=>{if(o&&Array.isArray(o[k]))filters[k]=new Set(o[k]);});NUM.forEach(k=>{if(o&&o[k]!=null)filters[k]=o[k];});}}catch(e){}}
+const MODE_FILTERS={};   /* in-memory only: filters persist across tab/mode switches within a page load, but reset on a real (re)load */
+function saveFilters(){MODE_FILTERS[mode]=filters;}
+function loadFilters(){filters = MODE_FILTERS[mode] || newFilters();}
 
 const POS_SLOTS = BOOK==='FD'
   ? [['C/1B',['C','1B']],['2B',['2B']],['3B',['3B']],['SS',['SS']],['OF',['OF']]]
@@ -409,7 +409,7 @@ function populateFilters(){
   MS.team.setOptions(uniq(g=>g.team).sort());
   MS.hand.setOptions(uniq(g=>g.hand).sort());
   if(mode==='batter'){ POS_ACTIVE=POS_SLOTS; MS.pos.setOptions(POS_SLOTS.map(x=>x[0])); }
-  else{ const seen=new Set(); GROUPS.forEach(g=>playerPositions(g.pos).forEach(x=>seen.add(x))); const labels=[...seen].sort(); POS_ACTIVE=labels.map(x=>[x,[x]]); MS.pos.setOptions(labels); }
+  else{ filters.pos.clear(); POS_ACTIVE=[]; MS.pos.setOptions([]); }   // pitchers: position filter removed
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=filters[k]||'';});
   els.search.value=filters.search||'';
 }
@@ -577,6 +577,8 @@ els.basisToggle.addEventListener('click',e=>{const btn=e.target.closest('button[
 function applyModeUI(){
   els.titleText.textContent=BOOK_NAME+' DFS · '+M().title;
   const hl=document.querySelector('[data-hand-label]'); if(hl) hl.textContent=M().handLabel;
+  const posEl=document.querySelector('.ms[data-ms="pos"]'), posFg=posEl&&posEl.closest('.fg');
+  if(posFg) posFg.style.display=(mode==='batter')?'':'none';   // no meaningful position filter for pitchers
 }
 els.modeToggle.addEventListener('click',e=>{
   const btn=e.target.closest('button[data-mode]'); if(!btn) return;
