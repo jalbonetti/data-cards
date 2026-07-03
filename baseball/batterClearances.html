@@ -225,6 +225,9 @@ function clrColors(p){if(p==null)return{edge:'var(--line)',bg:'rgba(255,255,255,
 /* ---------- Data ---------- */
 function buildQuery(lean){const select=lean?[...new Set(Object.values(F))].map(c=>`"${c}"`).join(','):'*';return `${SUPABASE_URL}/rest/v1/${TABLE}?select=${encodeURIComponent(select)}`;}
 async function fetchPage(url,offset,extra,limit){const lim=limit||PAGE_SIZE;const res=await fetch(url,{headers:{apikey:ANON_KEY,Authorization:"Bearer "+ANON_KEY,Accept:"application/json",'Range-Unit':'items',Range:`${offset}-${offset+lim-1}`,...extra}});if(!res.ok){const e=new Error(`Supabase ${res.status}`);e.status=res.status;throw e;}return {rows:await res.json(),contentRange:res.headers.get('content-range')};}
+/* count-only probe (no rows) used to confirm the table isn't mid-upload */
+let _lastTotal=null,_lastUrl='';
+async function countOnly(url){try{const res=await fetch(url,{headers:{apikey:ANON_KEY,Authorization:"Bearer "+ANON_KEY,Accept:"application/json",'Range-Unit':'items',Range:'0-0',Prefer:'count=exact'}});const m=/\/(\d+)$/.exec(res.headers.get('content-range')||'');return m?parseInt(m[1],10):null;}catch(e){return null;}}
 async function fetchAll(cb){
   let url=buildQuery(false), first;
   try{first=await fetchPage(url,0,{Prefer:'count=exact'},PAGE_SIZE);}
@@ -232,6 +235,7 @@ async function fetchAll(cb){
   const ps=first.rows.length||PAGE_SIZE;                       // real page size the server allows (cap-proof)
   const m=/\/(\d+)$/.exec(first.contentRange||'');
   const total=m?parseInt(m[1],10):(first.rows.length<PAGE_SIZE?first.rows.length:null);
+  _lastTotal=total; _lastUrl=url;
   let out=first.rows.slice();
   if(cb)cb(out,total,true,out.length);                         // paint first page immediately
   if(ps===0||(total!=null&&out.length>=total)||(total==null&&first.rows.length<PAGE_SIZE))return out;
@@ -244,6 +248,23 @@ async function fetchAll(cb){
     let offset=ps;while(true){const r=await fetchPage(url,offset,{},ps);out=out.concat(r.rows);if(cb)cb(null,null,false,out.length);if(r.rows.length<ps)break;offset+=ps;}
   }
   return out;
+}
+
+/* Load the full table, retrying if we catch it mid-upload. A stable table reports
+   the same count before and after we page through it and the assembled rows match
+   that count; a table being wiped/refilled does not. Only a read that passes is
+   treated as complete (and therefore cacheable). */
+async function fetchVerified(cb){
+  const TRIES=4; let last=[];
+  for(let t=0;t<TRIES;t++){
+    const rows=await fetchAll(t===0?cb:null);   // stream-paint only on the first attempt
+    last=rows;
+    const total=_lastTotal;
+    const after=await countOnly(_lastUrl);
+    if(total!=null && rows.length===total && after===total) return {rows, complete:true};
+    await new Promise(r=>setTimeout(r, 400*(t+1)));   // caught mid-upload — back off and retry
+  }
+  return {rows:last, complete:false};
 }
 
 /* ---------- Grouping ---------- */
@@ -472,22 +493,25 @@ function ingest(rows){GROUPS=buildGroups(rows);populateFilters();applySort();}
 async function boot(){
   const cacheKey=TABLE;
   const cached=await cacheGet(cacheKey);
-  if(cached&&Array.isArray(cached.rows)&&cached.rows.length){ingest(cached.rows);if((Date.now()-cached.t)<=CACHE_TTL)return;}
+  const warm=cached&&Array.isArray(cached.rows)&&cached.rows.length;
+  if(warm){ingest(cached.rows);if((Date.now()-cached.t)<=CACHE_TTL)return;}
   try{
-    const rows=await fetchAll((firstRows,total,isFirst,loaded)=>{
-      if(isFirst&&firstRows&&firstRows.length) ingest(firstRows);   // first page paints right away
-      setProg(loaded,total);                                        // rest streams in, counter ticks up
-    });
-    ingest(rows);
+    // stream-paint only on a cold load; on revalidate keep the cached view until a verified read lands
+    const cb=(firstRows,total,isFirst,loaded)=>{
+      if(!warm&&isFirst&&firstRows&&firstRows.length) ingest(firstRows);
+      setProg(loaded,total);
+    };
+    const {rows,complete}=await fetchVerified(warm?null:cb);
     setProgDone();
+    if(complete) ingest(rows);                 // verified full read → adopt it
+    else if(!warm) ingest(rows);               // cold load we couldn't verify → show it, but don't cache
+    // (!complete && warm) → leave the good cached view untouched
     if(!GROUPS.length){
       els.grid.hidden=true;els.content.hidden=false;
-      els.content.innerHTML = rows.length
-        ? `<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`
-        : `<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`;
+      els.content.innerHTML=`<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`;
       return;
     }
-    cacheSet(cacheKey,{t:Date.now(),rows});
+    if(complete&&rows.length) cacheSet(cacheKey,{t:Date.now(),rows});   // only cache a verified full read
   }
   catch(err){setProgDone();if(!GROUPS.length){els.content.innerHTML=`<div class="state"><h3>Couldn't load right now</h3><p>Please refresh in a moment.</p></div>`;els.content.hidden=false;}}
 }
