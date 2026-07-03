@@ -272,7 +272,7 @@ async function fetchAll(cb){
   const total=m?parseInt(m[1],10):(first.rows.length<PAGE_SIZE?first.rows.length:null);
   let out=first.rows.slice();
   if(cb)cb(out,total,true,out.length);
-  if(ps===0||(total!=null&&out.length>=total)||(total==null&&first.rows.length<PAGE_SIZE))return out;
+  if(ps===0||(total!=null&&out.length>=total)||(total==null&&first.rows.length<PAGE_SIZE))return {rows:out, total, url};
   if(total!=null){
     const offsets=[];for(let o=ps;o<total;o+=ps)offsets.push(o);
     const results=new Array(offsets.length);let i=0,loaded=out.length;
@@ -281,7 +281,7 @@ async function fetchAll(cb){
   }else{
     let offset=ps;while(true){const r=await fetchPage(url,offset,{},ps);out=out.concat(r.rows);if(cb)cb(null,null,false,out.length);if(r.rows.length<ps)break;offset+=ps;}
   }
-  return out;
+  return {rows:out, total, url};
 }
 
 /* ---------- Grouping ---------- */
@@ -531,26 +531,43 @@ function fmtN(n){return n>=1000?(((n/1000).toFixed(n>=10000?0:1)).replace(/\.0$/
 function setProg(loaded,total){if(!els.loadpill)return;els.loadpill.hidden=false;els.loadpill.textContent='Loading…';}
 function setProgDone(){if(els.loadpill)els.loadpill.hidden=true;}
 function ingest(rows){GROUPS=buildGroups(rows);populateFilters();applySort();}
+/* count-only probe used to confirm the table isn't mid-upload */
+async function countOnly(url){try{const r=await fetchPage(url,0,{Prefer:'count=exact'},1);const m=/\/(\d+)$/.exec(r.contentRange||'');return m?parseInt(m[1],10):null;}catch(e){return null;}}
+/* Load the full table, retrying if we catch it mid-upload (count unstable / rows != count). */
+async function fetchVerified(cb){
+  const TRIES=4; let last=[];
+  for(let t=0;t<TRIES;t++){
+    const {rows,total,url}=await fetchAll(t===0?cb:null);
+    last=rows;
+    const after=await countOnly(url);
+    if(total!=null && rows.length===total && after===total) return {rows, complete:true};
+    await new Promise(r=>setTimeout(r, 400*(t+1)));
+  }
+  return {rows:last, complete:false};
+}
 async function boot(){
   const seq=++bootSeq;
   const table=M().table, cacheKey='bbdfs_'+BOOK+'_'+mode;
   const cached=await cacheGet(cacheKey);
   if(seq!==bootSeq)return;
-  if(cached&&Array.isArray(cached.rows)&&cached.rows.length){ingest(cached.rows);if((Date.now()-cached.t)<=CACHE_TTL)return;}
+  const warm=cached&&Array.isArray(cached.rows)&&cached.rows.length;
+  if(warm){ingest(cached.rows);if((Date.now()-cached.t)<=CACHE_TTL)return;}
   try{
-    const rows=await fetchAll((firstRows,total,isFirst,loaded)=>{
+    const {rows,complete}=await fetchVerified((firstRows,total,isFirst,loaded)=>{
       if(seq!==bootSeq)return;
-      if(isFirst&&firstRows&&firstRows.length&&!GROUPS.length) ingest(firstRows);
+      if(!warm&&isFirst&&firstRows&&firstRows.length&&!GROUPS.length) ingest(firstRows);
       setProg(loaded,total);
     });
     if(seq!==bootSeq)return;
-    ingest(rows); setProgDone();
+    if(complete) ingest(rows);
+    else if(!warm) ingest(rows);
+    setProgDone();
     if(!GROUPS.length){
       els.grid.hidden=true;els.content.hidden=false;
       els.content.innerHTML = `<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`;
       return;
     }
-    cacheSet(cacheKey,{t:Date.now(),rows});
+    if(complete&&rows.length) cacheSet(cacheKey,{t:Date.now(),rows});
   }catch(err){
     if(seq!==bootSeq)return;
     setProgDone();
