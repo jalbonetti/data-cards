@@ -10,7 +10,8 @@
   .wrap{--brand:#06b6d4;--brand-dark:#0891b2;--glow:rgba(6,182,212,.28);--accent-soft:rgba(6,182,212,.14);--page-bg:#1a1028;--card:#231536;--inset:#1d1230;--surface:#2d1b45;--surface-2:#33204d;--ink:#e8e0f0;--muted:#a89bbe;--muted-2:#7a6b8f;--line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.06);--good:#6ee7b7;--good-bg:rgba(52,211,153,.16);--warn:#fcd34d;--warn-bg:rgba(251,191,36,.14);--away:#a5b4fc;--away-bg:rgba(129,140,248,.18);--radius:14px;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.28);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     max-width:1180px;margin:0 auto;padding:0 12px 48px;background:transparent;color:var(--ink);font-family:var(--font);-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;}
   .wrap,.wrap *,.wrap *::before,.wrap *::after{box-sizing:border-box;}
-  .bar{position:sticky;top:0;z-index:30;background:rgba(26,16,40,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);margin:0 -12px;padding:10px 12px;border-radius:0 0 14px 14px;}
+  .hdr{position:sticky;top:0;z-index:30;}
+  .bar{background:rgba(26,16,40,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);margin:0 -12px;padding:10px 12px;border-radius:0 0 14px 14px;}
   .bar-top{display:flex;align-items:center;gap:8px;}
   .title{font-size:15px;font-weight:700;color:var(--ink);margin-right:auto;display:flex;align-items:baseline;gap:8px;}
   .title .count{font-size:11px;font-weight:600;color:var(--brand);background:var(--accent-soft);padding:2px 7px;border-radius:999px;}
@@ -114,6 +115,7 @@
 </head>
 <body>
   <div class="wrap">
+    <div class="hdr">
     <div class="bar">
       <div class="bar-top">
         <div class="title"><span id="titleText">FanDuel DFS · Batters</span> <span class="count" id="count">—</span></div>
@@ -159,6 +161,7 @@
         <div class="fg"><label>Min value <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(pts per $1k)</span></label><input type="number" data-filter="valMin" inputmode="decimal" placeholder="e.g. 2.5" /></div>
       </div>
       <div class="filters-foot"><button class="clear-btn" id="clearFilters">Clear all</button></div>
+    </div>
     </div>
 
     <div id="content"><div class="state"><div class="spinner"></div><p>Loading…</p></div></div>
