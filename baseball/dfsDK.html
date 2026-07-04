@@ -151,7 +151,7 @@
           <button data-basis="high" aria-pressed="false">High</button>
         </div>
       </div>
-      <div class="hint">Ranked by value (projected pts per $1k salary), using the Median or High projection. Tap a split square to rank by it — the in-card stats switch to that window &amp; split.</div>
+      <div class="hint">Ranked by value (points per $1k salary), using the Median or High figure. Tap a split square to rank by it — the in-card stats switch to that window &amp; split.</div>
     </div>
 
     <div class="filters" id="filters">
@@ -165,7 +165,7 @@
             <input type="number" data-filter="prMax" inputmode="numeric" placeholder="Max" />
           </div>
         </div>
-        <div class="fg"><label>Min projected pts <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(ranked split)</span></label><input type="number" data-filter="projMin" inputmode="decimal" placeholder="e.g. 8" /></div>
+        <div class="fg"><label>Min points <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(ranked split)</span></label><input type="number" data-filter="projMin" inputmode="decimal" placeholder="e.g. 8" /></div>
         <div class="fg"><label>Min value <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(pts per $1k)</span></label><input type="number" data-filter="valMin" inputmode="decimal" placeholder="e.g. 2.5" /></div>
         <div class="fg"><label>Min games <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(season)</span></label><input type="number" data-filter="gMin" inputmode="numeric" placeholder="e.g. 20" /></div>
       </div>
@@ -488,7 +488,7 @@ function cardHTML(g){
     <div class="odds dfsref">
       <div class="o"><div class="k">Pos</div><div class="v">${esc(g.pos||'–')}</div><div class="b">&nbsp;</div></div>
       <div class="o"><div class="k">Price</div><div class="v">${fmtPrice(g.price)}</div><div class="b">&nbsp;</div></div>
-      <div class="o"><div class="k">Proj</div><div class="v">${projOf(av)!=null?fmtAvg(projOf(av)):'–'}</div><div class="b">pts</div></div>
+      <div class="o"><div class="k">Pts</div><div class="v">${projOf(av)!=null?fmtAvg(projOf(av)):'–'}</div><div class="b">pts</div></div>
       <div class="o"><div class="k">Rost</div><div class="v">${fmtRost(g.rostership)}</div><div class="b">&nbsp;</div></div>
     </div>
     <div class="cgrid">
