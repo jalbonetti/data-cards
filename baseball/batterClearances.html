@@ -499,11 +499,10 @@ function detailHTML(g){
       </tbody></table></div>
     <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.lefties)} LH / ${raw(g.righties)} RH</div>
       <table class="mini"><thead><tr><th></th><th>Tot</th><th>Rate</th></tr></thead><tbody>
-        <tr><td>LH relievers</td><td>${raw(g.bpLTotal)}</td><td>${fmtRate(g.bpL)}</td></tr>
-        <tr><td>RH relievers</td><td>${raw(g.bpRTotal)}</td><td>${fmtRate(g.bpR)}</td></tr>
-        <tr><td>Combined</td><td>${raw(g.bpCTotal)}</td><td>${fmtRate(g.bpC)}</td></tr>
-      </tbody></table>
-      <div class="note-sm">Each row is that reliever group's results vs ${esc(batsLbl)}.</div></div>
+        <tr><td>LH relievers vs ${esc(batsLbl)}</td><td>${raw(g.bpLTotal)}</td><td>${fmtRate(g.bpL)}</td></tr>
+        <tr><td>RH relievers vs ${esc(batsLbl)}</td><td>${raw(g.bpRTotal)}</td><td>${fmtRate(g.bpR)}</td></tr>
+        <tr><td>Combined vs ${esc(batsLbl)}</td><td>${raw(g.bpCTotal)}</td><td>${fmtRate(g.bpC)}</td></tr>
+      </tbody></table></div>
     <div class="panel"><div class="panel-h">Environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread||'–')}</span>
         <span class="k">Total</span><span class="v">${esc(g.total||'–')}</span>
