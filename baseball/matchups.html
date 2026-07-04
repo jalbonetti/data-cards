@@ -299,7 +299,14 @@ function buildCards(games,batters,starters,bullpen){
       cards.push(card); GMAP.set(card.key,card);
     }
   }
-  cards.sort((a,b)=> a.idNum!==b.idNum ? a.idNum-b.idNum : (a.isHome===b.isHome?0:(a.isHome?1:-1)));
+  // #17: order by first pitch (time-only field, same-day slate), keep each game's two teams together, away before home
+  const gmMin = g => { const m=String(g.gametime||'').match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i); if(!m) return Infinity; let h=parseInt(m[1],10)%12; if(/pm/i.test(m[3])) h+=12; return h*60+parseInt(m[2],10); };
+  cards.sort((a,b)=>{
+    const ta=gmMin(a.game), tb=gmMin(b.game);
+    if(ta!==tb) return ta-tb;
+    if(a.idNum!==b.idNum) return a.idNum-b.idNum;
+    return a.isHome===b.isHome?0:(a.isHome?1:-1);
+  });
   return cards;
 }
 
