@@ -64,6 +64,7 @@
   .c-sub{margin-top:4px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .tag{font-weight:700;color:var(--ink);background:rgba(255,255,255,.07);border-radius:5px;padding:1px 5px;font-size:10.5px;letter-spacing:.3px;}
   .tag.home{background:var(--good-bg);color:var(--good);} .tag.away{background:var(--away-bg);color:var(--away);}
+  .tag.gm{background:var(--inset);color:var(--muted);}
   .mtl{margin:10px 14px 0;font-size:12.5px;font-weight:600;color:var(--ink);}
   .mtl b{font-weight:800;color:var(--ink);} .mtl .op{color:var(--muted);}
   .odds{margin:11px 14px 0;display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:9px;overflow:hidden;}
@@ -269,10 +270,10 @@ function buildCards(games,batters,starters,bullpen){
     const k=id+'|'+team; let sp=SP.get(k); if(!sp){sp={name:r['SP Name'],throws:r['Throws'],variants:{}};SP.set(k,sp);}
     sp.variants[`${r['Time Period']}|${r['Stat Split']}`]=readCols(r,c=>c,SET_SP);
   }
-  const BP=new Map();
+  const BP=new Map();   // keyed by TEAM (a team has one bullpen, shared across doubleheader games)
   for(const r of bullpen){
-    const id=String(r['Matchup ID']),team=abbrTeam(r['Team']); if(!id||!team)continue;
-    const k=id+'|'+team; let bp=BP.get(k); if(!bp){bp={variants:{}};BP.set(k,bp);}
+    const team=abbrTeam(r['Team']); if(!team)continue;
+    let bp=BP.get(team); if(!bp){bp={variants:{}};BP.set(team,bp);}
     bp.variants[`${r['Time Period']}|${r['Stat Split']}`]={
       L:readCols(r,c=>`L ${c}`,SET_BP),R:readCols(r,c=>`R ${c}`,SET_BP),Comb:readCols(r,c=>`Comb ${c}`,SET_BP)};
   }
@@ -291,7 +292,7 @@ function buildCards(games,batters,starters,bullpen){
       const card={key:game.id+'|'+team,id:game.id,idNum:num(game.id)||0,team,teamFull:isHome?game.homeFull:game.awayFull,
         isHome,loc:isHome?'Home':'Away',oppLoc:isHome?'Away':'Home',game,oppTeam,
         lineup,status:lineupStatusOf(lineup),
-        oppSP,oppBP:BP.get(game.id+'|'+oppTeam)||null,
+        oppSP,oppBP:BP.get(oppTeam)||null,
         oppSPName:oppSP?oppSP.name:stripHand(oppSPraw),oppSPHand:oppSP?oppSP.throws:handOf(oppSPraw),
         ourSPName:stripHand(ourSPraw),ourSPHand:handOf(ourSPraw),
         lineCnt:game.cnt[isHome?'Home':'Away'], oppBpCnt:game.cnt[isHome?'Away':'Home'],
@@ -307,6 +308,12 @@ function buildCards(games,batters,starters,bullpen){
     if(a.idNum!==b.idNum) return a.idNum-b.idNum;
     return a.isHome===b.isHome?0:(a.isHome?1:-1);
   });
+  // #13: number doubleheader games — a matchup with >1 game, earliest first pitch = Game 1 (cards are time-sorted above)
+  const idsByMatch=new Map();
+  for(const c of cards){ let a=idsByMatch.get(c.game.matchupAb); if(!a){a=[];idsByMatch.set(c.game.matchupAb,a);} if(!a.includes(c.id))a.push(c.id); }
+  const gameNumById=new Map();
+  for(const [,ids] of idsByMatch){ if(ids.length>1) ids.forEach((gid,i)=>gameNumById.set(gid,i+1)); }
+  for(const c of cards) c.gameNum=gameNumById.get(c.id)||null;
   return cards;
 }
 
@@ -432,7 +439,7 @@ function cardHTML(c){
   <div class="card" data-key="${esc(c.key)}" style="--edge-c:${edge}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(c.teamFull||c.team)}</div>
-        <div class="c-sub"><span class="tag">${esc(c.team)}</span> ${sideTag} <span>${esc(c.game.matchupAb)}${c.game.gametime?' · '+esc(c.game.gametime):''}</span></div></div>
+        <div class="c-sub"><span class="tag">${esc(c.team)}</span> ${sideTag}${c.gameNum?` <span class="tag gm">Game ${c.gameNum}</span>`:''} <span>${esc(c.game.matchupAb)}${c.game.gametime?' · '+esc(c.game.gametime):''}</span></div></div>
     </div>
     <div class="mtl">Lineup vs SP <b>${esc(c.oppSPName||'—')}</b>${c.oppSPHand?' ('+esc(c.oppSPHand)+')':''}</div>
     <div class="odds">
