@@ -224,7 +224,9 @@ const CODE_ALIAS={SD:'SDP',SF:'SFG',TB:'TBR',WSH:'WSN',KC:'KCR',CWS:'CHW'};
 const canonTeam=c=>{const u=String(c||'').trim().toUpperCase();return CODE_ALIAS[u]||u;};
 const abbrTeam=v=>{if(!v)return '';const s=String(v).trim();return TEAM_NAME_MAP[s]||canonTeam(s);};
 const abbrProp = v=>!v?'':(PROP_ABBR[v]||v);
-const abbrMatchup = v=>!v?'':String(v).split(',')[0].replace(MATCHUP_RE,m=>TEAM_LC[m.toLowerCase()]||m);
+function etTz(){const d=new Date(),y=d.getFullYear();const m1=new Date(y,2,1),n1=new Date(y,10,1);const dstStart=new Date(y,2,1+((7-m1.getDay())%7)+7);const dstEnd=new Date(y,10,1+((7-n1.getDay())%7));return (d>=dstStart&&d<dstEnd)?'EDT':'EST';}
+const ET_TZ = etTz();
+const abbrMatchup = v=>!v?'':String(v).replace(MATCHUP_RE,m=>TEAM_LC[m.toLowerCase()]||m).replace(/\b(?:EST|EDT)\b/g,ET_TZ);   // #13: keep gametime, relabel ET zone
 const order = v=>{const m=String(v||'').match(/\((\d+)\)/);return m?m[1]:null;};
 const lineupTag = v=>{if(!v)return '';const st=/proj/i.test(v)?'Proj':(/conf/i.test(v)?'Conf':'');const o=order(v);if(!st&&!o)return '';return `${st}${o?' #'+o:''}`;};
 const fmtPark = v=>!v?'–':String(v).replace(/\((\d+)\)/g,' (#$1)');
