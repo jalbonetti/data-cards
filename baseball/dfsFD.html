@@ -139,10 +139,13 @@
       <div class="bar-row2">
         <div class="seg"><label for="sortSel">Rank by</label>
           <select id="sortSel">
-            <option value="Full Season|All">Season · all games</option>
-            <option value="Full Season|loc">Season · game location</option>
-            <option value="Last 30 Days|All">Last 30 Days · all games</option>
-            <option value="Last 30 Days|loc">Last 30 Days · game location</option>
+            <option value="proj:val">Projection · value (pts/$)</option>
+            <option value="proj:pts">Projection · points</option>
+            <option value="Full Season|All">Median/High · Season · all</option>
+            <option value="Full Season|loc">Median/High · Season · location</option>
+            <option value="Last 30 Days|All">Median/High · Last 30 · all</option>
+            <option value="Last 30 Days|loc">Median/High · Last 30 · location</option>
+            <option value="rost">Rostership</option>
           </select>
           <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
         </div>
@@ -154,7 +157,7 @@
           <select id="slateSel"><option value="">All slates</option></select>
         </div>
       </div>
-      <div class="hint">Ranked by value (points per $1k salary), using the Median or High figure. Tap a split square to rank by it — the in-card stats switch to that window &amp; split.</div>
+      <div class="hint">Sorted by the market projection — points or value (pts per $1k). The split squares show median/high output by window; tap one to sort by it, and the Median/High toggle sets which figure.</div>
     </div>
 
     <div class="filters" id="filters">
@@ -226,7 +229,7 @@ function fieldMap(){
     player:`${r} Name`, team:`${r} Team`, hand:`${r} Handedness`, pos:`${r} ${BOOK} Position`, price:`${r} ${BOOK} Price`,
     period:'Time Period', split:'Split',
     projMed:`${r} ${BOOK} Median`, projAvg:`${r} ${BOOK} Average`, projHigh:`${r} ${BOOK} High`, projLow:`${r} ${BOOK} Low`, projMode:`${r} ${BOOK} Mode`,
-    ratioMed:'Player Median Ratio', ratioHigh:'Player High Ratio', rostership:`${BOOK} Rostership`, slateRost:`${BOOK} Slate Rost`, gp:'Player Games Played',
+    ratioMed:'Player Median Ratio', ratioHigh:'Player High Ratio', rostership:`${BOOK} Rostership`, slateRost:`${BOOK} Slate Rost`, projection:`${BOOK} Projection`, gp:'Player Games Played',
     matchup:'Matchup', spread:'Matchup Spread', total:'Matchup Total',
     lineup: isBat ? 'Lineup Status' : 'Opposing Lineup Status',
     stadium:'Stadium', dome:'Dome', wx1:'Weather 1', wx2:'Weather 2', wx3:'Weather 3', wx4:'Weather 4'
@@ -236,7 +239,8 @@ function fieldMap(){
 /* ---------- State ---------- */
 let GROUPS = [], SORTED = [], VIEW = [], rendered = 0, bootSeq = 0;
 const GMAP = new Map();
-let sortMode = 'Full Season|All', sortDir = 'desc';
+let sortMode = 'proj:val', sortDir = 'desc';
+let dispWS = 'Full Season|All';   // window|split for the in-card stats + split-square context
 const CAT=['team','pos','hand'], NUM=['prMin','prMax','projMin','valMin','gMin'];
 function newFilters(){return {search:'',team:new Set(),pos:new Set(),hand:new Set(),prMin:'',prMax:'',projMin:'',valMin:'',gMin:''};}
 let filters = newFilters();
@@ -376,7 +380,7 @@ function buildGroups(rows){
     let g=map.get(player);
     if(!g){
       g={key:player, player, team:row[F.team], hand:row[F.hand], pos:row[F.pos], price:num(row[F.price]),
-        rostership:row[F.rostership], gp:row[F.gp], lineup:row[F.lineup],
+        rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], lineup:row[F.lineup],
         matchup:row[F.matchup], spread:row[F.spread], total:row[F.total],
         stadium:row[F.stadium], dome:row[F.dome], wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(Boolean),
         pf:PF_SET.map(([lbl,col])=>[lbl,row[col]]),
@@ -415,9 +419,19 @@ function buildGroups(rows){
 /* variant getters */
 function cellVar(g,period,sp){if(sp==='loc'){if(!g.location)return null;return g.variants[`${period}|${g.location}`]||null;}return g.variants[`${period}|${sp}`]||null;}
 function keyVar(g,key){const [period,sp]=key.split('|');return cellVar(g,period,sp);}
-function activeVar(g){const [period,sp]=sortMode.split('|');return cellVar(g,period,sp)||g.variants[`${period}|All`]||g._season;}
+function activeVar(g){const [period,sp]=dispWS.split('|');return cellVar(g,period,sp)||g.variants[`${period}|All`]||g._season;}
 const ratioOf=v=>v?(valBasis==='high'?v.ratioHigh:v.ratio):null;   // value ratio for active basis
-const projOf =v=>v?(valBasis==='high'?v.high:v.med):null;          // matching projection
+const projOf =v=>v?(valBasis==='high'?v.high:v.med):null;          // historical median/high (raw)
+const projPts = g=>{const p=(g.projection===''||g.projection==null)?null:Number(g.projection);return (p==null||isNaN(p))?null:p;};   // market projection (pts)
+const projValue = g=>{const p=projPts(g),pr=Number(g.price);return (p!=null&&pr>0)?p/(pr/1000):null;};                                 // projection value (pts per $1k)
+const isWS = m=>m.indexOf(':')<0&&m.indexOf('|')>=0;
+function sortValue(g){
+  if(sortMode==='proj:val')return projValue(g);
+  if(sortMode==='proj:pts')return projPts(g);
+  if(sortMode==='rost'){const r=Number(g.rostership);return isNaN(r)?null:r;}
+  const [period,sp]=sortMode.split('|');const v=cellVar(g,period,sp);   // historical median/high, raw (no $)
+  return v?(valBasis==='high'?v.high:v.med):null;
+}
 function recomputeProd(){for(const g of GROUPS){g._prodVar=activeVar(g);}}
 
 /* ---------- Filters / sort ---------- */
@@ -435,13 +449,10 @@ function applySort(){
   recomputeProd();
   const dir=sortDir==='asc'?1:-1;
   SORTED=GROUPS.slice().sort((a,b)=>{
-    const va=keyVar(a,sortMode),vb=keyVar(b,sortMode);
-    const ra=ratioOf(va),rb=ratioOf(vb);
-    if(ra==null&&rb==null) return a._q<b._q?-1:a._q>b._q?1:0;
-    if(ra==null) return 1; if(rb==null) return -1;
-    if(ra!==rb) return (ra-rb)*dir;
-    const pa=projOf(va)==null?-1:projOf(va), pb=projOf(vb)==null?-1:projOf(vb);
-    if(pa!==pb) return pb-pa;
+    const sa=sortValue(a),sb=sortValue(b);
+    if(sa==null&&sb==null) return a._q<b._q?-1:a._q>b._q?1:0;
+    if(sa==null) return 1; if(sb==null) return -1;
+    if(sa!==sb) return (sa-sb)*dir;
     return a._q<b._q?-1:a._q>b._q?1:0;
   });
   applyFilters();
@@ -461,8 +472,8 @@ function applyFilters(){
     if(filters.hand.size&&!filters.hand.has(g.hand))return false;
     if(prMin!=null&&(g.price==null||g.price<prMin))return false;
     if(prMax!=null&&(g.price==null||g.price>prMax))return false;
-    if(pjMin!=null){const v=av(g);const p=projOf(v);if(p==null||p<pjMin)return false;}
-    if(vMin!=null){const v=av(g);const r=ratioOf(v);if(r==null||r<vMin)return false;}
+    if(pjMin!=null){const p=projPts(g);if(p==null||p<pjMin)return false;}
+    if(vMin!=null){const r=projValue(g);if(r==null||r<vMin)return false;}
     if(gMin!=null){const gp=Number(g.gp);if(!isFinite(gp)||gp<gMin)return false;}
     return true;
   });
@@ -484,9 +495,9 @@ function statTable(set, rows){
 }
 function valCell(g,key,label){
   const v=keyVar(g,key);const active=sortMode===key?' active':'';
-  if(!v||ratioOf(v)==null)return `<div class="cell empty${active}"><div class="cl">${esc(label)}</div><div class="cv">–</div><div class="cg">&nbsp;</div></div>`;
-  const c=valColors(ratioOf(v));
-  return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtRatio(ratioOf(v))}</div><div class="cg">${projOf(v)==null?'–':fmtAvg(projOf(v))} pts</div></button>`;
+  if(!v||projOf(v)==null)return `<div class="cell empty${active}"><div class="cl">${esc(label)}</div><div class="cv">–</div><div class="cg">&nbsp;</div></div>`;
+  const c=valColors(ratioOf(v));   // color still hints value; number is now the raw historical figure
+  return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtAvg(projOf(v))}</div><div class="cg">pts</div></button>`;
 }
 function cardHTML(g){
   const isBat=mode==='batter';
@@ -494,20 +505,20 @@ function cardHTML(g){
   const lu=isBat?lineupTag(g.lineup):''; const luCls=/proj/i.test(g.lineup||'')?'proj':(/conf/i.test(g.lineup||'')?'conf':'');
   const luTag=lu?`<span class="tag lu ${luCls}" title="${esc(g.lineup||'')}">${esc(lu)}</span>`:'';
   const loc=g.location||'Loc';
-  const av=keyVar(g,sortMode)||g._season;
-  const c=valColors(ratioOf(av));
+  const pv=projValue(g);
+  const c=valColors(pv);
   const mini = isBat ? `vs <b>${esc(g.sp||'—')}</b>` : `vs <b>${esc(g.luNL!=null?(raw(g.luNL)+' LHB / '+raw(g.luNR)+' RHB'):'lineup')}</b>`;
   return `
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${c.edge}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
         <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span>${esc(g._matchupAb)}</span></div></div>
-      <div class="vbadge" style="--vb-bg:${c.bg};--vb-fg:${c.fg}"><div class="v">${ratioOf(av)!=null?fmtRatio(ratioOf(av)):'–'}</div><div class="k">Val</div></div>
+      <div class="vbadge" style="--vb-bg:${c.bg};--vb-fg:${c.fg}"><div class="v">${pv!=null?fmtRatio(pv):'–'}</div><div class="k">Val</div></div>
     </div>
     <div class="odds dfsref">
       <div class="o"><div class="k">Pos</div><div class="v">${esc(g.pos||'–')}</div><div class="b">&nbsp;</div></div>
       <div class="o"><div class="k">Price</div><div class="v">${fmtPrice(g.price)}</div><div class="b">&nbsp;</div></div>
-      <div class="o"><div class="k">Pts</div><div class="v">${projOf(av)!=null?fmtAvg(projOf(av)):'–'}</div><div class="b">pts</div></div>
+      <div class="o"><div class="k">Proj</div><div class="v">${projPts(g)!=null?fmtAvg(projPts(g)):'–'}</div><div class="b">pts</div></div>
       <div class="o"><div class="k">Rost</div><div class="v">${rostDisp(g)}</div><div class="b">&nbsp;</div></div>
     </div>
     <div class="cgrid">
@@ -573,7 +584,7 @@ function fillViewport(){let guard=0;do{renderMore();guard++;}while(rendered<VIEW
 const io=new IntersectionObserver(e=>{if(e[0].isIntersecting)fillViewport();},{rootMargin:'700px'});io.observe(els.sentinel);
 
 /* ---------- Events ---------- */
-function setSort(mode_){sortMode=mode_;sortDir='desc';if(els.sortSel.value!==mode_)els.sortSel.value=mode_;els.sortDir.textContent='▼';applySort();}
+function setSort(mode_){sortMode=mode_;if(isWS(mode_))dispWS=mode_;sortDir='desc';if(els.sortSel.value!==mode_)els.sortSel.value=mode_;els.sortDir.textContent='▼';applySort();}
 els.grid.addEventListener('click',e=>{
   const cell=e.target.closest('.cell[data-sortkey]');
   if(cell){setSort(cell.dataset.sortkey);window.scrollTo({top:0,behavior:'smooth'});return;}
