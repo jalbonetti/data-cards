@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Batter Prop Clearances — Card Layout</title>
+<title>Pitcher Prop Clearances — Card Layout</title>
 <link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin />
 <style>
   /* All styles scoped to .wrap so the host page's theme (background, fonts, CSS vars) is never touched. */
@@ -118,7 +118,7 @@
   <div class="wrap">
     <div class="hdr">
     <div class="bar">
-      <div class="bar-top"><div class="title">Batter Clearances <span class="count" id="count">—</span></div></div>
+      <div class="bar-top"><div class="title">Pitcher Clearances <span class="count" id="count">—</span></div></div>
       <div class="bar-top" style="margin-top:8px;">
         <input class="field search" id="search" type="search" placeholder="Search player…" autocomplete="off" aria-label="Search player" />
         <button class="icon-btn" id="filterToggle" aria-expanded="false">Filters <span class="badge-dot" id="filterCount" hidden>0</span></button>
@@ -142,7 +142,7 @@
         <div class="fg"><label>Team</label><div class="ms" data-ms="team"></div></div>
         <div class="fg"><label>Prop</label><div class="ms" data-ms="prop"></div></div>
         <div class="fg"><label>Line</label><div class="ms" data-ms="line"></div></div>
-        <div class="fg"><label>Bats</label><div class="ms" data-ms="bats"></div></div>
+        <div class="fg"><label>Throws</label><div class="ms" data-ms="throws"></div></div>
         <div class="fg"><label>Min games (season)</label><input type="number" data-filter="gMin" inputmode="numeric" value="0" /></div>
         <div class="fg"><label>Min clearance % <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(of ranked square)</span></label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
         <div class="fg"><label>Best over odds</label>
@@ -180,7 +180,7 @@
    ============================================================ */
 const SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
-const TABLE = "BaseballBatterPropClearances";
+const TABLE = "BaseballPitcherPropClearances";
 const CACHE_TTL = 3 * 60 * 1000;
 const BATCH = 24;
 const PAGE_SIZE = 1000;
@@ -189,26 +189,23 @@ const MAX_PARALLEL = 6;
 const TEAM_NAME_MAP = {'Arizona Diamondbacks':'ARI','Atlanta Braves':'ATL','Baltimore Orioles':'BAL','Boston Red Sox':'BOS','Chicago Cubs':'CHC','Chicago White Sox':'CHW','Cincinnati Reds':'CIN','Cleveland Guardians':'CLE','Colorado Rockies':'COL','Detroit Tigers':'DET','Houston Astros':'HOU','Kansas City Royals':'KCR','Los Angeles Angels':'LAA','Los Angeles Dodgers':'LAD','Miami Marlins':'MIA','Milwaukee Brewers':'MIL','Minnesota Twins':'MIN','New York Mets':'NYM','New York Yankees':'NYY','Athletics':'ATH','Philadelphia Phillies':'PHI','Pittsburgh Pirates':'PIT','San Diego Padres':'SDP','San Francisco Giants':'SFG','Seattle Mariners':'SEA','St. Louis Cardinals':'STL','Tampa Bay Rays':'TBR','Texas Rangers':'TEX','Toronto Blue Jays':'TOR','Washington Nationals':'WSN'};
 const TEAM_LC = Object.fromEntries(Object.entries(TEAM_NAME_MAP).map(([k,v])=>[k.toLowerCase(),v]));
 const MATCHUP_RE = new RegExp(Object.keys(TEAM_NAME_MAP).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'gi');
-const PROP_ABBR = {'Runs Scored':'Runs','Hits + Runs + RBIs':'H+R+RBI','Total Bases':'TB','Strikeouts':'K','Walks':'BB','Stolen Bases':'SB','Singles':'1B','Doubles':'2B','Triples':'3B','Home Runs':'HR','RBIs':'RBI','Hits':'Hits'};
-const PROP_ORDER = ['Hits','Total Bases','Singles','Doubles','Triples','Home Runs','Runs Scored','RBIs','Hits + Runs + RBIs','Walks','Stolen Bases','Strikeouts'];
+const PROP_ABBR = {'Strikeouts':'K','Outs':'Outs','Outs Recorded':'Outs','Pitching Outs':'Outs','Hits Allowed':'Hits','Walks':'BB','Earned Runs':'ER','Win':'Win','Record a Win':'Win'};
+const PROP_ORDER = ['Strikeouts','Outs','Outs Recorded','Pitching Outs','Hits Allowed','Walks','Earned Runs','Win','Record a Win'];
 const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});};
 
-const F = {player:'Player',team:'Team',bats:'Bats',prop:'Prop',line:'Line',period:'Time Period',split:'Stat Split',clearance:'Clearance %',games:'Games',matchup:'Matchup',spread:'Spread',total:'Total',lineup:'Lineup Status',park:'Park Factor',stadium:'Stadium',dome:'Dome',
-  pTotal:'Player Total',pAvg:'Player Avg',pHigh:'Player High',pRatio:'Player Ratio',
-  pLTotal:'Player vL Total',pLAvg:'Player vL Avg',pLHigh:'Player vL High',pLRatio:'Player vL Ratio',
-  pRTotal:'Player vR Total',pRAvg:'Player vR Avg',pRHigh:'Player vR High',pRRatio:'Player vR Ratio',
-  sp:'Opposing SP',spTotal:'SP Total',spAvg:'SP Avg',spHigh:'SP High',spRatio:'SP Ratio',
-  spVTotal:'SP V Total',spVAvg:'SP V Avg',spVHigh:'SP V High',spVRatio:'SP V Ratio',
-  bpLTotal:'BP L Total',bpL:'BP L Ratio',bpRTotal:'BP R Total',bpR:'BP R Ratio',bpCTotal:'BP Combined Total',bpC:'BP Combined Ratio',
+const F = {player:'Player',team:'Team',throws:'Throws',prop:'Prop',line:'Line',period:'Time Period',split:'Stat Split',clearance:'Clearance %',games:'Games',matchup:'Matchup',spread:'Spread',total:'Total',oppLineupStatus:'Opp Lineup Status',park:'Park Factor',stadium:'Stadium',dome:'Dome',oppLineupSplit:'Opp Lineup Split',
+  spTotal:'SP Total',spAvg:'SP Avg',spHigh:'SP High',spRatio:'SP Ratio',
+  spLTotal:'SP vL Total',spLAvg:'SP vL Avg',spLHigh:'SP vL High',spLRatio:'SP vL Ratio',
+  spRTotal:'SP vR Total',spRAvg:'SP vR Avg',spRHigh:'SP vR High',spRRatio:'SP vR Ratio',
   medOver:'Median Over',medUnder:'Median Under',bestOver:'Best Over',bestOverBk:'Best Over Books',bestUnder:'Best Under',bestUnderBk:'Best Under Books',
-  wx1:'Weather 1',wx2:'Weather 2',wx3:'Weather 3',wx4:'Weather 4',lefties:'Lefties',righties:'Righties'};
+  wx1:'Weather 1',wx2:'Weather 2',wx3:'Weather 3',wx4:'Weather 4'};
 
 /* ---------- State ---------- */
 let GROUPS = [], SORTED = [], VIEW = [], rendered = 0;
 const GMAP = new Map();
 let sortMode = 'clr:Full Season|All', sortDir = 'desc';
-const CAT=['team','prop','line','bats'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
-function newFilters(){return {search:'',team:new Set(),prop:new Set(),line:new Set(),bats:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
+const CAT=['team','prop','line','throws'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
+function newFilters(){return {search:'',team:new Set(),prop:new Set(),line:new Set(),throws:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
 let filters = newFilters();
 const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill')};
 
@@ -263,14 +260,11 @@ async function fetchAll(cb){
   return out;
 }
 
-/* Load the full table, retrying if we catch it mid-upload. A stable table reports
-   the same count before and after we page through it and the assembled rows match
-   that count; a table being wiped/refilled does not. Only a read that passes is
-   treated as complete (and therefore cacheable). */
+/* Load the full table, retrying if we catch it mid-upload — see batterClearances. */
 async function fetchVerified(cb){
   const TRIES=4; let last=[];
   for(let t=0;t<TRIES;t++){
-    const rows=await fetchAll(t===0?cb:null);   // stream-paint only on the first attempt
+    const rows=await fetchAll(t===0?cb:null);
     last=rows;
     const total=_lastTotal;
     const after=await countOnly(_lastUrl);
@@ -285,26 +279,24 @@ function buildGroups(rows){
   const map=new Map();
   const r0=rows[0]||{};
   const K={
-    bpL:findKey(r0,'BP L Ratio','BP L Rate'),
-    bpR:findKey(r0,'BP R Ratio','BP R Rate'),
-    bpC:findKey(r0,'BP Combined Ratio','BP Combined Rate'),
-    bpLTotal:findKey(r0,'BP L Total','BP L Tot'),
-    bpRTotal:findKey(r0,'BP R Total','BP R Tot'),
-    bpCTotal:findKey(r0,'BP Combined Total','BP Combined Tot'),
-    nL:findKey(r0,'BP L #','Lefties','LH Relievers'),
-    nR:findKey(r0,'BP R #','Righties','RH Relievers'),
+    lL:findKey(r0,'Lineup L Ratio','Lineup L Rate'),
+    lLt:findKey(r0,'Lineup L Total','Lineup L Tot'),
+    lR:findKey(r0,'Lineup R Ratio','Lineup R Rate'),
+    lRt:findKey(r0,'Lineup R Total','Lineup R Tot'),
+    lC:findKey(r0,'Lineup Combined Ratio','Lineup Combined Rate'),
+    lCt:findKey(r0,'Lineup Combined Total','Lineup Combined Tot'),
+    nLHB:findKey(r0,'Lineup LHB #','LHB','Lineup L #'),
+    nRHB:findKey(r0,'Lineup RHB #','RHB','Lineup R #'),
   };
   for(const row of rows){
     const player=row[F.player];if(!player)continue;
     const prop=row[F.prop],line=row[F.line],key=`${player}|${prop}|${line}`;
     let g=map.get(key);
     if(!g){
-      g={key,player,team:row[F.team],bats:row[F.bats],prop,line:num(line),lineup:row[F.lineup],
+      g={key,player,team:row[F.team],throws:row[F.throws],prop,line:num(line),oppLineupStatus:row[F.oppLineupStatus],oppLineupSplit:row[F.oppLineupSplit],
         matchup:row[F.matchup],spread:row[F.spread],total:row[F.total],park:row[F.park],stadium:row[F.stadium],dome:row[F.dome],
-        sp:row[F.sp],spTotal:row[F.spTotal],spAvg:row[F.spAvg],spHigh:row[F.spHigh],spRatio:row[F.spRatio],
-        spVTotal:row[F.spVTotal],spVAvg:row[F.spVAvg],spVHigh:row[F.spVHigh],spVRatio:row[F.spVRatio],
-        lefties:K.nL?row[K.nL]:null,righties:K.nR?row[K.nR]:null,
-        bpLTotal:K.bpLTotal?row[K.bpLTotal]:null,bpL:K.bpL?row[K.bpL]:null,bpRTotal:K.bpRTotal?row[K.bpRTotal]:null,bpR:K.bpR?row[K.bpR]:null,bpCTotal:K.bpCTotal?row[K.bpCTotal]:null,bpC:K.bpC?row[K.bpC]:null,
+        lineLTotal:K.lLt?row[K.lLt]:null,lineL:K.lL?row[K.lL]:null,lineRTotal:K.lRt?row[K.lRt]:null,lineR:K.lR?row[K.lR]:null,lineCTotal:K.lCt?row[K.lCt]:null,lineC:K.lC?row[K.lC]:null,
+        nLHB:K.nLHB?row[K.nLHB]:null,nRHB:K.nRHB?row[K.nRHB]:null,
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
         bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
         wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(Boolean),variants:{},
@@ -313,9 +305,9 @@ function buildGroups(rows){
     }
     const vk=`${row[F.period]}|${row[F.split]}`;const gm=String(row[F.games]||'').split('/');
     g.variants[vk]={clr:num(String(row[F.clearance]||'').replace('%','')),gCleared:gm[0]?parseInt(gm[0],10):null,gTotal:gm[1]?parseInt(gm[1],10):null,
-      prod:{tot:row[F.pTotal],avg:row[F.pAvg],hi:row[F.pHigh],ratio:row[F.pRatio],
-        Ltot:row[F.pLTotal],Lavg:row[F.pLAvg],Lhi:row[F.pLHigh],Lratio:row[F.pLRatio],
-        Rtot:row[F.pRTotal],Ravg:row[F.pRAvg],Rhi:row[F.pRHigh],Rratio:row[F.pRRatio]}};
+      prod:{tot:row[F.spTotal],avg:row[F.spAvg],hi:row[F.spHigh],ratio:row[F.spRatio],
+        Ltot:row[F.spLTotal],Lavg:row[F.spLAvg],Lhi:row[F.spLHigh],Lratio:row[F.spLRatio],
+        Rtot:row[F.spRTotal],Ravg:row[F.spRAvg],Rhi:row[F.spRHigh],Rratio:row[F.spRRatio]}};
   }
   const arr=[...map.values()];
   GMAP.clear();
@@ -375,14 +367,14 @@ loadFilters();
 buildMS(document.querySelector('.ms[data-ms="team"]'),'team');
 buildMS(document.querySelector('.ms[data-ms="prop"]'),'prop');
 buildMS(document.querySelector('.ms[data-ms="line"]'),'line');
-buildMS(document.querySelector('.ms[data-ms="bats"]'),'bats');
+buildMS(document.querySelector('.ms[data-ms="throws"]'),'throws');
 document.addEventListener('click',closeAllMS);
 
 function populateFilters(){
   MS.team.setOptions(uniq(g=>g.team).sort());
   MS.prop.setOptions(orderProps(uniq(g=>g.prop)).map(v=>[v,abbrProp(v)]));
   MS.line.setOptions(uniq(g=>g.line).sort((a,b)=>a-b).map(v=>[String(v),String(v)]));
-  MS.bats.setOptions(uniq(g=>g.bats).sort());
+  MS.throws.setOptions(uniq(g=>g.throws).sort());
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=(filters[k]!=null)?filters[k]:'';});
   els.search.value=filters.search||'';
 }
@@ -415,7 +407,7 @@ function applyFilters(){
     if(filters.team.size&&!filters.team.has(g.team))return false;
     if(filters.prop.size&&!filters.prop.has(g.prop))return false;
     if(filters.line.size&&!filters.line.has(String(g.line)))return false;
-    if(filters.bats.size&&!filters.bats.has(g.bats))return false;
+    if(filters.throws.size&&!filters.throws.has(g.throws))return false;
     if(gMin!=null){const sv=cellVar(g,'Full Season','All');if(!sv||sv.gTotal==null||sv.gTotal<gMin)return false;}
     if(cMin!=null){const c=activeClr(g);if(c==null||c<cMin)return false;}
     if(boMin!=null&&(g.bestOver==null||g.bestOver<boMin))return false;
@@ -429,7 +421,7 @@ function applyFilters(){
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
   if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching props</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.bats.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
+  const active=(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.throws.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
@@ -441,8 +433,11 @@ function clrCell(g,key,label){
   return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtPct(v.clr)}</div><div class="cg">${v.gCleared??'–'}/${v.gTotal??'–'}</div></button>`;
 }
 function cardHTML(g){
-  const bats=g.bats?`<span class="tag">${g.bats==='B'?'S':esc(g.bats)}HB</span>`:'';
-  const lu=lineupTag(g.lineup);const luCls=/proj/i.test(g.lineup||'')?'proj':(/conf/i.test(g.lineup||'')?'conf':'');const luTag=lu?`<span class="tag lu ${luCls}" title="${esc(g.lineup||'')}">${esc(lu)}</span>`:'';
+  const thr=g.throws?`<span class="tag">${g.throws==='R'?'RHP':g.throws==='L'?'LHP':esc(g.throws)}</span>`:'';
+  const oppSt=/proj/i.test(g.oppLineupStatus||'')?'proj':(/conf/i.test(g.oppLineupStatus||'')?'conf':'');
+  const oppLbl=oppSt==='proj'?'Opp Proj':(oppSt==='conf'?'Opp Conf':'');
+  const oppTag=oppLbl?`<span class="tag lu ${oppSt}" title="${esc(g.oppLineupStatus||'')}">${oppLbl}</span>`:'';
+  const opp=(g.oppLineupSplit||'').trim().split(/\s+/)[0]||'';
   const loc=g.location||'Loc';
   const av=clrVar(g,sortMode.startsWith('clr:')?sortMode:'clr:Full Season|All');
   const rail=clrColors(av?av.clr:null).edge;
@@ -450,7 +445,7 @@ function cardHTML(g){
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${rail}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
-        <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${bats} ${luTag} <span>${esc(g._matchupAb)}</span></div></div>
+        <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${thr} ${oppTag} <span>${esc(g._matchupAb)}</span></div></div>
     </div>
     <div class="bet-line">${esc(abbrProp(g.prop))} <span class="side">Over</span> ${g.line??''}</div>
     <div class="cgrid">
@@ -464,7 +459,7 @@ function cardHTML(g){
       <div class="o"><div class="k">Median</div><div class="v">${fmtOdds(g.medOver)}</div><div class="b">U ${fmtOdds(g.medUnder)}</div></div>
       <div class="o"><div class="k">Best Under</div><div class="v">${fmtOdds(g.bestUnder)}</div><div class="b">${esc(g.bestUnderBk||'')}</div></div>
     </div>
-    <div class="expand-row"><div class="matchup-mini">vs <b>${esc(g.sp||'—')}</b></div>
+    <div class="expand-row"><div class="matchup-mini">${opp?('vs <b>'+esc(opp)+'</b> lineup'):'Opposing lineup'}</div>
       <button class="exp-btn" type="button">Detail <span class="car">▾</span></button></div>
     <div class="detail"></div>
   </div>`;
@@ -477,31 +472,22 @@ function prodTable(g){
   const r=(l,t,hi,a,rt)=>`<tr><td>${l}</td><td>${raw(t)}</td><td>${raw(hi)}</td><td>${fmtAvg(a)}</td><td>${fmtRate(rt)}</td></tr>`;
   return `<table class="mini"><thead><tr><th></th><th>Tot</th><th>High</th><th>Avg</th><th>Rate</th></tr></thead><tbody>
     ${r('Overall',p.tot,p.hi,p.avg,p.ratio)}
-    ${r('vs LHP',p.Ltot,p.Lhi,p.Lavg,p.Lratio)}
-    ${r('vs RHP',p.Rtot,p.Rhi,p.Ravg,p.Rratio)}</tbody></table>`;
+    ${r('vs LHB',p.Ltot,p.Lhi,p.Lavg,p.Lratio)}
+    ${r('vs RHB',p.Rtot,p.Rhi,p.Ravg,p.Rratio)}</tbody></table>`;
 }
 function detailHTML(g){
   const [perRaw,spRaw]=sortMode.slice(4).split('|');
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
-  const spHand=/\(L\)/i.test(g.sp||'')?'L':(/\(R\)/i.test(g.sp||'')?'R':null);
-  const faceHand=g.bats==='B'?(spHand==='R'?'L':spHand==='L'?'R':null):(g.bats==='L'?'L':g.bats==='R'?'R':null);
-  const faceLbl=faceHand==='L'?'vs LHB':faceHand==='R'?'vs RHB':'Platoon';
-  const batsLbl=g.bats==='L'?'LHB':(g.bats==='R'?'RHB':'switch hitters');
   return `
-    <div class="panel"><div class="panel-h">Hitter production — ${perLbl}${splitLbl}</div>${prodTable(g)}</div>
-    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')}</div>
-      <table class="mini"><thead><tr><th></th><th>Tot</th><th>High</th><th>Avg</th><th>Rate</th></tr></thead><tbody>
-        <tr><td>Overall</td><td>${raw(g.spTotal)}</td><td>${raw(g.spHigh)}</td><td>${fmtAvg(g.spAvg)}</td><td>${fmtRate(g.spRatio)}</td></tr>
-        <tr><td>${faceLbl}</td><td>${raw(g.spVTotal)}</td><td>${raw(g.spVHigh)}</td><td>${fmtAvg(g.spVAvg)}</td><td>${fmtRate(g.spVRatio)}</td></tr>
-      </tbody></table></div>
-    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.lefties)} LH / ${raw(g.righties)} RH</div>
+    <div class="panel"><div class="panel-h">Pitcher production — ${perLbl}${splitLbl}</div>${prodTable(g)}</div>
+    <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.nLHB)} LHB / ${raw(g.nRHB)} RHB</div>
       <table class="mini"><thead><tr><th></th><th>Tot</th><th>Rate</th></tr></thead><tbody>
-        <tr><td>LH relievers</td><td>${raw(g.bpLTotal)}</td><td>${fmtRate(g.bpL)}</td></tr>
-        <tr><td>RH relievers</td><td>${raw(g.bpRTotal)}</td><td>${fmtRate(g.bpR)}</td></tr>
-        <tr><td>Combined</td><td>${raw(g.bpCTotal)}</td><td>${fmtRate(g.bpC)}</td></tr>
+        <tr><td>LH batters</td><td>${raw(g.lineLTotal)}</td><td>${fmtRate(g.lineL)}</td></tr>
+        <tr><td>RH batters</td><td>${raw(g.lineRTotal)}</td><td>${fmtRate(g.lineR)}</td></tr>
+        <tr><td>Combined</td><td>${raw(g.lineCTotal)}</td><td>${fmtRate(g.lineC)}</td></tr>
       </tbody></table>
-      <div class="note-sm">Each row is that reliever group's results vs ${esc(batsLbl)}.</div></div>
+      <div class="note-sm">Each row is that batter group's results vs this pitcher${g.oppLineupSplit?` · ${esc(g.oppLineupSplit)}`:''}.</div></div>
     <div class="panel"><div class="panel-h">Environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread||'–')}</span>
         <span class="k">Total</span><span class="v">${esc(g.total||'–')}</span>
@@ -551,22 +537,20 @@ async function boot(){
   const warm=cached&&Array.isArray(cached.rows)&&cached.rows.length;
   if(warm){ingest(cached.rows);if((Date.now()-cached.t)<=CACHE_TTL)return;}
   try{
-    // stream-paint only on a cold load; on revalidate keep the cached view until a verified read lands
     const cb=(firstRows,total,isFirst,loaded)=>{
       if(!warm&&isFirst&&firstRows&&firstRows.length) ingest(firstRows);
       setProg(loaded,total);
     };
     const {rows,complete}=await fetchVerified(warm?null:cb);
     setProgDone();
-    if(complete) ingest(rows);                 // verified full read → adopt it
-    else if(!warm) ingest(rows);               // cold load we couldn't verify → show it, but don't cache
-    // (!complete && warm) → leave the good cached view untouched
+    if(complete) ingest(rows);
+    else if(!warm) ingest(rows);
     if(!GROUPS.length){
       els.grid.hidden=true;els.content.hidden=false;
       els.content.innerHTML=`<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`;
       return;
     }
-    if(complete&&rows.length) cacheSet(cacheKey,{t:Date.now(),rows});   // only cache a verified full read
+    if(complete&&rows.length) cacheSet(cacheKey,{t:Date.now(),rows});
   }
   catch(err){setProgDone();if(!GROUPS.length){els.content.innerHTML=`<div class="state"><h3>Couldn't load right now</h3><p>Please refresh in a moment.</p></div>`;els.content.hidden=false;}}
 }
