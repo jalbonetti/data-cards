@@ -149,7 +149,7 @@
           </select>
           <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
         </div>
-        <div class="tg" id="basisToggle"><span class="tg-lab">Value</span>
+        <div class="tg" id="basisToggle"><span class="tg-lab">Output</span>
           <button data-basis="med" class="t-on" aria-pressed="true">Median</button>
           <button data-basis="high" aria-pressed="false">High</button>
         </div>
@@ -497,7 +497,7 @@ function valCell(g,key,label){
   const v=keyVar(g,key);const active=sortMode===key?' active':'';
   if(!v||projOf(v)==null)return `<div class="cell empty${active}"><div class="cl">${esc(label)}</div><div class="cv">–</div><div class="cg">&nbsp;</div></div>`;
   const c=valColors(ratioOf(v));   // color still hints value; number is now the raw historical figure
-  return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtAvg(projOf(v))}</div><div class="cg">pts</div></button>`;
+  return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtAvg(projOf(v))}</div><div class="cg">${valBasis==='high'?'High':'Median'} Output</div></button>`;
 }
 function cardHTML(g){
   const isBat=mode==='batter';
