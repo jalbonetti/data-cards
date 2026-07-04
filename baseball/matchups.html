@@ -164,7 +164,7 @@ const TEAM_NAME_MAP = {'Arizona Diamondbacks':'ARI','Atlanta Braves':'ATL','Balt
 /* Stat-set definitions — [display, columnToken, formatType] */
 const SET_BAT = [['G','Games','int'],['PA','PA','int'],['AB','AB','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['RBI','RBI','int'],['R','R','int'],['BB','BB','int'],['IBB','IBB','int'],['SO','SO','int'],['HBP','HBP','int'],['SB','SB','int'],['CS','CS','int'],['SF','SF','int'],['SH','SH','int'],['GDP','GDP','int'],['AVG','AVG','rate'],['OBP','OBP','rate'],['SLG','SLG','rate'],['H/PA','H/PA','rate']];
 const SET_SP  = [['G','Games','int'],['IP','IP','ip'],['TBF','TBF','int'],['H','H','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['R','R','int'],['ER','ER','int'],['BB','BB','int'],['IBB','IBB','int'],['SO','SO','int'],['HBP','HBP','int'],['W','W','int'],['AVG','AVG','rate'],['OBP','OBP','rate'],['SLG','SLG','rate'],['ERA','ERA','era'],['H/TBF','H/TBF','rate']];
-const SET_BP  = [['IP','IP','ip'],['TBF','TBF','int'],['H','H','int'],['HR','HR','int'],['R','R','int'],['ER','ER','int'],['BB','BB','int'],['SO','SO','int'],['H/TBF','H/TBF','rate']];
+const SET_BP  = [['IP','IP','ip'],['TBF','TBF','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['R','R','int'],['ER','ER','int'],['BB','BB','int'],['SO','SO','int'],['HBP','HBP','int'],['AVG','AVG','rate'],['ERA','ERA','era'],['H/TBF','H/TBF','rate']];
 const PF_STATS = ['H','1B','2B','3B','HR','R','BB','SO'];
 const SET_PF = PF_STATS.map(s=>[s,s,'park']);
 
