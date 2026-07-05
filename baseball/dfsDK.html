@@ -255,7 +255,7 @@ function populateSlates(){
   els.slateSel.innerHTML='<option value="">All slates</option>'+names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+' ('+counts[n]+')</option>').join('');
   if(currentSlate&&names.includes(currentSlate)) els.slateSel.value=currentSlate; else { currentSlate=''; els.slateSel.value=''; }
 }
-function rostDisp(g){const v=(currentSlate&&g.slateMap)?g.slateMap[currentSlate]:null;return (v!=null&&v!=='')?v+'%':fmtRost(g.rostership);}
+function rostDisp(g){const v=(currentSlate&&g.slateMap)?g.slateMap[currentSlate]:null;return (v!=null&&v!=='')?fmtRostPct(v):fmtRostPct(g.rostership);}
 
 /* ---------- Filters: persistence + multi-select + positions (#9/#10/#11) ---------- */
 const MODE_FILTERS={};   /* in-memory only: filters persist across tab/mode switches within a page load, but reset on a real (re)load */
@@ -322,6 +322,7 @@ const fmtIP = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s=
 const fmtPark = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.replace(/\((\d+)\)/g,' (#$1)');};
 const fmtPrice = v=>{const n=parseFloat(v);return isNaN(n)?'–':'$'+Math.round(n).toLocaleString();};
 const fmtRost = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.includes('%')?s:(s+'%');};
+const fmtRostPct = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';const n=parseFloat(s.replace('%',''));if(isNaN(n))return '–';if(n<=0)return '0%';if(n<1)return '<1%';return Math.round(n)+'%';};   // #6: whole %, sub-1% => <1%
 const fmtType = (t,v)=> t==='rate'?fmtAvg3(v) : t==='era'?fmt2(v) : t==='ip'?fmtIP(v) : raw(v);
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const CODE_ALIAS={SD:'SDP',SF:'SFG',TB:'TBR',WSH:'WSN',KC:'KCR',CWS:'CHW'};
