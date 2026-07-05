@@ -91,6 +91,8 @@
   .ms-opt{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;}
   .ms-opt:hover{background:var(--inset);}
   .ms-opt input{width:15px;height:15px;accent-color:var(--brand);margin:0;flex:0 0 auto;}
+  .ms-all{display:block;width:100%;text-align:left;background:transparent;border:none;border-bottom:1px solid var(--line);color:var(--brand);font-family:var(--font);font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:6px 8px;margin-bottom:4px;cursor:pointer;}
+  .ms-all:hover{background:var(--inset);}
   .fg-range { flex-direction: row; align-items: center; gap: 6px; }
   .fg-range input { width: 100%; }
   .filters-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-2); }
@@ -508,22 +510,31 @@ function buildMS(container,key){
   const pop=document.createElement('div'); pop.className='ms-pop'; pop.hidden=true;
   container.appendChild(btn); container.appendChild(pop);
   const ctrl={key,btn,pop,options:[],
-    syncLabel(){btn.textContent = filters[key].size===0 ? 'All' : (filters[key].size+' selected');},
+    syncLabel(){const ex=filters[key].size; btn.textContent = ex===0 ? 'All' : ((ctrl.options.length-ex)+' selected');},   // set = DESELECTED values
     setOptions(opts){
       const norm=opts.map(o=>Array.isArray(o)?o:[o,o]);
       ctrl.options=norm;
       const vals=new Set(norm.map(x=>String(x[0])));
       [...filters[key]].forEach(v=>{if(!vals.has(v))filters[key].delete(v);});
       pop.innerHTML='';
+      const allBtn=document.createElement('button'); allBtn.type='button'; allBtn.className='ms-all';
+      const syncAll=()=>{allBtn.textContent = filters[key].size===0 ? 'Deselect all' : 'Select all';};
+      allBtn.addEventListener('click',e=>{
+        e.stopPropagation();
+        if(filters[key].size===0){ norm.forEach(x=>filters[key].add(String(x[0]))); } else { filters[key].clear(); }
+        pop.querySelectorAll('input[type=checkbox]').forEach(cb=>{cb.checked=!filters[key].has(cb.value);});
+        syncAll(); ctrl.syncLabel(); saveFilters(); applyFilters();
+      });
+      pop.appendChild(allBtn);
       norm.forEach(([value,label])=>{
         const val=String(value);
         const row=document.createElement('label'); row.className='ms-opt';
-        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=val; cb.checked=filters[key].has(val);
-        cb.addEventListener('change',()=>{if(cb.checked)filters[key].add(val);else filters[key].delete(val);ctrl.syncLabel();saveFilters();applyFilters();});
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=val; cb.checked=!filters[key].has(val);
+        cb.addEventListener('change',()=>{if(cb.checked)filters[key].delete(val);else filters[key].add(val);syncAll();ctrl.syncLabel();saveFilters();applyFilters();});
         const span=document.createElement('span'); span.textContent=label;
         row.appendChild(cb); row.appendChild(span); pop.appendChild(row);
       });
-      ctrl.syncLabel();
+      syncAll(); ctrl.syncLabel();
     }
   };
   btn.addEventListener('click',e=>{e.stopPropagation();const willOpen=pop.hidden;closeAllMS();pop.hidden=!willOpen;btn.setAttribute('aria-expanded',String(willOpen));});
@@ -585,12 +596,12 @@ function applyFilters(){
 
   VIEW = SORTED.filter(r => {
     if (s && !r._q.includes(s)) return false;
-    if (filters.matchup.size && !filters.matchup.has(r.matchup)) return false;
-    if (filters.team.size && !filters.team.has(r.team)) return false;
-    if (filters.prop.size && !filters.prop.has(r.prop)) return false;
-    if (filters.label.size && !filters.label.has(r.label)) return false;
-    if (filters.book.size && !filters.book.has(r.book)) return false;
-    if (filters.bestBooks.size && !filters.bestBooks.has(r.bestBooks)) return false;
+    if (filters.matchup.has(r.matchup)) return false;
+    if (filters.team.has(r.team)) return false;
+    if (filters.prop.has(r.prop)) return false;
+    if (filters.label.has(r.label)) return false;
+    if (filters.book.has(r.book)) return false;
+    if (filters.bestBooks.has(r.bestBooks)) return false;
     if (evMin!=null && (evPct(r)==null || evPct(r) < evMin)) return false;
     if (bMin!=null && (r.bestOdds==null || r.bestOdds < bMin)) return false;
     if (bMax!=null && (r.bestOdds==null || r.bestOdds > bMax)) return false;
