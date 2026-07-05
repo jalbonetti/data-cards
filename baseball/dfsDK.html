@@ -141,25 +141,29 @@
       <div class="bar-row2">
         <div class="seg"><label for="sortSel">Rank by</label>
           <select id="sortSel">
-            <option value="proj:val">Projection · value (pts/$)</option>
-            <option value="proj:pts">Projection · points</option>
-            <option value="Full Season|All">Median/High · Season · all</option>
-            <option value="Full Season|loc">Median/High · Season · location</option>
-            <option value="Last 30 Days|All">Median/High · Last 30 · all</option>
-            <option value="Last 30 Days|loc">Median/High · Last 30 · location</option>
+            <option value="proj:pts">Projection</option>
+            <option value="proj:val">Value (pts/$)</option>
             <option value="rost">Rostership</option>
+            <option value="output">Output</option>
           </select>
           <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
         </div>
-        <div class="tg" id="basisToggle"><span class="tg-lab">Output</span>
-          <button data-basis="med" class="t-on" aria-pressed="true">Median</button>
-          <button data-basis="high" aria-pressed="false">High</button>
+        <div class="seg"><label for="owSel">Output</label>
+          <select id="owSel">
+            <option value="Full Season|All">Season · All</option>
+            <option value="Full Season|loc">Season · Location</option>
+            <option value="Last 30 Days|All">L30 · All</option>
+            <option value="Last 30 Days|loc">L30 · Location</option>
+          </select>
+          <select id="basisSel">
+            <option value="med">Median</option>
+            <option value="high">High</option>
+          </select>
         </div>
         <div class="seg"><label for="slateSel">Slate</label>
           <select id="slateSel"><option value="">All slates</option></select>
         </div>
       </div>
-      <div class="hint">Sorted by the market projection — points or value (pts per $1k). The split squares show median/high output by window; tap one to sort by it, and the Median/High toggle sets which figure.</div>
     </div>
 
     <div class="filters" id="filters">
@@ -241,12 +245,12 @@ function fieldMap(){
 /* ---------- State ---------- */
 let GROUPS = [], SORTED = [], VIEW = [], rendered = 0, bootSeq = 0;
 const GMAP = new Map();
-let sortMode = 'proj:val', sortDir = 'desc';
+let sortMode = 'proj:pts', sortDir = 'desc';
 let dispWS = 'Full Season|All';   // window|split for the in-card stats + split-square context
 const CAT=['team','pos','hand'], NUM=['prMin','prMax','projMin','valMin','gMin'];
 function newFilters(){return {search:'',team:new Set(),pos:new Set(),hand:new Set(),prMin:'',prMax:'',projMin:'',valMin:'',gMin:''};}
 let filters = newFilters();
-const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),modeToggle:document.getElementById('modeToggle'),basisToggle:document.getElementById('basisToggle'),titleText:document.getElementById('titleText'),slateSel:document.getElementById('slateSel')};
+const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),modeToggle:document.getElementById('modeToggle'),owSel:document.getElementById('owSel'),basisSel:document.getElementById('basisSel'),titleText:document.getElementById('titleText'),slateSel:document.getElementById('slateSel')};
 /* ---------- Slate ownership (Phase 1c) ---------- */
 let currentSlate='';   // '' = All slates
 function parseSlateRost(str){const m={};if(!str)return m;String(str).split('/').forEach(part=>{const i=part.indexOf(':');if(i<0)return;const n=part.slice(0,i).trim();if(n)m[n]=part.slice(i+1).trim();});return m;}
@@ -438,13 +442,16 @@ const projOf =v=>v?(valBasis==='high'?v.high:v.med):null;          // historical
 const projPts = g=>{const p=(g.projection===''||g.projection==null)?null:Number(g.projection);return (p==null||isNaN(p))?null:p;};   // market projection (pts)
 const projValue = g=>{const p=projPts(g),pr=Number(g.price);return (p!=null&&pr>0)?p/(pr/1000):null;};                                 // projection value (pts per $1k)
 const isWS = m=>m.indexOf(':')<0&&m.indexOf('|')>=0;
+function outputVal(g){const [period,sp]=dispWS.split('|');const v=cellVar(g,period,sp);return v?(valBasis==='high'?v.high:v.med):null;}
+function outputLabel(g){const [period,sp]=dispWS.split('|');const per=period==='Full Season'?'Season':'L30';const loc=(sp==='loc')?((g&&g.location)?g.location:'Loc'):'All';return per+' · '+loc+' · '+(valBasis==='high'?'High':'Med');}
 function sortValue(g){
-  if(sortMode==='proj:val')return projValue(g);
   if(sortMode==='proj:pts')return projPts(g);
+  if(sortMode==='proj:val')return projValue(g);
   if(sortMode==='rost'){const r=Number(g.rostership);return isNaN(r)?null:r;}
-  const [period,sp]=sortMode.split('|');const v=cellVar(g,period,sp);   // historical median/high, raw (no $)
-  return v?(valBasis==='high'?v.high:v.med):null;
+  if(sortMode==='output')return outputVal(g);
+  return null;
 }
+function sortCard(g,key,label,valStr,sub){const active=sortMode===key?' active':'';return `<button type="button" class="cell${active}" data-sortkey="${key}"><div class="cl">${esc(label)}</div><div class="cv">${valStr}</div><div class="cg">${sub?esc(sub):'&nbsp;'}</div></button>`;}
 function recomputeProd(){for(const g of GROUPS){g._prodVar=activeVar(g);}}
 
 /* ---------- Filters / sort ---------- */
@@ -520,25 +527,19 @@ function cardHTML(g){
   const loc=g.location||'Loc';
   const pv=projValue(g);
   const c=valColors(pv);
-  const mini = isBat ? `vs <b>${esc(g.sp||'—')}</b>` : `vs <b>${esc(g.luNL!=null?(raw(g.luNL)+' LHB / '+raw(g.luNR)+' RHB'):'lineup')}</b>`;
+  const swS=(g.luNS&&String(g.luNS)!=='0')?(' / '+raw(g.luNS)+' SHB'):'';
+  const mini = isBat ? `vs <b>${esc(g.sp||'—')}</b>` : `vs <b>${g.luNL!=null?(raw(g.luNL)+' LHB / '+raw(g.luNR)+' RHB'+swS):'lineup'}</b>`;
   return `
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${c.edge}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
-        <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span>${esc(g._matchupAb)}</span></div></div>
-      <div class="vbadge" style="--vb-bg:${c.bg};--vb-fg:${c.fg}"><div class="v">${pv!=null?fmtRatio(pv):'–'}</div><div class="k">Val</div></div>
-    </div>
-    <div class="odds dfsref">
-      <div class="o"><div class="k">Pos</div><div class="v">${esc(g.pos||'–')}</div><div class="b">&nbsp;</div></div>
-      <div class="o"><div class="k">Price</div><div class="v">${fmtPrice(g.price)}</div><div class="b">&nbsp;</div></div>
-      <div class="o"><div class="k">Proj</div><div class="v">${projPts(g)!=null?fmtAvg(projPts(g)):'–'}</div><div class="b">pts</div></div>
-      <div class="o"><div class="k">Rost</div><div class="v">${rostDisp(g)}</div><div class="b">&nbsp;</div></div>
+        <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span class="tag">${esc(g.pos||'–')}</span> <span class="tag">${fmtPrice(g.price)}</span> <span>${esc(g._matchupAb)}</span></div></div>
     </div>
     <div class="cgrid">
-      ${valCell(g,'Full Season|All','Season · All')}
-      ${valCell(g,'Full Season|loc','Season · '+loc)}
-      ${valCell(g,'Last 30 Days|All','L30 Days · All')}
-      ${valCell(g,'Last 30 Days|loc','L30 Days · '+loc)}
+      ${sortCard(g,'proj:pts','Proj',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts')}
+      ${sortCard(g,'proj:val','Value',projValue(g)!=null?fmtRatio(projValue(g)):'–','pts/$')}
+      ${sortCard(g,'rost','Rost',rostDisp(g),'')}
+      ${sortCard(g,'output',outputLabel(g),outputVal(g)!=null?fmtAvg(outputVal(g)):'–','output')}
     </div>
     <div class="expand-row"><div class="matchup-mini">${mini}</div>
       <button class="exp-btn" type="button">Detail <span class="car">▾</span></button></div>
@@ -549,7 +550,7 @@ function cardHTML(g){
 /* ---------- Detail (lazy) ---------- */
 function detailHTML(g){
   const isBat=mode==='batter';
-  const [perRaw,spRaw]=sortMode.split('|');
+  const [perRaw,spRaw]=dispWS.split('|');
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
   const v=g._prodVar||g._season;
@@ -597,7 +598,7 @@ function fillViewport(){let guard=0;do{renderMore();guard++;}while(rendered<VIEW
 const io=new IntersectionObserver(e=>{if(e[0].isIntersecting)fillViewport();},{rootMargin:'700px'});io.observe(els.sentinel);
 
 /* ---------- Events ---------- */
-function setSort(mode_){sortMode=mode_;if(isWS(mode_))dispWS=mode_;sortDir='desc';if(els.sortSel.value!==mode_)els.sortSel.value=mode_;els.sortDir.textContent='▼';applySort();}
+function setSort(mode_){sortMode=mode_;sortDir='desc';if(els.sortSel.value!==mode_)els.sortSel.value=mode_;els.sortDir.textContent='▼';applySort();}
 els.grid.addEventListener('click',e=>{
   const cell=e.target.closest('.cell[data-sortkey]');
   if(cell){setSort(cell.dataset.sortkey);window.scrollTo({top:0,behavior:'smooth'});return;}
@@ -616,7 +617,8 @@ els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=n
 els.sortSel.addEventListener('change',e=>setSort(e.target.value));
 els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;applyFilters();});
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
-els.basisToggle.addEventListener('click',e=>{const btn=e.target.closest('button[data-basis]');if(!btn)return;const next=btn.getAttribute('data-basis');if(next===valBasis)return;valBasis=next;[...els.basisToggle.querySelectorAll('button')].forEach(b=>{const on=b===btn;b.classList.toggle('t-on',on);b.setAttribute('aria-pressed',on);});applySort();});
+els.owSel.addEventListener('change',e=>{dispWS=e.target.value;applySort();});
+els.basisSel.addEventListener('change',e=>{valBasis=e.target.value;applySort();});
 
 function applyModeUI(){
   els.titleText.textContent=BOOK_NAME+' DFS · '+M().title;
