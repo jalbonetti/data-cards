@@ -49,6 +49,8 @@
   .ms-opt{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;color:var(--ink);cursor:pointer;white-space:nowrap;}
   .ms-opt:hover{background:var(--inset);}
   .ms-opt input{width:15px;height:15px;accent-color:var(--brand);margin:0;flex:0 0 auto;}
+  .ms-all{display:block;width:100%;text-align:left;background:transparent;border:none;border-bottom:1px solid var(--line);color:var(--brand);font-family:var(--font);font-size:11.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:6px 8px;margin-bottom:4px;cursor:pointer;}
+  .ms-all:hover{background:var(--inset);}
   .fg-range{display:flex;gap:6px;}
   .fg-range input{flex:1;min-width:0;width:100%;}
   .filters-foot{display:flex;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-2);}
@@ -268,10 +270,10 @@ const POS_SLOTS = BOOK==='FD'
 let POS_ACTIVE = POS_SLOTS;
 function playerPositions(str){return new Set(String(str||'').split('/').map(x=>x.trim().toUpperCase()).filter(x=>x&&x!=='UTIL'));}
 function posMatch(g){
-  if(filters.pos.size===0) return true;
+  if(filters.pos.size===0) return true;   // filters.pos = DESELECTED slots; empty => all shown
   const pp = g._posSet || (g._posSet = playerPositions(g.pos));
-  for(const [label,covers] of POS_ACTIVE){ if(filters.pos.has(label) && covers.some(c=>pp.has(c))) return true; }
-  return false;
+  for(const [label,covers] of POS_ACTIVE){ if(!filters.pos.has(label) && covers.some(c=>pp.has(c))) return true; }
+  return false;   // every slot covering this player is deselected -> hide
 }
 
 const MS = {};
@@ -283,19 +285,28 @@ function buildMS(container,key){
   const pop=document.createElement('div'); pop.className='ms-pop'; pop.hidden=true;
   container.appendChild(btn); container.appendChild(pop);
   const ctrl={key,btn,pop,options:[],
-    syncLabel(){btn.textContent = filters[key].size===0 ? 'All' : (filters[key].size+' selected');},
+    syncLabel(){const ex=filters[key].size; btn.textContent = ex===0 ? 'All' : ((ctrl.options.length-ex)+' selected');},
     setOptions(opts){
       ctrl.options=opts.slice();
       [...filters[key]].forEach(v=>{if(!opts.includes(v))filters[key].delete(v);});
       pop.innerHTML='';
+      const allBtn=document.createElement('button'); allBtn.type='button'; allBtn.className='ms-all';
+      const syncAll=()=>{allBtn.textContent = filters[key].size===0 ? 'Deselect all' : 'Select all';};
+      allBtn.addEventListener('click',e=>{
+        e.stopPropagation();
+        if(filters[key].size===0){ ctrl.options.forEach(o=>filters[key].add(o)); } else { filters[key].clear(); }
+        pop.querySelectorAll('input[type=checkbox]').forEach(cb=>{cb.checked=!filters[key].has(cb.value);});
+        syncAll(); ctrl.syncLabel(); saveFilters(); applyFilters();
+      });
+      pop.appendChild(allBtn);
       opts.forEach(label=>{
         const row=document.createElement('label'); row.className='ms-opt';
-        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=label; cb.checked=filters[key].has(label);
-        cb.addEventListener('change',()=>{if(cb.checked)filters[key].add(label);else filters[key].delete(label);ctrl.syncLabel();saveFilters();applyFilters();});
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=label; cb.checked=!filters[key].has(label);
+        cb.addEventListener('change',()=>{if(cb.checked)filters[key].delete(label);else filters[key].add(label);syncAll();ctrl.syncLabel();saveFilters();applyFilters();});
         const span=document.createElement('span'); span.textContent=label;
         row.appendChild(cb); row.appendChild(span); pop.appendChild(row);
       });
-      ctrl.syncLabel();
+      syncAll(); ctrl.syncLabel();
     }
   };
   btn.addEventListener('click',e=>{e.stopPropagation();const willOpen=pop.hidden;closeAllMS();pop.hidden=!willOpen;btn.setAttribute('aria-expanded',String(willOpen));});
@@ -468,9 +479,9 @@ function applyFilters(){
   VIEW=SORTED.filter(g=>{
     if(s&&!g._q.includes(s))return false;
     if(currentSlate&&!(g._slates&&g._slates.has(currentSlate)))return false;
-    if(filters.team.size&&!filters.team.has(g.team))return false;
+    if(filters.team.has(g.team))return false;
     if(!posMatch(g))return false;
-    if(filters.hand.size&&!filters.hand.has(g.hand))return false;
+    if(filters.hand.has(g.hand))return false;
     if(prMin!=null&&(g.price==null||g.price<prMin))return false;
     if(prMax!=null&&(g.price==null||g.price>prMax))return false;
     if(pjMin!=null){const p=projPts(g);if(p==null||p<pjMin)return false;}
