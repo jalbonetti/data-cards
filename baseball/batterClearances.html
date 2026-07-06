@@ -323,10 +323,8 @@ function buildGroups(rows){
     if(!g){
       g={key,player,team:row[F.team],bats:row[F.bats],prop,line:num(line),lineup:row[F.lineup],
         matchup:row[F.matchup],spread:row[F.spread],total:row[F.total],park:row[F.park],stadium:row[F.stadium],dome:row[F.dome],
-        sp:row[F.sp],spTotal:row[F.spTotal],spAvg:row[F.spAvg],spHigh:row[F.spHigh],spRatio:row[F.spRatio],
-        spVTotal:row[F.spVTotal],spVAvg:row[F.spVAvg],spVHigh:row[F.spVHigh],spVRatio:row[F.spVRatio],
+        sp:row[F.sp],
         lefties:K.nL?row[K.nL]:null,righties:K.nR?row[K.nR]:null,
-        bpLTotal:K.bpLTotal?row[K.bpLTotal]:null,bpL:K.bpL?row[K.bpL]:null,bpRTotal:K.bpRTotal?row[K.bpRTotal]:null,bpR:K.bpR?row[K.bpR]:null,bpCTotal:K.bpCTotal?row[K.bpCTotal]:null,bpC:K.bpC?row[K.bpC]:null,
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
         bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
         wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(Boolean),variants:{},
@@ -335,6 +333,9 @@ function buildGroups(rows){
     }
     const vk=`${row[F.period]}|${row[F.split]}`;const gm=String(row[F.games]||'').split('/');
     g.variants[vk]={clr:num(String(row[F.clearance]||'').replace('%','')),gCleared:gm[0]?parseInt(gm[0],10):null,gTotal:gm[1]?parseInt(gm[1],10):null,
+      spTotal:row[F.spTotal],spAvg:row[F.spAvg],spHigh:row[F.spHigh],spRatio:row[F.spRatio],
+      spVTotal:row[F.spVTotal],spVAvg:row[F.spVAvg],spVHigh:row[F.spVHigh],spVRatio:row[F.spVRatio],
+      bpLTotal:K.bpLTotal?row[K.bpLTotal]:null,bpL:K.bpL?row[K.bpL]:null,bpRTotal:K.bpRTotal?row[K.bpRTotal]:null,bpR:K.bpR?row[K.bpR]:null,bpCTotal:K.bpCTotal?row[K.bpCTotal]:null,bpC:K.bpC?row[K.bpC]:null,
       prod:{tot:row[F.pTotal],avg:row[F.pAvg],hi:row[F.pHigh],ratio:row[F.pRatio],
         Ltot:row[F.pLTotal],Lavg:row[F.pLAvg],Lhi:row[F.pLHigh],Lratio:row[F.pLRatio],
         Rtot:row[F.pRTotal],Ravg:row[F.pRAvg],Rhi:row[F.pRHigh],Rratio:row[F.pRRatio]}};
@@ -519,18 +520,19 @@ function detailHTML(g){
   const faceHand=g.bats==='B'?(spHand==='R'?'L':spHand==='L'?'R':null):(g.bats==='L'?'L':g.bats==='R'?'R':null);
   const faceLbl=faceHand==='L'?'vs LHB':faceHand==='R'?'vs RHB':'Platoon';
   const batsLbl=g.bats==='L'?'LHB':(g.bats==='R'?'RHB':'switch hitters');
+  const v=g._prodVar||g._season;
   return `
     <div class="panel"><div class="panel-h">Hitter production — ${perLbl}${splitLbl}</div>${prodTable(g)}</div>
-    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')}</div>
+    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')} · ${perLbl}</div>
       <table class="mini"><thead><tr><th></th><th>Tot</th><th>High</th><th>Avg</th><th>Rate</th></tr></thead><tbody>
-        <tr><td>Overall</td><td>${raw(g.spTotal)}</td><td>${raw(g.spHigh)}</td><td>${fmtAvg(g.spAvg)}</td><td>${fmtRate(g.spRatio)}</td></tr>
-        <tr><td>${faceLbl}</td><td>${raw(g.spVTotal)}</td><td>${raw(g.spVHigh)}</td><td>${fmtAvg(g.spVAvg)}</td><td>${fmtRate(g.spVRatio)}</td></tr>
+        <tr><td>Overall</td><td>${raw(v&&v.spTotal)}</td><td>${raw(v&&v.spHigh)}</td><td>${fmtAvg(v&&v.spAvg)}</td><td>${fmtRate(v&&v.spRatio)}</td></tr>
+        <tr><td>${faceLbl}</td><td>${raw(v&&v.spVTotal)}</td><td>${raw(v&&v.spVHigh)}</td><td>${fmtAvg(v&&v.spVAvg)}</td><td>${fmtRate(v&&v.spVRatio)}</td></tr>
       </tbody></table></div>
-    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.lefties)} LH / ${raw(g.righties)} RH</div>
+    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.lefties)} LH / ${raw(g.righties)} RH · ${perLbl}</div>
       <table class="mini"><thead><tr><th></th><th>Tot</th><th>Rate</th></tr></thead><tbody>
-        <tr><td>LH relievers vs ${esc(batsLbl)}</td><td>${raw(g.bpLTotal)}</td><td>${fmtRate(g.bpL)}</td></tr>
-        <tr><td>RH relievers vs ${esc(batsLbl)}</td><td>${raw(g.bpRTotal)}</td><td>${fmtRate(g.bpR)}</td></tr>
-        <tr><td>Combined vs ${esc(batsLbl)}</td><td>${raw(g.bpCTotal)}</td><td>${fmtRate(g.bpC)}</td></tr>
+        <tr><td>LH relievers vs ${esc(batsLbl)}</td><td>${raw(v&&v.bpLTotal)}</td><td>${fmtRate(v&&v.bpL)}</td></tr>
+        <tr><td>RH relievers vs ${esc(batsLbl)}</td><td>${raw(v&&v.bpRTotal)}</td><td>${fmtRate(v&&v.bpR)}</td></tr>
+        <tr><td>Combined vs ${esc(batsLbl)}</td><td>${raw(v&&v.bpCTotal)}</td><td>${fmtRate(v&&v.bpC)}</td></tr>
       </tbody></table></div>
     <div class="panel"><div class="panel-h">Environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread||'–')}</span>
