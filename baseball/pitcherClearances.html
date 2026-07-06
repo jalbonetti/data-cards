@@ -119,7 +119,10 @@
     .field,.fg select,.fg input,.ms-btn{height:32px;padding-top:5px;padding-bottom:5px;}
     .icon-btn,.seg{height:32px;}
     .seg select{height:30px;}
-    .bar{padding-top:8px;padding-bottom:8px;}
+    .bar{padding-top:8px;padding-bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
+    .bar-top,.bar-row2{display:contents;}                                  /* dissolve the row boxes into one flex line */
+    .title{order:1;} .search{order:2;margin-right:0;} .seg{order:3;}
+    #filterToggle{order:90;margin-left:auto;}
     .bar-row2{margin-top:6px;}
     .filters{margin-top:8px;padding-top:8px;padding-bottom:8px;}
     .filters-grid{gap:6px 10px;}
@@ -152,7 +155,6 @@
           <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
         </div>
       </div>
-      <div class="hint">Tap a clearance square to rank by it — the in-card stats switch to that same window &amp; split.</div>
     </div>
 
     <div class="filters" id="filters">
@@ -162,7 +164,7 @@
         <div class="fg"><label>Line</label><div class="ms" data-ms="line"></div></div>
         <div class="fg"><label>Throws</label><div class="ms" data-ms="throws"></div></div>
         <div class="fg"><label>Min games (season)</label><input type="number" data-filter="gMin" inputmode="numeric" value="0" /></div>
-        <div class="fg"><label>Min clearance % <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(of ranked square)</span></label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
+        <div class="fg"><label>Min clearance %</label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
         <div class="fg"><label>Best over odds</label>
           <div class="fg-range">
             <input type="number" data-filter="boMin" inputmode="numeric" placeholder="Min" />
