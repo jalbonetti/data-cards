@@ -109,6 +109,22 @@
   @media (prefers-reduced-motion:reduce){.spinner{animation-duration:1.6s;}}
   .sentinel{height:1px;}
   .loadpill{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--surface);color:var(--ink);border:1px solid var(--line);font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:50;}
+  /* #5: tighter vertical rhythm on desktop/tablet only — mobile (<680px) keeps its spacing */
+  @media (min-width:680px){
+    .field,.fg select,.fg input,.ms-btn{height:32px;padding-top:5px;padding-bottom:5px;}
+    .icon-btn,.seg{height:32px;}
+    .seg select{height:30px;}
+    .bar{padding-top:8px;padding-bottom:8px;}
+    .bar-row2{margin-top:6px;}
+    .filters{margin-top:8px;padding-top:8px;padding-bottom:8px;}
+    .filters-grid{gap:6px 10px;}
+    .grid{gap:8px;}
+    .c-head{padding-top:10px;}
+    .c-sub{margin-top:3px;}
+    .cgrid{margin-top:8px;gap:5px;}
+    .cell{padding-top:5px;padding-bottom:4px;}
+    .expand-row{margin-top:8px;margin-bottom:9px;}
+  }
 </style>
 </head>
 <body>
