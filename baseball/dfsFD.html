@@ -66,6 +66,7 @@
   .c-name{font-size:15px;font-weight:700;line-height:1.2;}
   .c-sub{margin-top:4px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
   .c-matchup{margin-top:3px;font-size:11.5px;color:var(--muted);}
+  .bar-break{display:none;}
   .tag{font-weight:700;color:var(--ink);background:var(--line-2);border-radius:5px;padding:1px 5px;font-size:10.5px;letter-spacing:.3px;}
   .tag.lu.conf{background:var(--good-bg);color:var(--good);}
   .tag.lu.proj{background:var(--warn-bg);color:var(--warn);}
@@ -130,6 +131,7 @@
     .bar{padding-top:8px;padding-bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
     .bar-top,.bar-row2{display:contents;}                                  /* dissolve the row boxes into one flex line */
     .title{order:1;} .search{order:2;margin-right:0;} .seg{order:3;}
+    .bar-break{display:block;flex-basis:100%;height:0;order:87;}   /* force the right group onto row 2 */
     .slate-seg{order:88;margin-left:auto;} #modeToggle{order:89;} #filterToggle{order:90;}
     .bar-row2{margin-top:6px;}
     .filters{margin-top:8px;padding-top:8px;padding-bottom:8px;}
@@ -184,6 +186,7 @@
           <select id="slateSel"><option value="">All slates</option></select>
         </div>
       </div>
+      <div class="bar-break"></div>
     </div>
 
     <div class="filters" id="filters">
