@@ -114,7 +114,10 @@
     .field,.fg select,.fg input,.ms-btn{height:32px;padding-top:5px;padding-bottom:5px;}
     .icon-btn,.seg{height:32px;}
     .seg select{height:30px;}
-    .bar{padding-top:8px;padding-bottom:8px;}
+    .bar{padding-top:8px;padding-bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
+    .bar-top,.bar-row2{display:contents;}                                  /* dissolve the row boxes into one flex line */
+    .title{order:1;} .search{order:2;margin-right:0;} .seg{order:3;}
+    #filterToggle{order:90;margin-left:auto;}
     .bar-row2{margin-top:6px;}
     .filters{margin-top:8px;padding-top:8px;padding-bottom:8px;}
     .filters-grid{gap:6px 10px;}
@@ -499,11 +502,11 @@ function detailHTML(c){
   const bpL=c.oppBP?getVar(c.oppBP.variants,c.oppLoc,'vL'):null;
   const bpR=c.oppBP?getVar(c.oppBP.variants,c.oppLoc,'vR'):null;
   const bpCnt=bpCountStr(c.oppBpCnt||{});
-  const bpPanel=`<div class="panel"><div class="panel-h">Opposing bullpen${bpCnt?' — '+esc(bpCnt):''}</div>${bpO?bullpenTable(bpO,bpL,bpR)+`<div class="note-sm">tap a pen slot for vs-LHB / vs-RHB.</div>`:'<div class="note-sm">No bullpen data for this split.</div>'}</div>`;
+  const bpPanel=`<div class="panel"><div class="panel-h">Opposing bullpen${bpCnt?' — '+esc(bpCnt):''}</div>${bpO?bullpenTable(bpO,bpL,bpR)+`<div class="note-sm">Tap a pen hand for vs-LHB / vs-RHB.</div>`:'<div class="note-sm">No bullpen data for this split.</div>'}</div>`;
   // park factors
   const pf=c.game.pf;
   const pfPanel=`<div class="panel"><div class="panel-h">Park factors (rank)</div>${statTable(SET_PF,[['All',pf.All],['vL',pf.L],['vR',pf.R]])}
-    <div class="note-sm">100 is league average; higher inflates, lower suppresses. Same for both teams in the game.</div></div>`;
+    <div class="note-sm">100 is league average; higher inflates, lower suppresses.</div></div>`;
   // environment
   const envPanel=`<div class="panel"><div class="panel-h">Environment</div>
     <div class="kv"><span class="k">Spread</span><span class="v">${esc(c.game.spread||'–')}</span>
