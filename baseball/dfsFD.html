@@ -126,7 +126,10 @@
     .field,.fg select,.fg input,.ms-btn{height:32px;padding-top:5px;padding-bottom:5px;}
     .icon-btn,.seg{height:32px;}
     .seg select{height:30px;}
-    .bar{padding-top:8px;padding-bottom:8px;}
+    .bar{padding-top:8px;padding-bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
+    .bar-top,.bar-row2{display:contents;}                                  /* dissolve the row boxes into one flex line */
+    .title{order:1;} .search{order:2;margin-right:0;} .seg{order:3;}
+    #modeToggle{order:89;margin-left:auto;} #filterToggle{order:90;}
     .bar-row2{margin-top:6px;}
     .filters{margin-top:8px;padding-top:8px;padding-bottom:8px;}
     .filters-grid{gap:6px 10px;}
@@ -193,9 +196,9 @@
             <input type="number" data-filter="prMax" inputmode="numeric" placeholder="Max" />
           </div>
         </div>
-        <div class="fg"><label>Min points <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(ranked split)</span></label><input type="number" data-filter="projMin" inputmode="decimal" placeholder="e.g. 8" /></div>
-        <div class="fg"><label>Min value <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(pts per $1k)</span></label><input type="number" data-filter="valMin" inputmode="decimal" placeholder="e.g. 2.5" /></div>
-        <div class="fg"><label>Min games <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted-2)">(season)</span></label><input type="number" data-filter="gMin" inputmode="numeric" placeholder="e.g. 20" /></div>
+        <div class="fg"><label>Min points</label><input type="number" data-filter="projMin" inputmode="decimal" placeholder="e.g. 8" /></div>
+        <div class="fg"><label>Min value</label><input type="number" data-filter="valMin" inputmode="decimal" placeholder="e.g. 2.5" /></div>
+        <div class="fg"><label>Min games</label><input type="number" data-filter="gMin" inputmode="numeric" placeholder="e.g. 20" /></div>
       </div>
       <div class="filters-foot"><button class="clear-btn" id="clearFilters">Clear all</button></div>
     </div>
@@ -385,7 +388,8 @@ function rampColor(t){
   if(t<0.8)return{edge:'#34d399',bg:'rgba(52,211,153,.16)',fg:'#6ee7b7'};
   return{edge:'#10b981',bg:'rgba(16,185,129,.24)',fg:'#34d399'};
 }
-function normColor(v,mn,mx){if(v==null||mn==null||mx==null||mx<=mn)return rampColor(null);return rampColor((v-mn)/(mx-mn));}
+function pct(v,arr){if(v==null||!arr||arr.length<2)return null;let below=0;for(const x of arr)if(x<v)below++;return below/(arr.length-1);}   // percentile rank in the field (outlier-robust)
+function pctColor(v,arr,invert){const t=pct(v,arr);if(t==null)return rampColor(null);return rampColor(invert?1-t:t);}
 
 /* ---------- Data ---------- */
 function buildQuery(){ return `${SUPABASE_URL}/rest/v1/${M().table}?select=*`; }
@@ -476,7 +480,7 @@ function sortValue(g){
   return null;
 }
 function sortCard(g,key,label,valStr,sub,col){const active=sortMode===key?' active':'';const st=col?` style="--cbg:${col.bg};--cfg:${col.fg}"`:'';return `<button type="button" class="cell${active}" data-sortkey="${key}"${st}><div class="cl">${esc(label)}</div><div class="cv">${valStr}</div><div class="cg">${sub?esc(sub):'&nbsp;'}</div></button>`;}
-let RANGES={proj:{},val:{},rost:{},out:{}};
+let VALS={proj:[],val:[],rost:[],out:[]};
 function recomputeProd(){
   const proj=[],val=[],rost=[],out=[];
   for(const g of GROUPS){
@@ -486,8 +490,8 @@ function recomputeProd(){
     const r=Number(g.rostership); if(!isNaN(r))rost.push(r);
     const o=outputVal(g); if(o!=null)out.push(o);
   }
-  const rng=a=>a.length?{mn:Math.min.apply(null,a),mx:Math.max.apply(null,a)}:{mn:null,mx:null};
-  RANGES={proj:rng(proj),val:rng(val),rost:rng(rost),out:rng(out)};
+  const sort=a=>a.slice().sort((x,y)=>x-y);
+  VALS={proj:sort(proj),val:sort(val),rost:sort(rost),out:sort(out)};
 }
 
 /* ---------- Filters / sort ---------- */
@@ -561,7 +565,7 @@ function cardHTML(g){
   const lu=isBat?lineupTag(g.lineup):''; const luCls=/proj/i.test(g.lineup||'')?'proj':(/conf/i.test(g.lineup||'')?'conf':'');
   const luTag=lu?`<span class="tag lu ${luCls}" title="${esc(g.lineup||'')}">${esc(lu)}</span>`:'';
   const loc=g.location||'Loc';
-  const c=normColor(projPts(g),RANGES.proj.mn,RANGES.proj.mx);   // edge accent = projection standing
+  const c=pctColor(projPts(g),VALS.proj,false);   // edge accent = projection percentile
   const swS=(g.luNS&&String(g.luNS)!=='0')?(' / '+raw(g.luNS)+' SHB'):'';
   const mini = isBat ? `vs <b>${esc(g.sp||'—')}</b>` : `vs <b>${g.luNL!=null?(raw(g.luNL)+' LHB / '+raw(g.luNR)+' RHB'+swS):'lineup'}</b>`;
   return `
@@ -571,10 +575,10 @@ function cardHTML(g){
         <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span class="tag">${esc(g.pos||'–')}</span> <span class="tag">${fmtPrice(g.price)}</span> <span>${esc(g._matchupAb)}</span></div></div>
     </div>
     <div class="cgrid">
-      ${sortCard(g,'proj:pts','Proj',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts',normColor(projPts(g),RANGES.proj.mn,RANGES.proj.mx))}
-      ${sortCard(g,'proj:val','Value',projValue(g)!=null?fmtRatio(projValue(g)):'–','pts/$',normColor(projValue(g),RANGES.val.mn,RANGES.val.mx))}
-      ${sortCard(g,'rost','Rost',rostDisp(g),'',normColor(Number(g.rostership),RANGES.rost.mn,RANGES.rost.mx))}
-      ${sortCard(g,'output',outputLabel(g),outputVal(g)!=null?fmtAvg(outputVal(g)):'–','output',normColor(outputVal(g),RANGES.out.mn,RANGES.out.mx))}
+      ${sortCard(g,'proj:pts','Projected Points',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts',pctColor(projPts(g),VALS.proj,false))}
+      ${sortCard(g,'proj:val','Projected Value',projValue(g)!=null?fmtRatio(projValue(g)):'–','pts/$',pctColor(projValue(g),VALS.val,false))}
+      ${sortCard(g,'rost','Projected Rostership',rostDisp(g),'',pctColor(Number(g.rostership),VALS.rost,true))}
+      ${sortCard(g,'output',outputLabel(g),outputVal(g)!=null?fmtAvg(outputVal(g)):'–','output',pctColor(outputVal(g),VALS.out,false))}
     </div>
     <div class="expand-row"><div class="matchup-mini">${mini}</div>
       <button class="exp-btn" type="button">Detail <span class="car">▾</span></button></div>
@@ -602,8 +606,7 @@ function detailHTML(g){
     <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')}</div>
       ${statTable(SET_OPP_SP,[['Overall',g.spO],[faceLbl,g.spV]])}</div>
     <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.bpNL)} LH / ${raw(g.bpNR)} RH</div>
-      ${statTable(SET_OPP_BP,[['LH relievers',g.bpL],['RH relievers',g.bpR]])}
-      <div class="note-sm">Each row is that reliever group's results vs ${esc(batsLbl)}.</div></div>`;
+      ${statTable(SET_OPP_BP,[['LH pen vs '+batsLbl,g.bpL],['RH pen vs '+batsLbl,g.bpR]])}</div>`;
   }else{
     const myHand=g.hand==='L'?'L':g.hand==='R'?'R':null;
     const vsLbl=myHand?('vs '+myHand+'HP'):'vs hand';
