@@ -435,11 +435,7 @@ function buildGroups(rows){
       g.slateMap=parseSlateRost(row[F.slateRost]); g._slates=new Set(Object.keys(g.slateMap));
       if(isBat){
         g.sp=row['Starter'];
-        g.spO=readCols(row,c=>`Starter ${c}`,SET_OPP_SP);
-        g.spV=readCols(row,c=>`Starter ${c} V`,SET_OPP_SP);
         g.bpNL=row['Bullpen L Count']; g.bpNR=row['Bullpen R Count'];
-        g.bpL=readCols(row,c=>`Bullpen ${c} L`,SET_OPP_BP);
-        g.bpR=readCols(row,c=>`Bullpen ${c} R`,SET_OPP_BP);
       }else{
         g.luNL=row['Lineup Lefties']; g.luNR=row['Lineup Righties']; g.luNS=row['Lineup Switch'];
         g.luO=readCols(row,c=>`Lineup ${c}`,SET_BAT);
@@ -448,9 +444,11 @@ function buildGroups(rows){
       map.set(player,g);
     }
     const vk=`${row[F.period]}|${row[F.split]}`;
-    g.variants[vk]={ratio:num(row[F.ratioMed]), ratioHigh:num(row[F.ratioHigh]),
+    const vv={ratio:num(row[F.ratioMed]), ratioHigh:num(row[F.ratioHigh]),
       med:num(row[F.projMed]), avg:num(row[F.projAvg]), high:num(row[F.projHigh]), low:num(row[F.projLow]), mode:row[F.projMode],
       prod:{O:readCols(row,c=>`${role} ${c}`,set), L:readCols(row,c=>`${role} L ${c}`,set), R:readCols(row,c=>`${role} R ${c}`,set)}};
+    if(isBat){ vv.spO=readCols(row,c=>`Starter ${c}`,SET_OPP_SP); vv.spV=readCols(row,c=>`Starter ${c} V`,SET_OPP_SP); vv.bpL=readCols(row,c=>`Bullpen ${c} L`,SET_OPP_BP); vv.bpR=readCols(row,c=>`Bullpen ${c} R`,SET_OPP_BP); }
+    g.variants[vk]=vv;
   }
   const arr=[...map.values()];
   GMAP.clear();
@@ -605,10 +603,10 @@ function detailHTML(g){
     const faceLbl=faceHand==='L'?'vs LHB':faceHand==='R'?'vs RHB':'Platoon';
     const batsLbl=g.hand==='L'?'LHB':(g.hand==='R'?'RHB':'switch hitters');
     oppPanel=`
-    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')}</div>
-      ${statTable(SET_OPP_SP,[['Overall',g.spO],[faceLbl,g.spV]])}</div>
-    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.bpNL)} LH / ${raw(g.bpNR)} RH</div>
-      ${statTable(SET_OPP_BP,[['LH pen vs '+batsLbl,g.bpL],['RH pen vs '+batsLbl,g.bpR]])}</div>`;
+    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')} · ${perLbl}</div>
+      ${statTable(SET_OPP_SP,[['Overall',v&&v.spO],[faceLbl,v&&v.spV]])}</div>
+    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.bpNL)} LH / ${raw(g.bpNR)} RH · ${perLbl}</div>
+      ${statTable(SET_OPP_BP,[['LH pen vs '+batsLbl,v&&v.bpL],['RH pen vs '+batsLbl,v&&v.bpR]])}</div>`;
   }else{
     const myHand=g.hand==='L'?'L':g.hand==='R'?'R':null;
     const vsLbl=myHand?('vs '+myHand+'HP'):'vs hand';
