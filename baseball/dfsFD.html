@@ -65,6 +65,7 @@
   .c-main{flex:1;min-width:0;}
   .c-name{font-size:15px;font-weight:700;line-height:1.2;}
   .c-sub{margin-top:4px;font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .c-matchup{margin-top:3px;font-size:11.5px;color:var(--muted);}
   .tag{font-weight:700;color:var(--ink);background:var(--line-2);border-radius:5px;padding:1px 5px;font-size:10.5px;letter-spacing:.3px;}
   .tag.lu.conf{background:var(--good-bg);color:var(--good);}
   .tag.lu.proj{background:var(--warn-bg);color:var(--warn);}
@@ -129,7 +130,7 @@
     .bar{padding-top:8px;padding-bottom:8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;}
     .bar-top,.bar-row2{display:contents;}                                  /* dissolve the row boxes into one flex line */
     .title{order:1;} .search{order:2;margin-right:0;} .seg{order:3;}
-    #modeToggle{order:89;margin-left:auto;} #filterToggle{order:90;}
+    .slate-seg{order:88;margin-left:auto;} #modeToggle{order:89;} #filterToggle{order:90;}
     .bar-row2{margin-top:6px;}
     .filters{margin-top:8px;padding-top:8px;padding-bottom:8px;}
     .filters-grid{gap:6px 10px;}
@@ -179,7 +180,7 @@
             <option value="high">High</option>
           </select>
         </div>
-        <div class="seg"><label for="slateSel">Slate</label>
+        <div class="seg slate-seg"><label for="slateSel">Slate</label>
           <select id="slateSel"><option value="">All slates</option></select>
         </div>
       </div>
@@ -570,7 +571,8 @@ function cardHTML(g){
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${c.edge}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
-        <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span class="tag">${esc(g.pos||'–')}</span> <span class="tag">${fmtPrice(g.price)}</span> <span>${esc(g._matchupAb)}</span></div></div>
+        <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span class="tag">${esc(g.pos||'–')}</span> <span class="tag">${fmtPrice(g.price)}</span></div>
+        <div class="c-matchup">${esc(g._matchupAb)}</div></div>
     </div>
     <div class="cgrid">
       ${sortCard(g,'proj:pts','Projected Points',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts',pctColor(projPts(g),VALS.proj,false))}
