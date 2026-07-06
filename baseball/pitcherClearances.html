@@ -317,7 +317,6 @@ function buildGroups(rows){
     if(!g){
       g={key,player,team:row[F.team],throws:row[F.throws],prop,line:num(line),oppLineupStatus:row[F.oppLineupStatus],oppLineupSplit:row[F.oppLineupSplit],
         matchup:row[F.matchup],spread:row[F.spread],total:row[F.total],park:row[F.park],stadium:row[F.stadium],dome:row[F.dome],
-        lineLTotal:K.lLt?row[K.lLt]:null,lineL:K.lL?row[K.lL]:null,lineRTotal:K.lRt?row[K.lRt]:null,lineR:K.lR?row[K.lR]:null,lineCTotal:K.lCt?row[K.lCt]:null,lineC:K.lC?row[K.lC]:null,
         nLHB:K.nLHB?row[K.nLHB]:null,nRHB:K.nRHB?row[K.nRHB]:null,
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
         bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
@@ -327,6 +326,7 @@ function buildGroups(rows){
     }
     const vk=`${row[F.period]}|${row[F.split]}`;const gm=String(row[F.games]||'').split('/');
     g.variants[vk]={clr:num(String(row[F.clearance]||'').replace('%','')),gCleared:gm[0]?parseInt(gm[0],10):null,gTotal:gm[1]?parseInt(gm[1],10):null,
+      lineLTotal:K.lLt?row[K.lLt]:null,lineL:K.lL?row[K.lL]:null,lineRTotal:K.lRt?row[K.lRt]:null,lineR:K.lR?row[K.lR]:null,lineCTotal:K.lCt?row[K.lCt]:null,lineC:K.lC?row[K.lC]:null,
       prod:{tot:row[F.spTotal],avg:row[F.spAvg],hi:row[F.spHigh],ratio:row[F.spRatio],
         Ltot:row[F.spLTotal],Lavg:row[F.spLAvg],Lhi:row[F.spLHigh],Lratio:row[F.spLRatio],
         Rtot:row[F.spRTotal],Ravg:row[F.spRAvg],Rhi:row[F.spRHigh],Rratio:row[F.spRRatio]}};
@@ -510,13 +510,14 @@ function detailHTML(g){
   const [perRaw,spRaw]=sortMode.slice(4).split('|');
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
+  const v=g._prodVar||g._season;
   return `
     <div class="panel"><div class="panel-h">Pitcher production — ${perLbl}${splitLbl}</div>${prodTable(g)}</div>
-    <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.nLHB)} LHB / ${raw(g.nRHB)} RHB</div>
+    <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.nLHB)} LHB / ${raw(g.nRHB)} RHB · ${perLbl}</div>
       <table class="mini"><thead><tr><th></th><th>Tot</th><th>Rate</th></tr></thead><tbody>
-        <tr><td>LH batters</td><td>${raw(g.lineLTotal)}</td><td>${fmtRate(g.lineL)}</td></tr>
-        <tr><td>RH batters</td><td>${raw(g.lineRTotal)}</td><td>${fmtRate(g.lineR)}</td></tr>
-        <tr><td>Combined</td><td>${raw(g.lineCTotal)}</td><td>${fmtRate(g.lineC)}</td></tr>
+        <tr><td>LH batters</td><td>${raw(v&&v.lineLTotal)}</td><td>${fmtRate(v&&v.lineL)}</td></tr>
+        <tr><td>RH batters</td><td>${raw(v&&v.lineRTotal)}</td><td>${fmtRate(v&&v.lineR)}</td></tr>
+        <tr><td>Combined</td><td>${raw(v&&v.lineCTotal)}</td><td>${fmtRate(v&&v.lineC)}</td></tr>
       </tbody></table>
       <div class="note-sm">Each row is that batter group's results vs this pitcher${g.oppLineupSplit?` · ${esc(g.oppLineupSplit)}`:''}.</div></div>
     <div class="panel"><div class="panel-h">Environment</div>
