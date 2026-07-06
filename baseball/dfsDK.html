@@ -215,7 +215,7 @@ const MATCHUP_RE = new RegExp(Object.keys(TEAM_NAME_MAP).sort((a,b)=>b.length-a.
    same slots in both, with rates pushed to the end. */
 const SET_BAT = [['PA','PA','int'],['AB','AB','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['RBI','RBI','int'],['R','R','int'],['BB','BB','int'],['SO','SO','int'],['HBP','HBP','int'],['SB','SB','int'],['AVG','AVG','rate'],['H/PA','HpPA','rate']];
 const SET_PIT = [['IP','IP','ip'],['TBF','TBF','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['ER','ER','int'],['R','R','int'],['BB','BB','int'],['SO','SO','int'],['HBP','HBP','int'],['AVG','AVG','rate'],['ERA','ERA','era'],['H/BF','H/BF','rate']];
-const SET_OPP_SP = [['TBF','TBF','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['BB','BB','int'],['HBP','HBP','int'],['AVG','AVG','rate'],['ERA','ERA','era']];
+const SET_OPP_SP = [['TBF','TBF','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['R','R','int'],['ER','ER','int'],['BB','BB','int'],['HBP','HBP','int'],['AVG','AVG','rate'],['ERA','ERA','era']];
 const SET_OPP_BP = [['IP','IP','ip'],['TBF','TBF','int'],['H','H','int'],['1B','1B','int'],['2B','2B','int'],['3B','3B','int'],['HR','HR','int'],['BB','BB','int'],['HBP','HBP','int'],['AVG','AVG','rate'],['ERA','ERA','era']];
 const PF_SET = [[BOOK,BOOK+' PF'],['H','H PF'],['1B','1B PF'],['2B','2B PF'],['3B','3B PF'],['HR','HR PF'],['R','R PF'],['SO','SO PF'],['BB','BB PF']];
 
