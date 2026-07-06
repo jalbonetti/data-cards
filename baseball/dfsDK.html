@@ -362,6 +362,16 @@ function valColors(r){
   if(r<3.25) return{edge:'#34d399',bg:'rgba(52,211,153,.16)',fg:'#6ee7b7'};
   return            {edge:'#10b981',bg:'rgba(16,185,129,.24)',fg:'#34d399'};
 }
+// same 5-color ramp, but keyed to a 0..1 position so each stat can be scaled to its own field range
+function rampColor(t){
+  if(t==null||isNaN(t))return{edge:'var(--line)',bg:'rgba(255,255,255,.05)',fg:'#7a6b8f'};
+  if(t<0.2)return{edge:'#f87171',bg:'rgba(248,113,113,.16)',fg:'#fca5a5'};
+  if(t<0.4)return{edge:'#fb923c',bg:'rgba(251,146,60,.16)',fg:'#fdba74'};
+  if(t<0.6)return{edge:'#fbbf24',bg:'rgba(251,191,36,.15)',fg:'#fcd34d'};
+  if(t<0.8)return{edge:'#34d399',bg:'rgba(52,211,153,.16)',fg:'#6ee7b7'};
+  return{edge:'#10b981',bg:'rgba(16,185,129,.24)',fg:'#34d399'};
+}
+function normColor(v,mn,mx){if(v==null||mn==null||mx==null||mx<=mn)return rampColor(null);return rampColor((v-mn)/(mx-mn));}
 
 /* ---------- Data ---------- */
 function buildQuery(){ return `${SUPABASE_URL}/rest/v1/${M().table}?select=*`; }
@@ -451,8 +461,20 @@ function sortValue(g){
   if(sortMode==='output')return outputVal(g);
   return null;
 }
-function sortCard(g,key,label,valStr,sub){const active=sortMode===key?' active':'';return `<button type="button" class="cell${active}" data-sortkey="${key}"><div class="cl">${esc(label)}</div><div class="cv">${valStr}</div><div class="cg">${sub?esc(sub):'&nbsp;'}</div></button>`;}
-function recomputeProd(){for(const g of GROUPS){g._prodVar=activeVar(g);}}
+function sortCard(g,key,label,valStr,sub,col){const active=sortMode===key?' active':'';const st=col?` style="--cbg:${col.bg};--cfg:${col.fg}"`:'';return `<button type="button" class="cell${active}" data-sortkey="${key}"${st}><div class="cl">${esc(label)}</div><div class="cv">${valStr}</div><div class="cg">${sub?esc(sub):'&nbsp;'}</div></button>`;}
+let RANGES={proj:{},val:{},rost:{},out:{}};
+function recomputeProd(){
+  const proj=[],val=[],rost=[],out=[];
+  for(const g of GROUPS){
+    g._prodVar=activeVar(g);
+    const p=projPts(g); if(p!=null)proj.push(p);
+    const vv=projValue(g); if(vv!=null)val.push(vv);
+    const r=Number(g.rostership); if(!isNaN(r))rost.push(r);
+    const o=outputVal(g); if(o!=null)out.push(o);
+  }
+  const rng=a=>a.length?{mn:Math.min.apply(null,a),mx:Math.max.apply(null,a)}:{mn:null,mx:null};
+  RANGES={proj:rng(proj),val:rng(val),rost:rng(rost),out:rng(out)};
+}
 
 /* ---------- Filters / sort ---------- */
 function uniq(getter){return [...new Set(GROUPS.map(getter).filter(v=>v!=null&&v!==''))];}
@@ -525,8 +547,7 @@ function cardHTML(g){
   const lu=isBat?lineupTag(g.lineup):''; const luCls=/proj/i.test(g.lineup||'')?'proj':(/conf/i.test(g.lineup||'')?'conf':'');
   const luTag=lu?`<span class="tag lu ${luCls}" title="${esc(g.lineup||'')}">${esc(lu)}</span>`:'';
   const loc=g.location||'Loc';
-  const pv=projValue(g);
-  const c=valColors(pv);
+  const c=normColor(projPts(g),RANGES.proj.mn,RANGES.proj.mx);   // edge accent = projection standing
   const swS=(g.luNS&&String(g.luNS)!=='0')?(' / '+raw(g.luNS)+' SHB'):'';
   const mini = isBat ? `vs <b>${esc(g.sp||'—')}</b>` : `vs <b>${g.luNL!=null?(raw(g.luNL)+' LHB / '+raw(g.luNR)+' RHB'+swS):'lineup'}</b>`;
   return `
@@ -536,10 +557,10 @@ function cardHTML(g){
         <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span class="tag">${esc(g.pos||'–')}</span> <span class="tag">${fmtPrice(g.price)}</span> <span>${esc(g._matchupAb)}</span></div></div>
     </div>
     <div class="cgrid">
-      ${sortCard(g,'proj:pts','Proj',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts')}
-      ${sortCard(g,'proj:val','Value',projValue(g)!=null?fmtRatio(projValue(g)):'–','pts/$')}
-      ${sortCard(g,'rost','Rost',rostDisp(g),'')}
-      ${sortCard(g,'output',outputLabel(g),outputVal(g)!=null?fmtAvg(outputVal(g)):'–','output')}
+      ${sortCard(g,'proj:pts','Proj',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts',normColor(projPts(g),RANGES.proj.mn,RANGES.proj.mx))}
+      ${sortCard(g,'proj:val','Value',projValue(g)!=null?fmtRatio(projValue(g)):'–','pts/$',normColor(projValue(g),RANGES.val.mn,RANGES.val.mx))}
+      ${sortCard(g,'rost','Rost',rostDisp(g),'',normColor(Number(g.rostership),RANGES.rost.mn,RANGES.rost.mx))}
+      ${sortCard(g,'output',outputLabel(g),outputVal(g)!=null?fmtAvg(outputVal(g)):'–','output',normColor(outputVal(g),RANGES.out.mn,RANGES.out.mx))}
     </div>
     <div class="expand-row"><div class="matchup-mini">${mini}</div>
       <button class="exp-btn" type="button">Detail <span class="car">▾</span></button></div>
