@@ -254,10 +254,14 @@ async function fetchTableVerified(table){
 
 /* ---------- Build cards ---------- */
 function parseMatchup(s){
-  const sep=String(s||'').includes(' @ ')?' @ ':(String(s||'').includes(' vs ')?' vs ':null);
-  if(!sep)return {awayFull:'',homeFull:''};
-  const [a,h]=s.split(sep).map(x=>x.split(',')[0].trim());
-  return {awayFull:a,homeFull:h};
+  const str=String(s||'');
+  const gm=str.match(/\s*\(Game\s*\d+\)\s*$/);   // trailing doubleheader tag, e.g. " (Game 1)"
+  const gameTag=gm?gm[0].trim():'';
+  const clean=gm?str.slice(0,gm.index):str;          // team names without the tag so abbrTeam matches
+  const sep=clean.includes(' @ ')?' @ ':(clean.includes(' vs ')?' vs ':null);
+  if(!sep)return {awayFull:'',homeFull:'',gameTag:gameTag};
+  const [a,h]=clean.split(sep).map(x=>x.split(',')[0].trim());
+  return {awayFull:a,homeFull:h,gameTag:gameTag};
 }
 function lineupStatusOf(lineup){
   const blob=(lineup||[]).map(p=>String(p.status||'')).join(' ').toLowerCase();
@@ -269,9 +273,9 @@ function buildCards(games,batters,starters,bullpen){
   const G=new Map();
   for(const r of games){
     const id=r['Matchup ID']; if(id==null) continue;
-    const {awayFull,homeFull}=parseMatchup(r['Matchup']);
+    const {awayFull,homeFull,gameTag}=parseMatchup(r['Matchup']);
     const pf={};for(const sp of ['All','L','R']){const o={};for(const st of PF_STATS)o[st]=r[`PF ${sp} ${st}`];pf[sp]=o;}
-    G.set(String(id),{id:String(id),matchup:r['Matchup'],matchupAb:`${abbrTeam(awayFull)} @ ${abbrTeam(homeFull)}`,
+    G.set(String(id),{id:String(id),matchup:r['Matchup'],matchupAb:`${abbrTeam(awayFull)} @ ${abbrTeam(homeFull)}${gameTag?' '+gameTag:''}`,
       awayFull,homeFull,away:abbrTeam(awayFull),home:abbrTeam(homeFull),
       gametime:fmtTime(r['Gametime']),spread:r['Spread'],total:r['Total'],homeSP:r['Home SP'],awaySP:r['Away SP'],
       stadium:r['Stadium'],dome:r['Dome'],wx:[r['Weather 1'],r['Weather 2'],r['Weather 3'],r['Weather 4']].filter(Boolean),pf,
@@ -502,11 +506,11 @@ function detailHTML(c){
   const bpL=c.oppBP?getVar(c.oppBP.variants,c.oppLoc,'vL'):null;
   const bpR=c.oppBP?getVar(c.oppBP.variants,c.oppLoc,'vR'):null;
   const bpCnt=bpCountStr(c.oppBpCnt||{});
-  const bpPanel=`<div class="panel"><div class="panel-h">Opposing bullpen${bpCnt?' — '+esc(bpCnt):''}</div>${bpO?bullpenTable(bpO,bpL,bpR)+`<div class="note-sm">Tap a pen hand for vs-LHB / vs-RHB.</div>`:'<div class="note-sm">No bullpen data for this split.</div>'}</div>`;
+  const bpPanel=`<div class="panel"><div class="panel-h">Opposing bullpen${bpCnt?' — '+esc(bpCnt):''}</div>${bpO?bullpenTable(bpO,bpL,bpR)+`<div class="note-sm">tap a pen slot for vs-LHB / vs-RHB.</div>`:'<div class="note-sm">No bullpen data for this split.</div>'}</div>`;
   // park factors
   const pf=c.game.pf;
   const pfPanel=`<div class="panel"><div class="panel-h">Park factors (rank)</div>${statTable(SET_PF,[['All',pf.All],['vL',pf.L],['vR',pf.R]])}
-    <div class="note-sm">100 is league average; higher inflates, lower suppresses.</div></div>`;
+    <div class="note-sm">100 is league average; higher inflates, lower suppresses. Same for both teams in the game.</div></div>`;
   // environment
   const envPanel=`<div class="panel"><div class="panel-h">Environment</div>
     <div class="kv"><span class="k">Spread</span><span class="v">${esc(c.game.spread||'–')}</span>
