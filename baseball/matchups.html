@@ -441,7 +441,8 @@ function lineupTable(c){
   const cells=o=>SET_BAT.map(([,col,typ])=>`<td>${fmtType(typ,o?o[col]:null)}</td>`).join('');
   let body='';
   c.lineup.forEach((p,i)=>{
-    const O=getVar(p.variants,c.loc,''),L=getVar(p.variants,c.loc,'vL'),R=getVar(p.variants,c.loc,'vR');
+    const blankG=v=>v?{...v,Games:null}:v;   // a batter's vs-LHP/vs-RHP "Games" isn't a distinct count — blank it (matches the pitcher rows)
+    const O=getVar(p.variants,c.loc,''),L=blankG(getVar(p.variants,c.loc,'vL')),R=blankG(getVar(p.variants,c.loc,'vR'));
     const lbl=`${p.pos!=null?p.pos:'–'} ${esc(p.player)}${p.bats?' ('+esc(p.bats)+')':''}`;
     body+=`<tr class="lp-row" data-idx="${i}"><td><span class="car-sm">▸</span> ${lbl}</td>${cells(O)}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>↳ vs LHP</td>${cells(L)}</tr>`;
@@ -498,9 +499,7 @@ function detailHTML(c){
   let spPanel;
   if(!c.oppSP){spPanel=`<div class="panel"><div class="panel-h">Opposing starter — ${esc(c.oppSPName||'—')}</div><div class="note-sm">No starter data for this split.</div></div>`;}
   else{
-    const O=getVar(c.oppSP.variants,c.oppLoc,'');
-    const blankG=v=>v?{...v,Games:null}:v;   // a pitcher's vs-LHB/vs-RHB "Games" isn't a distinct count — blank it (was leaking on the L30+location variant)
-    const L=blankG(getVar(c.oppSP.variants,c.oppLoc,'vL')),R=blankG(getVar(c.oppSP.variants,c.oppLoc,'vR'));
+    const O=getVar(c.oppSP.variants,c.oppLoc,''),L=getVar(c.oppSP.variants,c.oppLoc,'vL'),R=getVar(c.oppSP.variants,c.oppLoc,'vR');
     spPanel=`<div class="panel"><div class="panel-h">Opposing starter — ${esc(c.oppSPName||'—')}${c.oppSPHand?' ('+esc(c.oppSPHand)+')':''}</div>${statTable(SET_SP,[['Overall',O],['vs LHB',L],['vs RHB',R]])}</div>`;
   }
   // opposing bullpen — LH/RH pen slots expand to vs-LHB / vs-RHB
