@@ -510,18 +510,17 @@ function detailHTML(g){
   const [perRaw,spRaw]=sortMode.slice(4).split('|');
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
-  // The opposing lineup plays the opposite location to the pitcher.
-  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.location==='Home'?'away':'home')):' · all games';
+  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.location==='Home'?'away':'home')):' · all games';   // opposing lineup plays the opposite location
+  const vsP=g.throws==='R'?'RHP':(g.throws==='L'?'LHP':'the SP');
   const v=g._prodVar||g._season;
   return `
     <div class="panel"><div class="panel-h">Pitcher production — ${perLbl}${splitLbl}</div>${prodTable(g)}</div>
     <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.nLHB)} LHB / ${raw(g.nRHB)} RHB · ${perLbl}${oppSplitLbl}</div>
       <table class="mini"><thead><tr><th></th><th>Tot</th><th>Rate</th></tr></thead><tbody>
-        <tr><td>LH batters</td><td>${raw(v&&v.lineLTotal)}</td><td>${fmtRate(v&&v.lineL)}</td></tr>
-        <tr><td>RH batters</td><td>${raw(v&&v.lineRTotal)}</td><td>${fmtRate(v&&v.lineR)}</td></tr>
-        <tr><td>Combined</td><td>${raw(v&&v.lineCTotal)}</td><td>${fmtRate(v&&v.lineC)}</td></tr>
-      </tbody></table>
-      <div class="note-sm">Each row is that batter group's results vs this pitcher${g.oppLineupSplit?` · ${esc(g.oppLineupSplit)}`:''}.</div></div>
+        <tr><td>LH batters vs ${vsP}</td><td>${raw(v&&v.lineLTotal)}</td><td>${fmtRate(v&&v.lineL)}</td></tr>
+        <tr><td>RH batters vs ${vsP}</td><td>${raw(v&&v.lineRTotal)}</td><td>${fmtRate(v&&v.lineR)}</td></tr>
+        <tr><td>Combined vs ${vsP}</td><td>${raw(v&&v.lineCTotal)}</td><td>${fmtRate(v&&v.lineC)}</td></tr>
+      </tbody></table></div>
     <div class="panel"><div class="panel-h">Environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread||'–')}</span>
         <span class="k">Total</span><span class="v">${esc(g.total||'–')}</span>
