@@ -499,7 +499,8 @@ function detailHTML(c){
   let spPanel;
   if(!c.oppSP){spPanel=`<div class="panel"><div class="panel-h">Opposing starter — ${esc(c.oppSPName||'—')}</div><div class="note-sm">No starter data for this split.</div></div>`;}
   else{
-    const O=getVar(c.oppSP.variants,c.oppLoc,''),L=getVar(c.oppSP.variants,c.oppLoc,'vL'),R=getVar(c.oppSP.variants,c.oppLoc,'vR');
+    const blankG=v=>v?{...v,Games:null}:v;   // a pitcher's vs-LHB/vs-RHB "Games" isn't a distinct count — blank it on the split rows (all views)
+    const O=getVar(c.oppSP.variants,c.oppLoc,''),L=blankG(getVar(c.oppSP.variants,c.oppLoc,'vL')),R=blankG(getVar(c.oppSP.variants,c.oppLoc,'vR'));
     spPanel=`<div class="panel"><div class="panel-h">Opposing starter — ${esc(c.oppSPName||'—')}${c.oppSPHand?' ('+esc(c.oppSPHand)+')':''}</div>${statTable(SET_SP,[['Overall',O],['vs LHB',L],['vs RHB',R]])}</div>`;
   }
   // opposing bullpen — LH/RH pen slots expand to vs-LHB / vs-RHB
