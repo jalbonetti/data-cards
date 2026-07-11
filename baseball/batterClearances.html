@@ -537,6 +537,8 @@ function detailHTML(g){
   const [perRaw,spRaw]=sortMode.slice(4).split('|');
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
+  // the opposing pitcher/bullpen play the opposite location (batter home => they're away)
+  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.location==='Home'?'away':'home')):' · all games';
   const spHand=/\(L\)/i.test(g.sp||'')?'L':(/\(R\)/i.test(g.sp||'')?'R':null);
   const faceHand=g.bats==='B'?(spHand==='R'?'L':spHand==='L'?'R':null):(g.bats==='L'?'L':g.bats==='R'?'R':null);
   const faceLbl=faceHand==='L'?'vs LHB':faceHand==='R'?'vs RHB':'Platoon';
@@ -544,12 +546,12 @@ function detailHTML(g){
   const v=g._prodVar||g._season;
   return `
     <div class="panel"><div class="panel-h">Hitter production — ${perLbl}${splitLbl}</div>${prodTable(g)}</div>
-    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')} · ${perLbl}</div>
+    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')} · ${perLbl}${oppSplitLbl}</div>
       <table class="mini"><thead><tr><th></th><th>Tot</th><th>High</th><th>Avg</th><th>Rate</th></tr></thead><tbody>
         <tr><td>Overall</td><td>${raw(v&&v.spTotal)}</td><td>${raw(v&&v.spHigh)}</td><td>${fmtAvg(v&&v.spAvg)}</td><td>${fmtRate(v&&v.spRatio)}</td></tr>
         <tr><td>${faceLbl}</td><td>${raw(v&&v.spVTotal)}</td><td>${raw(v&&v.spVHigh)}</td><td>${fmtAvg(v&&v.spVAvg)}</td><td>${fmtRate(v&&v.spVRatio)}</td></tr>
       </tbody></table></div>
-    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.lefties)} LH / ${raw(g.righties)} RH · ${perLbl}</div>
+    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.lefties)} LH / ${raw(g.righties)} RH · ${perLbl}${oppSplitLbl}</div>
       <table class="mini"><thead><tr><th></th><th>Tot</th><th>Rate</th></tr></thead><tbody>
         <tr><td>LH relievers vs ${esc(batsLbl)}</td><td>${raw(v&&v.bpLTotal)}</td><td>${fmtRate(v&&v.bpL)}</td></tr>
         <tr><td>RH relievers vs ${esc(batsLbl)}</td><td>${raw(v&&v.bpRTotal)}</td><td>${fmtRate(v&&v.bpR)}</td></tr>
