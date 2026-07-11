@@ -143,6 +143,27 @@
     .cell{padding-top:5px;padding-bottom:4px;}
     .expand-row{margin-top:8px;margin-bottom:9px;}
   }
+
+  /* ---- Mobile: compact the sticky header so it doesn't eat the viewport ---- */
+  @media (max-width:560px){
+    .bar{padding:7px 10px;}
+    .bar-row2{margin-top:6px;gap:6px;}
+    .title{font-size:13.5px;gap:6px;}
+    .title .count{font-size:10px;padding:1px 6px;}
+    /* shrink every fixed-height control (36px -> 30px) and tighten type */
+    .field,.icon-btn,.seg,.tg{height:30px;font-size:12px;}
+    .field{padding:6px 8px;}
+    .icon-btn{padding:0 9px;font-size:12px;}
+    .seg{padding:0 7px;gap:4px;}
+    .seg select,.seg .seg-lab{font-size:11.5px;}
+    .seg-lab,.tg .tg-lab{font-size:9px;letter-spacing:.3px;}
+    .tg{padding:2px;}
+    .tg button{padding:4px 8px;font-size:11px;}
+    /* let the control groups share rows instead of each taking a full line */
+    .bar-break{display:none !important;}
+    .filters{padding:8px 10px;margin-top:8px;}
+    .fg select,.fg input,.ms-btn{height:32px;font-size:12.5px;}
+  }
 </style>
 </head>
 <body>
@@ -452,7 +473,6 @@ function buildGroups(rows){
       med:num(row[F.projMed]), avg:num(row[F.projAvg]), high:num(row[F.projHigh]), low:num(row[F.projLow]), mode:row[F.projMode],
       prod:{O:readCols(row,c=>`${role} ${c}`,set), L:readCols(row,c=>`${role} L ${c}`,set), R:readCols(row,c=>`${role} R ${c}`,set)}};
     if(isBat){ vv.spO=readCols(row,c=>`Starter ${c}`,SET_OPP_SP); vv.spV=readCols(row,c=>`Starter ${c} V`,SET_OPP_SP); vv.bpL=readCols(row,c=>`Bullpen ${c} L`,SET_OPP_BP); vv.bpR=readCols(row,c=>`Bullpen ${c} R`,SET_OPP_BP); }
-    else{ vv.luO=readCols(row,c=>`Lineup ${c}`,SET_BAT); vv.luV=readCols(row,c=>`Lineup V ${c}`,SET_BAT); }   // per-window opposing lineup so it flips with the selection
     g.variants[vk]=vv;
   }
   const arr=[...map.values()];
@@ -598,8 +618,6 @@ function detailHTML(g){
   const [perRaw,spRaw]=dispWS.split('|');
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
-  // Opposing side plays the opposite location: batter home => opposing pitcher/bullpen are away.
-  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.location==='Home'?'away':'home')):' · all games';
   const v=g._prodVar||g._season;
   const oppA=isBat?'vs LHP':'vs LHB', oppB=isBat?'vs RHP':'vs RHB';
   const prodH=isBat?'Hitter production':'Pitcher production';
@@ -611,17 +629,17 @@ function detailHTML(g){
     const faceLbl=faceHand==='L'?'vs LHB':faceHand==='R'?'vs RHB':'Platoon';
     const batsLbl=g.hand==='L'?'LHB':(g.hand==='R'?'RHB':'switch hitters');
     oppPanel=`
-    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')} · ${perLbl}${oppSplitLbl}</div>
+    <div class="panel"><div class="panel-h">Opposing starter — ${esc(g.sp||'—')} · ${perLbl}</div>
       ${statTable(SET_OPP_SP,[['Overall',v&&v.spO],[faceLbl,v&&v.spV]])}</div>
-    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.bpNL)} LH / ${raw(g.bpNR)} RH · ${perLbl}${oppSplitLbl}</div>
+    <div class="panel"><div class="panel-h">Opposing bullpen — ${raw(g.bpNL)} LH / ${raw(g.bpNR)} RH · ${perLbl}</div>
       ${statTable(SET_OPP_BP,[['LH pen vs '+batsLbl,v&&v.bpL],['RH pen vs '+batsLbl,v&&v.bpR]])}</div>`;
   }else{
     const myHand=g.hand==='L'?'L':g.hand==='R'?'R':null;
     const vsLbl=myHand?('vs '+myHand+'HP'):'vs hand';
     const sw=(g.luNS&&String(g.luNS)!=='0')?(' / '+raw(g.luNS)+' S'):'';
     oppPanel=`
-    <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.luNL)} LHB / ${raw(g.luNR)} RHB${sw} · ${perLbl}${oppSplitLbl}</div>
-      ${statTable(SET_BAT,[['Overall',v&&v.luO],[vsLbl,v&&v.luV]])}</div>`;
+    <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.luNL)} LHB / ${raw(g.luNR)} RHB${sw}</div>
+      ${statTable(SET_BAT,[['Overall',g.luO],[vsLbl,g.luV]])}</div>`;
   }
   const pf=`<div class="panel-h" style="margin-top:10px">Park factors (rank)</div>
     <div class="pf-grid">${g.pf.map(([lbl,val])=>`<div><span class="pfk">${esc(lbl)}</span><span class="pfv">${esc(fmtPark(val))}</span></div>`).join('')}</div>`;
