@@ -133,6 +133,27 @@
     .cell{padding-top:5px;padding-bottom:4px;}
     .expand-row{margin-top:8px;margin-bottom:9px;}
   }
+
+  /* ---- Mobile: compact the sticky header so it doesn't eat the viewport ---- */
+  @media (max-width:560px){
+    .bar{padding:7px 10px;}
+    .bar-row2{margin-top:6px;gap:6px;}
+    .title{font-size:13.5px;gap:6px;}
+    .title .count{font-size:10px;padding:1px 6px;}
+    /* shrink every fixed-height control (36px -> 30px) and tighten type */
+    .field,.icon-btn,.seg,.tg{height:30px;font-size:12px;}
+    .field{padding:6px 8px;}
+    .icon-btn{padding:0 9px;font-size:12px;}
+    .seg{padding:0 7px;gap:4px;}
+    .seg select,.seg .seg-lab{font-size:11.5px;}
+    .seg-lab,.tg .tg-lab{font-size:9px;letter-spacing:.3px;}
+    .tg{padding:2px;}
+    .tg button{padding:4px 8px;font-size:11px;}
+    /* let the control groups share rows instead of each taking a full line */
+    .bar-break{display:none !important;}
+    .filters{padding:8px 10px;margin-top:8px;}
+    .fg select,.fg input,.ms-btn{height:32px;font-size:12.5px;}
+  }
 </style>
 </head>
 <body>
