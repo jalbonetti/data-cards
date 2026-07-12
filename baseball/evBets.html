@@ -540,6 +540,11 @@ const kellyPct = (r) => r.kelly;
    sorted array preserves order, so keystrokes never trigger a re-sort.
 ------------------------------------------------------------------ */
 function uniqueSorted(key){ return [...new Set(RAW.map(r=>r[key]).filter(v=>v!=null&&v!==''))].sort(); }
+/* Best Odds Books can be a combo like "DraftKings/FanDuel" when books tie. Treat it like a
+   dual-position player: the filter lists INDIVIDUAL books, and a row matches if ANY of its
+   books is selected (so picking DraftKings catches every combo containing DraftKings). */
+function splitBooks(v){ return String(v==null?'':v).split('/').map(x=>x.trim()).filter(Boolean); }
+function uniqueBooksSorted(key){ const s=new Set(); RAW.forEach(r=>splitBooks(r[key]).forEach(b=>s.add(b))); return [...s].sort(); }
 
 const PROP_ORDER = ['Hits','Total Bases','Singles','Doubles','Triples','Home Runs','Runs Scored','RBIs','Hits + Runs + RBIs','Walks','Stolen Bases','Strikeouts','Outs Recorded','Pitching Outs','Hits Allowed','Earned Runs','Record a Win'];
 function orderProps(vals){const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});}
@@ -597,7 +602,7 @@ function populateFilters(){
   MS.prop.setOptions(orderProps(uniqueSorted('prop')).map(v=>[v,abbrProp(v)]));
   MS.label.setOptions(uniqueSorted('label'));
   MS.book.setOptions(uniqueSorted('book'));
-  MS.bestBooks.setOptions(uniqueSorted('bestBooks'));
+  MS.bestBooks.setOptions(uniqueBooksSorted('bestBooks'));
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=(filters[k]!=null)?filters[k]:'';});
   els.search.value=filters.search||'';
 }
@@ -649,7 +654,10 @@ function applyFilters(){
     if (filters.prop.has(r.prop)) return false;
     if (filters.label.has(r.label)) return false;
     if (filters.book.has(r.book)) return false;
-    if (filters.bestBooks.has(r.bestBooks)) return false;
+    if (filters.bestBooks.size){                     // set holds DESELECTED books
+      const bks = splitBooks(r.bestBooks);
+      if (bks.length && bks.every(b => filters.bestBooks.has(b))) return false;   // no selected book on this row
+    }
     if (evMin!=null && (evPct(r)==null || evPct(r) < evMin)) return false;
     if (bMin!=null && (r.bestOdds==null || r.bestOdds < bMin)) return false;
     if (bMax!=null && (r.bestOdds==null || r.bestOdds > bMax)) return false;
