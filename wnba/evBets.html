@@ -279,7 +279,8 @@ const TEAM_NAME_MAP = {
   'Atlanta Dream':'ATL','Chicago Sky':'CHI','Connecticut Sun':'CON','Dallas Wings':'DAL',
   'Golden State Valkyries':'GSV','Indiana Fever':'IND','Los Angeles Sparks':'LAS',
   'Las Vegas Aces':'LVA','Minnesota Lynx':'MIN','New York Liberty':'NYL',
-  'Phoenix Mercury':'PHX','Seattle Storm':'SEA','Washington Mystics':'WAS'
+  'Phoenix Mercury':'PHX','Portland Fire':'POR','Seattle Storm':'SEA',
+  'Toronto Tempo':'TOR','Washington Mystics':'WAS'
 };
 /* One precompiled alternation instead of 30 regexes per call */
 const TEAM_LC = Object.fromEntries(Object.entries(TEAM_NAME_MAP).map(([k,v]) => [k.toLowerCase(), v]));
