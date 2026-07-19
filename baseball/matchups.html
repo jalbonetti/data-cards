@@ -487,6 +487,14 @@ function bullpenTable(O,L,R){
   body+=`<tr><td>Combined</td>${cells(O&&O.Comb)}</tr>`;
   return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
+function teamSpread(c){
+  const raw=c.game.spread; if(!raw) return '–';
+  const m=String(raw).match(/(-?\d+(?:\.\d+)?)/);   // pull the number out of "NYY -1.5"
+  if(!m) return raw;                                   // unexpected format — show as stored
+  let n=parseFloat(m[1]); if(!c.isHome) n=-n;          // away team = opposite sign
+  const num=(n%1===0)?n.toFixed(1):String(n);
+  return c.team+' '+(n>0?'+':'')+num;                  // always THIS card's team + its own line
+}
 function cardHTML(c){
   const sideTag=c.isHome?'<span class="tag home">Home</span>':'<span class="tag away">Away</span>';
   const edge=c.isHome?'var(--good)':'var(--away)';
@@ -499,7 +507,7 @@ function cardHTML(c){
     </div>
     <div class="mtl">Lineup vs SP <b>${esc(c.oppSPName||'—')}</b>${c.oppSPHand?' ('+esc(c.oppSPHand)+')':''}</div>
     <div class="odds">
-      <div class="o"><div class="k">Spread</div><div class="v">${esc(c.game.spread||'–')}</div></div>
+      <div class="o"><div class="k">Spread</div><div class="v">${esc(teamSpread(c))}</div></div>
       <div class="o"><div class="k">Total</div><div class="v">${esc(c.game.total||'–')}</div></div>
       <div class="o"><div class="k">First pitch</div><div class="v">${esc(c.game.gametime||'–')}</div></div>
     </div>
@@ -536,7 +544,7 @@ function detailHTML(c){
     <div class="note-sm">100 is league average; higher inflates, lower suppresses. Same for both teams in the game.</div></div>`;
   // environment
   const envPanel=`<div class="panel"><div class="panel-h">Environment</div>
-    <div class="kv"><span class="k">Spread</span><span class="v">${esc(c.game.spread||'–')}</span>
+    <div class="kv"><span class="k">Spread</span><span class="v">${esc(teamSpread(c))}</span>
       <span class="k">Total</span><span class="v">${esc(c.game.total||'–')}</span>
       <span class="k">First pitch</span><span class="v">${esc(c.game.gametime||'–')}</span>
       <span class="k">Stadium</span><span class="v">${esc(c.game.stadium||'–')}</span>
