@@ -208,7 +208,8 @@ const MAX_PARALLEL = 6;
 const TEAM_NAME_MAP = {'Atlanta Dream':'ATL','Chicago Sky':'CHI','Connecticut Sun':'CON','Dallas Wings':'DAL','Golden State Valkyries':'GSV','Indiana Fever':'IND','Los Angeles Sparks':'LAS','Las Vegas Aces':'LVA','Minnesota Lynx':'MIN','New York Liberty':'NYL','Phoenix Mercury':'PHX','Portland Fire':'POR','Seattle Storm':'SEA','Toronto Tempo':'TOR','Washington Mystics':'WSH'};
 
 /* WNBA card stats — [display, blobKey]. Avg on the face; Median/High/Low in the expand rows. */
-const WNBA_STATS = [['MIN','MIN'],['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S']];
+const WNBA_STATS = [['MIN','MIN'],['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S'],['DD','DD'],['TD','TD']];
+  const TOTAL_ONLY = new Set(['DD','TD']);   // shown as a whole season total on the face; blank in Med/High/Low
 const fmt1 = v=>{const n=parseFloat(v);return isNaN(n)?'–':(n%1===0?n.toFixed(0):n.toFixed(1));};
 
 /* ---------- State ---------- */
@@ -311,8 +312,7 @@ function buildOdds(rows){
   return byGame;
 }
 
-function buildCards(gameRows,playerRows,defRows,oddsRows){
-  const oddsByGame=buildOdds(oddsRows);
+function buildCards(gameRows,playerRows,defRows){
   const playersByCard={}, defByCard={};
   for(const pr of playerRows||[]){const k=pr['Matchup ID']+'|'+pr['Team']; (playersByCard[k]=playersByCard[k]||[]).push(pr);}
   for(const d of defRows||[]){const k=d['Matchup ID']+'|'+d['Team']; (defByCard[k]=defByCard[k]||[]).push(d);}
@@ -324,8 +324,6 @@ function buildCards(gameRows,playerRows,defRows,oddsRows){
     const key=g['Matchup ID']+'|'+g['Team'];
     const awayCode=isHome?opp:team, homeCode=isHome?team:opp;
     const matchupAb=`${awayCode} @ ${homeCode}`;
-    const pairKey=[team,opp].sort().join('|');
-    const odds=oddsByGame[pairKey]||{spread:{},ml:{},total:null};
 
     const players=(playersByCard[key]||[]).map(pr=>({name:pr['Player'],pos:pr['Position'],role:pr['Role'],injury:pr['Injury'],status:pr['Status'],tag:pr['Tag'],blob:parseJSON(pr['Stats JSON'])||{}}));
     const defense={};
@@ -334,7 +332,7 @@ function buildCards(gameRows,playerRows,defRows,oddsRows){
     const starters=players.filter(p=>p.role==='Starter'), bench=players.filter(p=>p.role==='Bench'), notPlaying=players.filter(p=>p.role==='Not Playing');
     const card={key,id:String(g['Matchup ID']),team,teamFull:CODE_TO_NAME[team]||team,opp,oppFull:CODE_TO_NAME[opp]||opp,
       isHome,loc:isHome?'Home':'Away',gametime:fmtTime(g['Game Time']),matchupAb,
-      spread:odds.spread[team],total:odds.total,ml:odds.ml[team],
+      spread:num(g['Spread']),total:num(g['Total']),ml:num(g['Moneyline']),
       oppPace:g['Opp Pace'],oppPaceRank:g['Opp Pace Rank'],
       players,starters,bench,notPlaying,defense,
       status: starters.length?'Confirmed':'Projected',
@@ -439,7 +437,11 @@ function statTable(set,rows){
 }
 function playerTable(players,cardLoc){
   const heads=WNBA_STATS.map(([d])=>`<th>${esc(d)}</th>`).join('');
-  const rowFor=(cell,key)=>WNBA_STATS.map(([,k])=>`<td>${cell&&cell.stats&&cell.stats[k]?fmt1(cell.stats[k][key]):'–'}</td>`).join('');
+  const rowFor=(cell,key)=>WNBA_STATS.map(([,k])=>{
+    const st=cell&&cell.stats&&cell.stats[k];
+    if(TOTAL_ONLY.has(k)) return `<td>${key==='avg'&&st&&st.total!=null?fmt1(st.total):''}</td>`;   // face=total; med/high/low blank
+    return `<td>${st?fmt1(st[key]):'–'}</td>`;
+  }).join('');
   let body='';
   players.forEach((p,i)=>{
     const cell=getCell(p.blob,cardLoc);
@@ -523,7 +525,7 @@ async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))
 async function cacheSet(key,obj){if(location.protocol==='file:'||!('caches'in self))return;try{const c=await caches.open('bbmatch-v2');await c.put('/'+key,new Response(JSON.stringify(obj),{headers:{'Content-Type':'application/json'}}));}catch(e){}}
 
 /* ---------- Boot ---------- */
-function ingest(d){CARDS=buildCards(d.games,d.players,d.defense,d.odds);populateFilters();applyFilters();}
+function ingest(d){CARDS=buildCards(d.games,d.players,d.defense);populateFilters();applyFilters();}
 function showEmpty(){els.grid.hidden=true;els.content.hidden=false;els.content.innerHTML='<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>';}
 async function boot(){
   els.loadpill.hidden=false;els.loadpill.textContent='Loading…';
@@ -531,11 +533,11 @@ async function boot(){
   const warm=cached&&cached.games;
   if(warm){ingest(cached);if((Date.now()-cached.t)<=CACHE_TTL){els.loadpill.hidden=true;return;}}
   try{
-    const [g,pl,df,od]=await Promise.all([
+    const [g,pl,df]=await Promise.all([
       fetchTableVerified('WBasketMatchupsGame'),fetchTableVerified('WBasketMatchupsPlayers'),
-      fetchTableVerified('WBasketMatchupsDefense'),fetchTableVerified('WBasketGameOdds')]);
-    const allComplete=g.complete&&pl.complete&&df.complete&&od.complete;   // every table caught in a stable state
-    const d={t:Date.now(),games:g.rows,players:pl.rows,defense:df.rows,odds:od.rows};
+      fetchTableVerified('WBasketMatchupsDefense')]);
+    const allComplete=g.complete&&pl.complete&&df.complete;   // every table caught in a stable state
+    const d={t:Date.now(),games:g.rows,players:pl.rows,defense:df.rows};
     if(allComplete||!warm) ingest(d);        // adopt if verified, or on a cold load show what we have
     els.loadpill.hidden=true;                // (!allComplete && warm) → keep the good cached view
     if(!CARDS.length){showEmpty();return;}
