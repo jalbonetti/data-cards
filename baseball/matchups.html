@@ -279,6 +279,7 @@ function lineupStatusOf(lineup){
   return 'Projected';
 }
 function buildCards(games,batters,starters,bullpen){
+  games=Array.isArray(games)?games:[];batters=Array.isArray(batters)?batters:[];starters=Array.isArray(starters)?starters:[];bullpen=Array.isArray(bullpen)?bullpen:[];
   const G=new Map();
   for(const r of games){
     const id=r['Matchup ID']; if(id==null) continue;
@@ -564,8 +565,8 @@ els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=n
 els.splitSel.addEventListener('change',e=>{split=e.target.value;refreshOpen();});
 
 /* ---------- Cache ---------- */
-async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))return null;try{const c=await caches.open('bbmatch-v2');const r=await c.match('/'+key);return r?await r.json():null;}catch(e){return null;}}
-async function cacheSet(key,obj){if(location.protocol==='file:'||!('caches'in self))return;try{const c=await caches.open('bbmatch-v2');await c.put('/'+key,new Response(JSON.stringify(obj),{headers:{'Content-Type':'application/json'}}));}catch(e){}}
+async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))return null;try{const c=await caches.open('bbmatch-v3');const r=await c.match('/'+key);return r?await r.json():null;}catch(e){return null;}}
+async function cacheSet(key,obj){if(location.protocol==='file:'||!('caches'in self))return;try{const c=await caches.open('bbmatch-v3');await c.put('/'+key,new Response(JSON.stringify(obj),{headers:{'Content-Type':'application/json'}}));}catch(e){}}
 
 /* ---------- Boot ---------- */
 function ingest(d){CARDS=buildCards(d.games,d.batters,d.starters,d.bullpen);populateFilters();applyFilters();}
@@ -573,7 +574,7 @@ function showEmpty(){els.grid.hidden=true;els.content.hidden=false;els.content.i
 async function boot(){
   els.loadpill.hidden=false;els.loadpill.textContent='Loading…';
   const cached=await cacheGet('all');
-  const warm=cached&&cached.games;
+  const warm=cached&&Array.isArray(cached.games)&&Array.isArray(cached.batters);
   if(warm){ingest(cached);if((Date.now()-cached.t)<=CACHE_TTL){els.loadpill.hidden=true;return;}}
   try{
     const [g,b,s,bp]=await Promise.all([
