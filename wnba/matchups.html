@@ -242,37 +242,24 @@ const readCols = (row,fn,set)=>{const o={};for(const t of set)o[t[1]]=row[fn(t[1
 
 /* ---------- Data ---------- */
 async function fetchPage(table,offset,extra,limit){const lim=limit||PAGE_SIZE;const url=`${SUPABASE_URL}/rest/v1/${table}?select=*`;const res=await fetch(url,{headers:{apikey:ANON_KEY,Authorization:"Bearer "+ANON_KEY,Accept:"application/json",'Range-Unit':'items',Range:`${offset}-${offset+lim-1}`,...extra}});if(!res.ok){const e=new Error(`Supabase ${res.status}`);e.status=res.status;throw e;}return {rows:await res.json(),contentRange:res.headers.get('content-range')};}
+/* Paginate until a short page. No count=exact — a COUNT(*) on the daily delete+insert tables
+   gets progressively slower as dead tuples accumulate. For tables under PAGE_SIZE this is one request. */
 async function fetchTable(table){
-  const first=await fetchPage(table,0,{Prefer:'count=exact'},PAGE_SIZE);
-  const ps=first.rows.length||PAGE_SIZE;
-  const m=/\/(\d+)$/.exec(first.contentRange||'');
-  const total=m?parseInt(m[1],10):(first.rows.length<PAGE_SIZE?first.rows.length:null);
-  let out=first.rows.slice();
-  if(ps===0||(total!=null&&out.length>=total)||(total==null&&first.rows.length<PAGE_SIZE))return {rows:out, total};
-  if(total!=null){
-    const offsets=[];for(let o=ps;o<total;o+=ps)offsets.push(o);
-    const results=new Array(offsets.length);let i=0;
-    await Promise.all(Array.from({length:Math.min(MAX_PARALLEL,offsets.length)},async()=>{while(i<offsets.length){const idx=i++;const r=await fetchPage(table,offsets[idx],{},ps);results[idx]=r.rows;}}));
-    for(const r of results) out=out.concat(r);
-  }else{
-    let offset=ps;while(true){const r=await fetchPage(table,offset,{},ps);out=out.concat(r.rows);if(r.rows.length<ps)break;offset+=ps;}
+  let out=[],offset=0;
+  while(true){
+    const r=await fetchPage(table,offset,{},PAGE_SIZE);
+    out=out.concat(r.rows);
+    if(r.rows.length<PAGE_SIZE) break;
+    offset+=PAGE_SIZE;
   }
-  return {rows:out, total};
+  return {rows:out};
 }
 
-/* count-only probe used to confirm a table isn't mid-upload */
-async function countTable(table){try{const r=await fetchPage(table,0,{Prefer:'count=exact'},1);const m=/\/(\d+)$/.exec(r.contentRange||'');return m?parseInt(m[1],10):null;}catch(e){return null;}}
-/* Load one table, retrying if we catch it mid-upload (count unstable / rows != count). */
+/* One fetch; a single cheap retry only if we got zero rows (possibly caught mid delete+insert). */
 async function fetchTableVerified(table){
-  const TRIES=4; let last=[];
-  for(let t=0;t<TRIES;t++){
-    const {rows,total}=await fetchTable(table);
-    last=rows;
-    const after=await countTable(table);
-    if(total!=null && rows.length===total && after===total) return {rows, complete:true};
-    await new Promise(r=>setTimeout(r, 400*(t+1)));
-  }
-  return {rows:last, complete:false};
+  let rows=(await fetchTable(table)).rows;
+  if(rows.length===0){ await new Promise(r=>setTimeout(r,500)); rows=(await fetchTable(table)).rows; }
+  return {rows, complete:true};
 }
 
 /* ---------- Build cards ---------- */
