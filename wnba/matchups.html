@@ -210,6 +210,8 @@ const TEAM_NAME_MAP = {'Atlanta Dream':'ATL','Chicago Sky':'CHI','Connecticut Su
 /* WNBA card stats — [display, blobKey]. Avg on the face; Median/High/Low in the expand rows. */
 const WNBA_STATS = [['MIN','MIN'],['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S'],['DD','DD'],['TD','TD']];
   const TOTAL_ONLY = new Set(['DD','TD']);   // shown as a whole season total on the face; blank in Med/High/Low
+  // Defense panel stat set: no MIN ('minutes allowed' rank is meaningless); DD/TD are season totals given up.
+  const DEF_STATS = [['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S'],['DD','DD'],['TD','TD']];
 const fmt1 = v=>{const n=parseFloat(v);return isNaN(n)?'–':(n%1===0?n.toFixed(0):n.toFixed(1));};
 
 /* ---------- State ---------- */
@@ -323,7 +325,7 @@ function buildCards(gameRows,playerRows,defRows){
       spread:num(g['Spread']),total:num(g['Total']),ml:num(g['Moneyline']),
       oppPace:g['Opp Pace'],oppPaceRank:g['Opp Pace Rank'],
       players,starters,bench,notPlaying,defense,
-      status: starters.length?'Confirmed':'Projected',
+      status: g['Lineup Status'] || (starters.length?'Confirmed':'Projected'),
       game:{matchupAb},
       _q:`${team} ${CODE_TO_NAME[team]||''} ${opp} ${matchupAb} ${players.map(p=>p.name).join(' ')}`.toLowerCase()};
     cards.push(card); GMAP.set(key,card);
@@ -443,16 +445,17 @@ function playerTable(players,cardLoc){
   return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 function defenseTable(cell){
-  const heads=WNBA_STATS.map(([d])=>`<th>${esc(d)}</th>`).join('');
-  const aRow=WNBA_STATS.map(([,k])=>`<td>${cell&&cell.data.allowed[k]!=null?fmt1(cell.data.allowed[k]):'–'}</td>`).join('');
-  const rRow=WNBA_STATS.map(([,k])=>{const rk=cell&&cell.data.ranks[k];return `<td>${rk!=null?('#'+rk):'–'}</td>`;}).join('');
-  return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody><tr><td>Allowed/G</td>${aRow}</tr><tr><td>Rank</td>${rRow}</tr></tbody></table></div>`;
+  const heads=DEF_STATS.map(([d])=>`<th>${esc(d)}</th>`).join('');
+  // DD/TD are season totals given up; the rest are per-game allowed. Header notes both.
+  const aRow=DEF_STATS.map(([,k])=>`<td>${cell&&cell.data.allowed[k]!=null?fmt1(cell.data.allowed[k]):'–'}</td>`).join('');
+  const rRow=DEF_STATS.map(([,k])=>{const rk=cell&&cell.data.ranks[k];return `<td>${rk!=null?('#'+rk):'–'}</td>`;}).join('');
+  return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody><tr><td>Allowed</td>${aRow}</tr><tr><td>Rank</td>${rRow}</tr></tbody></table></div>`;
 }
 function teamSpread(c){ if(c.spread==null) return '–'; const n=parseFloat(c.spread); if(isNaN(n)) return '–'; return c.team+' '+(n>0?'+':'')+(n%1===0?n.toFixed(1):String(n)); }
 function cardHTML(c){
   const sideTag=c.isHome?'<span class="tag home">Home</span>':'<span class="tag away">Away</span>';
   const edge=c.isHome?'var(--good)':'var(--away)';
-  const statusCls=c.status==='Confirmed'?'conf':'proj';
+  const statusCls=/confirm/i.test(c.status||'')?'conf':'proj';
   const paceTxt=c.oppPace!=null?(fmt1(c.oppPace)+(c.oppPaceRank!=null?(' (#'+c.oppPaceRank+')'):'')):'–';
   const mlTxt=c.ml!=null?((c.ml>0?'+':'')+c.ml):'–';
   return `
