@@ -98,6 +98,12 @@
   .panel{margin-top:12px;}
   .panel-h{font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--brand);margin:0 0 6px;}
   table.mini{width:100%;border-collapse:collapse;font-size:11.5px;}
+  .mini-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -2px;}
+  .mini-scroll::-webkit-scrollbar{height:6px;}
+  .mini-scroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px;}
+  table.mini.clr-detail{min-width:460px;}
+  table.mini.clr-detail.yn{min-width:0;}
+  table.mini.clr-detail th,table.mini.clr-detail td{padding:5px 9px;}
   table.mini th,table.mini td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--line-2);}
   table.mini th:first-child,table.mini td:first-child{text-align:left;color:var(--muted);font-weight:600;}
   table.mini thead th{color:var(--muted-2);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line);}
@@ -500,12 +506,12 @@ function detailHTML(g){
     : `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Avg</th><th>Med</th><th>High</th><th>Low</th><th>Opp Allowed</th></tr>`;
   const oppNote=yesNo?"Opp Allowed = total DD/TD the opponent has given up (location-matched)." : "Opp Allowed = opponent's location-matched allowed per game for this stat.";
   return `<div class="panel"><div class="panel-h">Clearance${yesNo?'':' & distribution'} — ${esc(g.role||'')} · vs ${esc(g.opp||'—')}</div>
-    <table class="mini clr-detail"><thead>${head}</thead><tbody>
+    <div class="mini-scroll"><table class="mini clr-detail${yesNo?' yn':''}"><thead>${head}</thead><tbody>
       ${rowFor('Season · All','Full Season','All')}
       ${rowFor('Season · '+loc,'Full Season','loc')}
       ${rowFor('L30 · All','Last 30 Days','All')}
       ${rowFor('L30 · '+loc,'Last 30 Days','loc')}
-    </tbody></table>
+    </tbody></table></div>
     <div class="note-sm" style="color:var(--muted-2);font-size:11px;margin-top:6px">${oppNote} Rank 1 = allows most.</div>
   </div>`;
 }
