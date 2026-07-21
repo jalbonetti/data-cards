@@ -102,6 +102,7 @@
   table.mini th:first-child,table.mini td:first-child{text-align:left;color:var(--muted);font-weight:600;}
   table.mini thead th{color:var(--muted-2);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line);}
   table.mini td{font-weight:600;}
+  .mini.clr-detail td.rl,.mini.clr-detail th:first-child{white-space:nowrap;width:1%;padding-right:14px;}
   .note-sm{font-size:10px;color:var(--muted-2);margin-top:5px;line-height:1.3;}
   .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:11.5px;}
   .kv .k{color:var(--muted);} .kv .v{font-weight:600;text-align:right;}
@@ -481,22 +482,31 @@ function cardHTML(g){
 
 /* ---------- Detail (lazy) ---------- */
 function detailHTML(g){
+  const yesNo=/double double|triple double/i.test(g.prop);   // DD/TD: Avg/Med/High/Low are meaningless (0/1)
+  const oppCell=v=>v.oppAllowed!=null?(fmtAvg(v.oppAllowed)+(v.oppRank!=null?` <span style="color:var(--muted-2)">(#${v.oppRank})</span>`:'')):'–';
   const rowFor=(label,period,sp)=>{
     const v=cellVar(g,period,sp);
-    if(!v)return `<tr><td>${esc(label)}</td><td colspan="6" style="color:var(--muted-2)">no games</td></tr>`;
+    const cols=yesNo?4:8;
+    if(!v)return `<tr><td class="rl">${esc(label)}</td><td colspan="${cols-1}" style="color:var(--muted-2)">no games</td></tr>`;
     const clr=v.clr!=null?fmtPct(v.clr):'–';
-    const opp=v.oppAllowed!=null?(fmtAvg(v.oppAllowed)+(v.oppRank!=null?` <span style="color:var(--muted-2)">#${v.oppRank}</span>`:'')):'–';
-    return `<tr><td>${esc(label)}</td><td>${clr}</td><td>${v.gCleared??'–'}/${v.gTotal??'–'}</td><td>${fmtAvg(v.avg)}</td><td>${fmtAvg(v.median)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td>${opp}</td></tr>`;
+    if(yesNo){   // Clr% | Cleared | Opp Allowed only
+      return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td>${v.gCleared??'–'}/${v.gTotal??'–'}</td><td>${oppCell(v)}</td></tr>`;
+    }
+    return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td>${v.gCleared??'–'}/${v.gTotal??'–'}</td><td>${fmtAvg(v.avg)}</td><td>${fmtAvg(v.median)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td>${oppCell(v)}</td></tr>`;
   };
   const loc=g.location||'Loc';
-  return `<div class="panel"><div class="panel-h">Clearance & distribution — ${esc(g.role||'')} · vs ${esc(g.opp||'—')}</div>
-    <table class="mini"><thead><tr><th></th><th>Clr%</th><th>Cleared</th><th>Avg</th><th>Med</th><th>High</th><th>Low</th><th>Opp Allowed</th></tr></thead><tbody>
+  const head=yesNo
+    ? `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Opp Allowed</th></tr>`
+    : `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Avg</th><th>Med</th><th>High</th><th>Low</th><th>Opp Allowed</th></tr>`;
+  const oppNote=yesNo?"Opp Allowed = total DD/TD the opponent has given up (location-matched)." : "Opp Allowed = opponent's location-matched allowed per game for this stat.";
+  return `<div class="panel"><div class="panel-h">Clearance${yesNo?'':' & distribution'} — ${esc(g.role||'')} · vs ${esc(g.opp||'—')}</div>
+    <table class="mini clr-detail"><thead>${head}</thead><tbody>
       ${rowFor('Season · All','Full Season','All')}
       ${rowFor('Season · '+loc,'Full Season','loc')}
       ${rowFor('L30 · All','Last 30 Days','All')}
       ${rowFor('L30 · '+loc,'Last 30 Days','loc')}
     </tbody></table>
-    <div class="note-sm" style="color:var(--muted-2);font-size:11px;margin-top:6px">Opp Allowed = opponent's location-matched allowed for this stat; DD/TD are totals given up. Rank 1 = allows most.</div>
+    <div class="note-sm" style="color:var(--muted-2);font-size:11px;margin-top:6px">${oppNote} Rank 1 = allows most.</div>
   </div>`;
 }
 
