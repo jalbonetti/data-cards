@@ -109,6 +109,7 @@
   table.mini thead th{color:var(--muted-2);font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--line);}
   table.mini td{font-weight:600;}
   .mini.clr-detail td.rl,.mini.clr-detail th:first-child{white-space:nowrap;width:1%;padding-right:14px;}
+  .mini.clr-detail td.oa,.mini.clr-detail td.nw,.mini.clr-detail th:last-child{white-space:nowrap;}
   .note-sm{font-size:10px;color:var(--muted-2);margin-top:5px;line-height:1.3;}
   .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:11.5px;}
   .kv .k{color:var(--muted);} .kv .v{font-weight:600;text-align:right;}
@@ -489,16 +490,16 @@ function cardHTML(g){
 /* ---------- Detail (lazy) ---------- */
 function detailHTML(g){
   const yesNo=/double double|triple double/i.test(g.prop);   // DD/TD: Avg/Med/High/Low are meaningless (0/1)
-  const oppCell=v=>v.oppAllowed!=null?(fmtAvg(v.oppAllowed)+(v.oppRank!=null?` <span style="color:var(--muted-2)">(#${v.oppRank})</span>`:'')):'–';
+  const oppCell=v=>v.oppAllowed!=null?(fmtAvg(v.oppAllowed)+(v.oppRank!=null?`&nbsp;<span style="color:var(--muted-2)">(#${v.oppRank})</span>`:'')):'–';
   const rowFor=(label,period,sp)=>{
     const v=cellVar(g,period,sp);
     const cols=yesNo?4:8;
     if(!v)return `<tr><td class="rl">${esc(label)}</td><td colspan="${cols-1}" style="color:var(--muted-2)">no games</td></tr>`;
     const clr=v.clr!=null?fmtPct(v.clr):'–';
     if(yesNo){   // Clr% | Cleared | Opp Allowed only
-      return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td>${v.gCleared??'–'}/${v.gTotal??'–'}</td><td>${oppCell(v)}</td></tr>`;
+      return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td class="nw">${v.gCleared??'–'}/${v.gTotal??'–'}</td><td class="oa">${oppCell(v)}</td></tr>`;
     }
-    return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td>${v.gCleared??'–'}/${v.gTotal??'–'}</td><td>${fmtAvg(v.avg)}</td><td>${fmtAvg(v.median)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td>${oppCell(v)}</td></tr>`;
+    return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td class="nw">${v.gCleared??'–'}/${v.gTotal??'–'}</td><td>${fmtAvg(v.avg)}</td><td>${fmtAvg(v.median)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td class="oa">${oppCell(v)}</td></tr>`;
   };
   const loc=g.location||'Loc';
   const head=yesNo
