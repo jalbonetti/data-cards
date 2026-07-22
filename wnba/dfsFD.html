@@ -591,17 +591,19 @@ function detailHTML(g){
   const prodPanel=`<div class="panel"><div class="panel-h">${esc(BOOK)} production — ${perLbl}${splitLbl}</div>${distRow}</div>`;
   // Opposing defense: DFS points allowed + component stats allowed (location-matched)
   const dfsLine=v&&v.oppDfs!=null?`${fmtRatio(v.oppDfs)}${v.oppDfsRank!=null?` <span style="color:var(--muted-2)">(#${v.oppDfsRank})</span>`:''}`:'–';
-  const defCells=SET_OPP_DEF.map(([lbl,col])=>{
+  const defAllowed=SET_OPP_DEF.map(([,col])=>{
     const pair=v&&v.def?v.def[col]:null;
-    const val=pair&&pair[0]!=null?fmtRatio(pair[0]):'–';
-    const rk=pair&&pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:'';
-    return `<td>${val}${rk}</td>`;
+    return `<td>${pair&&pair[0]!=null?fmtRatio(pair[0]):'–'}</td>`;
+  }).join('');
+  const defRanks=SET_OPP_DEF.map(([,col])=>{
+    const pair=v&&v.def?v.def[col]:null;
+    return `<td>${pair&&pair[1]!=null?('#'+pair[1]):'–'}</td>`;
   }).join('');
   const oppPanel=`<div class="panel"><div class="panel-h">Opposing defense — ${esc(g.opp||'—')} · ${perLbl}${oppSplitLbl}</div>
     <div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span>
       <span class="k">Pace</span><span class="v">${raw(g.pace)}</span></div>
-    <div class="mini-scroll"><table class="mini"><thead><tr>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
-      <tbody><tr>${defCells}</tr></tbody></table></div>
+    <div class="mini-scroll"><table class="mini"><thead><tr><th></th>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
+      <tbody><tr><td>Allowed</td>${defAllowed}</tr><tr><td>Rank</td>${defRanks}</tr></tbody></table></div>
     <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. Rank 1 = allows most.</div></div>`;
   return `
     ${prodPanel}
