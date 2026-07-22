@@ -182,7 +182,6 @@
           <select id="sortSel">
             <option value="proj:pts">Projection</option>
             <option value="proj:val">Value (pts/$)</option>
-            <option value="rost">Rostership</option>
             <option value="output">Output</option>
           </select>
           <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
@@ -198,9 +197,6 @@
             <option value="med">Median</option>
             <option value="high">High</option>
           </select>
-        </div>
-        <div class="seg slate-seg"><label for="slateSel">Slate</label>
-          <select id="slateSel"><option value="">All slates</option></select>
         </div>
       </div>
       <div class="bar-break"></div>
@@ -289,6 +285,7 @@ function populateSlates(){
   const counts={};
   GROUPS.forEach(g=>{ if(g._slates) g._slates.forEach(n=>{counts[n]=(counts[n]||0)+1;}); });
   const names=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b));
+  if(!els.slateSel) { currentSlate=''; return; }   // no WNBA rostership/slate data
   els.slateSel.innerHTML='<option value="">All slates</option>'+names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+' ('+counts[n]+')</option>').join('');
   if(currentSlate&&names.includes(currentSlate)) els.slateSel.value=currentSlate; else { currentSlate=''; els.slateSel.value=''; }
 }
@@ -469,7 +466,7 @@ function outputLabel(g){const [period,sp]=dispWS.split('|');const per=period==='
 function sortValue(g){
   if(sortMode==='proj:pts')return projPts(g);
   if(sortMode==='proj:val')return projValue(g);
-  if(sortMode==='rost'){const r=Number(g.rostership);return isNaN(r)?null:r;}
+  if(sortMode==='rost'){return projPts(g);}   // rostership retired for WNBA — rank by projection
   if(sortMode==='output')return outputVal(g);
   return null;
 }
@@ -568,7 +565,6 @@ function cardHTML(g){
     <div class="cgrid">
       ${sortCard(g,'proj:pts','Projected Points',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts',pctColor(projPts(g),VALS.proj,false))}
       ${sortCard(g,'proj:val','Projected Value',projValue(g)!=null?fmtRatio(projValue(g)):'–','pts/$',pctColor(projValue(g),VALS.val,false))}
-      ${sortCard(g,'rost','Projected Rostership',rostDisp(g),'',pctColor(Number(g.rostership),VALS.rost,true))}
       ${sortCard(g,'output',outputLabel(g),outputVal(g)!=null?fmtAvg(outputVal(g)):'–','output',pctColor(outputVal(g),VALS.out,false))}
     </div>
     <div class="expand-row"><div class="matchup-mini">${mini}</div>
@@ -591,19 +587,17 @@ function detailHTML(g){
   const prodPanel=`<div class="panel"><div class="panel-h">${esc(BOOK)} production — ${perLbl}${splitLbl}</div>${distRow}</div>`;
   // Opposing defense: DFS points allowed + component stats allowed (location-matched)
   const dfsLine=v&&v.oppDfs!=null?`${fmtRatio(v.oppDfs)}${v.oppDfsRank!=null?` <span style="color:var(--muted-2)">(#${v.oppDfsRank})</span>`:''}`:'–';
-  const defAllowed=SET_OPP_DEF.map(([,col])=>{
+  const defCells=SET_OPP_DEF.map(([lbl,col])=>{
     const pair=v&&v.def?v.def[col]:null;
-    return `<td>${pair&&pair[0]!=null?fmtRatio(pair[0]):'–'}</td>`;
-  }).join('');
-  const defRanks=SET_OPP_DEF.map(([,col])=>{
-    const pair=v&&v.def?v.def[col]:null;
-    return `<td>${pair&&pair[1]!=null?('#'+pair[1]):'–'}</td>`;
+    const val=pair&&pair[0]!=null?fmtRatio(pair[0]):'–';
+    const rk=pair&&pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:'';
+    return `<td>${val}${rk}</td>`;
   }).join('');
   const oppPanel=`<div class="panel"><div class="panel-h">Opposing defense — ${esc(g.opp||'—')} · ${perLbl}${oppSplitLbl}</div>
     <div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span>
       <span class="k">Pace</span><span class="v">${raw(g.pace)}</span></div>
-    <div class="mini-scroll"><table class="mini"><thead><tr><th></th>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
-      <tbody><tr><td>Allowed</td>${defAllowed}</tr><tr><td>Rank</td>${defRanks}</tr></tbody></table></div>
+    <div class="mini-scroll"><table class="mini"><thead><tr>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
+      <tbody><tr>${defCells}</tr></tbody></table></div>
     <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. Rank 1 = allows most.</div></div>`;
   return `
     ${prodPanel}
@@ -640,7 +634,7 @@ els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.
 document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;saveFilters();applyFilters();});});
 els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=newFilters();filters.search=sv;document.querySelectorAll('input[data-filter]').forEach(el=>el.value='');Object.values(MS).forEach(c=>c.setOptions(c.options));saveFilters();applyFilters();});
 els.sortSel.addEventListener('change',e=>setSort(e.target.value));
-els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;applyFilters();});
+if(els.slateSel) els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;applyFilters();});
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
 els.owSel.addEventListener('change',e=>{dispWS=e.target.value;applySort();});
 els.basisSel.addEventListener('change',e=>{valBasis=e.target.value;applySort();});
