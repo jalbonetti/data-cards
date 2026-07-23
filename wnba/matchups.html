@@ -212,7 +212,7 @@ const WNBA_STATS = [['MIN','MIN'],['PTS','PTS'],['REB','REB'],['AST','AST'],['3P
   const TOTAL_ONLY = new Set(['DD','TD']);   // shown as a whole season total on the face; blank in Med/High/Low
   // Defense panel stat set: no MIN ('minutes allowed' rank is meaningless); DD/TD are season totals given up.
   const DEF_STATS = [['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S'],['DD','DD'],['TD','TD']];
-const fmt1 = v=>{const n=parseFloat(v);return isNaN(n)?'–':(n%1===0?n.toFixed(0):n.toFixed(1));};
+const fmt1 = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};   // always a trailing decimal; toFixed keeps the leading 0
 
 /* ---------- State ---------- */
 let CARDS = [], VIEW = [], rendered = 0;
@@ -227,7 +227,7 @@ const num = v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
 const raw = v=>{if(v==null)return '–';const s=String(v).trim();return s===''?'–':s;};
 const has = v=>v!=null&&String(v).trim()!==''&&String(v).trim()!=='-';
 const fmt2 = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(2);};
-const fmtAvg3 = v=>{const n=parseFloat(v);if(isNaN(n))return '–';const sign=n<0?'-':'';const t=(Math.trunc(Math.abs(n)*1000)/1000).toFixed(3);return (sign+t).replace(/^(-?)0\./,'$1.');};
+const fmtAvg3 = v=>{const n=parseFloat(v);if(isNaN(n))return '–';const sign=n<0?'-':'';return sign+(Math.trunc(Math.abs(n)*1000)/1000).toFixed(3);};   // keep the leading 0
 const fmtIP = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.includes('.')?s:s+'.0';};
 const fmtPark = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.replace(/\((\d+)\)/g,' (#$1)');};
 const fmtType = (t,v)=> t==='rate'?fmtAvg3(v) : t==='era'?fmt2(v) : t==='ip'?fmtIP(v) : t==='park'?fmtPark(v) : raw(v);
@@ -319,7 +319,10 @@ function buildCards(gameRows,playerRows,defRows){
     const defense={};
     for(const d of (defByCard[key]||[])) defense[d['Time Period']+'|'+d['Stat Split']]={games:num(d['Games'])||0,data:parseJSON(d['Defense JSON'])||{allowed:{},ranks:{}}};
 
-    const starters=players.filter(p=>p.role==='Starter'), bench=players.filter(p=>p.role==='Bench'), notPlaying=players.filter(p=>p.role==='Not Playing');
+    const byName=(a,b)=>String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base'});
+    const starters=players.filter(p=>p.role==='Starter').sort(byName),
+          bench=players.filter(p=>p.role==='Bench').sort(byName),
+          notPlaying=players.filter(p=>p.role==='Not Playing').sort(byName);
     const card={key,id:String(g['Matchup ID']),team,teamFull:CODE_TO_NAME[team]||team,opp,oppFull:CODE_TO_NAME[opp]||opp,
       isHome,loc:isHome?'Home':'Away',gametime:fmtTime(g['Game Time']),matchupAb,
       spread:num(g['Spread']),total:num(g['Total']),ml:num(g['Moneyline']),
@@ -451,7 +454,7 @@ function defenseTable(cell){
   const rRow=DEF_STATS.map(([,k])=>{const rk=cell&&cell.data.ranks[k];return `<td>${rk!=null?('#'+rk):'–'}</td>`;}).join('');
   return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody><tr><td>Allowed</td>${aRow}</tr><tr><td>Rank</td>${rRow}</tr></tbody></table></div>`;
 }
-function teamSpread(c){ if(c.spread==null) return '–'; const n=parseFloat(c.spread); if(isNaN(n)) return '–'; return c.team+' '+(n>0?'+':'')+(n%1===0?n.toFixed(1):String(n)); }
+function teamSpread(c){ if(c.spread==null) return '–'; const n=parseFloat(c.spread); if(isNaN(n)) return '–'; return c.team+' '+(n>0?'+':'')+n.toFixed(1); }
 function cardHTML(c){
   const sideTag=c.isHome?'<span class="tag home">Home</span>':'<span class="tag away">Away</span>';
   const edge=c.isHome?'var(--good)':'var(--away)';
