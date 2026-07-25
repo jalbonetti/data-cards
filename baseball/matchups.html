@@ -538,7 +538,9 @@ function detailHTML(c){
       <span class="k">First pitch</span><span class="v">${esc(c.game.gametime||'–')}</span>
       <span class="k">Stadium</span><span class="v">${esc(c.game.stadium||'–')}</span>
       <span class="k">Dome</span><span class="v">${esc(c.game.dome||'–')}</span></div>
-    ${c.game.wx.length?`<div class="wx">${c.game.wx.map(w=>`<div>${esc(w)}</div>`).join('')}</div>`:''}</div>`;
+    ${/^yes$/i.test(String(c.game.dome||'').trim())
+      ? `<div class="wx"><div>No Weather Data - Game Played in Dome</div></div>`
+      : (c.game.wx.length?`<div class="wx">${c.game.wx.map(w=>`<div>${esc(w)}</div>`).join('')}</div>`:'')}</div>`;
   return lineupPanel+spPanel+bpPanel+pfPanel+envPanel;
 }
 
