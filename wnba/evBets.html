@@ -366,7 +366,7 @@ const CODE_ALIAS={SD:'SDP',SF:'SFG',TB:'TBR',WSH:'WSN',KC:'KCR',CWS:'CHW'};
 const canonTeam=c=>{const u=String(c||'').trim().toUpperCase();return CODE_ALIAS[u]||u;};
 function abbrTeam(v){ if(!v) return ''; const s=String(v).trim(); return TEAM_NAME_MAP[s] || canonTeam(s); }
 function etTz(){const d=new Date(),y=d.getFullYear();const m1=new Date(y,2,1),n1=new Date(y,10,1);const dstStart=new Date(y,2,1+((7-m1.getDay())%7)+7);const dstEnd=new Date(y,10,1+((7-n1.getDay())%7));return (d>=dstStart&&d<dstEnd)?'EDT':'EST';}
-const ET_TZ = etTz();
+const ET_TZ = 'ET';   // always "ET" — the clock values are already correct, so the DST label never needs switching
 function abbrMatchup(v){ if(!v) return ''; return v.replace(MATCHUP_RE, m => TEAM_LC[m.toLowerCase()] || m).replace(/\b(?:EST|EDT)\b/g, ET_TZ); }
 function abbrProp(v){ if(!v) return ''; return MODES[mode].propAbbr[v] || v; }
 
