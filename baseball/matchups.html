@@ -232,8 +232,22 @@ const CODE_ALIAS={SD:'SDP',SF:'SFG',TB:'TBR',WSH:'WSN',KC:'KCR',CWS:'CHW'};   //
 const canonTeam=c=>{const u=String(c||'').trim().toUpperCase();return CODE_ALIAS[u]||u;};
 const abbrTeam=v=>{if(!v)return '';const s=String(v).trim();return TEAM_NAME_MAP[s]||canonTeam(s);};
 function etTz(){const d=new Date(),y=d.getFullYear();const m1=new Date(y,2,1),n1=new Date(y,10,1);const dstStart=new Date(y,2,1+((7-m1.getDay())%7)+7);const dstEnd=new Date(y,10,1+((7-n1.getDay())%7));return (d>=dstStart&&d<dstEnd)?'EDT':'EST';}
-const ET_TZ = etTz();
+const ET_TZ = 'ET';   // always "ET" — the clock values are already correct, so the DST label never needs switching
 const fmtTime = v=>!v?'':String(v).replace(/\b(EST|EDT)\b/g,ET_TZ);
+const fmtStamp = v=>{
+  if(!v) return '';
+  const s=String(v);
+  const tm=s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  const timePart=tm?`${parseInt(tm[1],10)}:${tm[2]} ${tm[3].toUpperCase()}`:'';
+  const dm=s.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  let datePart='';
+  if(dm){const mo=+dm[1],d=+dm[2];let y=dm[3]?(+dm[3]<100?2000+ +dm[3]:+dm[3]):null;
+    const dow=(y!=null)?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y,mo-1,d).getDay()]:'';
+    datePart=(dow?dow+' ':'')+mo+'/'+d;}
+  const left=timePart?timePart+' ET':'';
+  return datePart?(left?left+' · '+datePart:datePart):left;
+};   // "4:08 PM ET · Tue 7/22"  (date shown when present; time-only otherwise)
+
 const stripHand = v=>String(v||'').replace(/\s*\([LRS]\)\s*$/i,'').trim();
 const handOf = v=>{const m=String(v||'').match(/\(([LRS])\)\s*$/i);return m?m[1].toUpperCase():'';};
 const readCols = (row,fn,set)=>{const o={};for(const t of set)o[t[1]]=row[fn(t[1])];return o;};
@@ -287,7 +301,7 @@ function buildCards(games,batters,starters,bullpen){
     const pf={};for(const sp of ['All','L','R']){const o={};for(const st of PF_STATS)o[st]=r[`PF ${sp} ${st}`];pf[sp]=o;}
     G.set(String(id),{id:String(id),matchup:r['Matchup'],matchupAb:`${abbrTeam(awayFull)} @ ${abbrTeam(homeFull)}${gameTag?' '+gameTag:''}`,
       awayFull,homeFull,away:abbrTeam(awayFull),home:abbrTeam(homeFull),
-      gametime:fmtTime(r['Gametime']),spread:r['Spread'],total:r['Total'],homeSP:r['Home SP'],awaySP:r['Away SP'],
+      gametime:fmtStamp(r['Gametime']),spread:r['Spread'],total:r['Total'],homeSP:r['Home SP'],awaySP:r['Away SP'],
       stadium:r['Stadium'],dome:r['Dome'],wx:[r['Weather 1'],r['Weather 2'],r['Weather 3'],r['Weather 4']].filter(Boolean),pf,
       cnt:{Home:{L:r['Home LHB #'],R:r['Home RHB #'],S:r['Home SWH #'],bpL:r['Home BP L #'],bpR:r['Home BP R #']},
            Away:{L:r['Away LHB #'],R:r['Away RHB #'],S:r['Away SWH #'],bpL:r['Away BP L #'],bpR:r['Away BP R #']}}});
