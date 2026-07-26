@@ -265,7 +265,7 @@ function fieldMap(){
     projection:`${BOOK} Projection`, gp:'Player Games Played', minutes:'Minutes',
     matchup:'Matchup', spread:'Matchup Spread', total:'Matchup Total', moneyline:'Matchup Moneyline',
     pace:'Opp Pace', lineup:'Lineup Status',
-    oppDfsAllowed:`Opp ${BOOK} Pts Allowed`, oppDfsRank:`Opp ${BOOK} Pts Rank`
+    oppDfsAllowed:`Opp ${BOOK} Pts Allowed`, oppDfsRank:`Opp ${BOOK} Pts Rank`, gameTime:'Game Time'
   };
 }
 
@@ -375,6 +375,19 @@ const abbrTeam=v=>{if(!v)return '';const s=String(v).trim();return TEAM_NAME_MAP
 function etTz(){const d=new Date(),y=d.getFullYear();const m1=new Date(y,2,1),n1=new Date(y,10,1);const dstStart=new Date(y,2,1+((7-m1.getDay())%7)+7);const dstEnd=new Date(y,10,1+((7-n1.getDay())%7));return (d>=dstStart&&d<dstEnd)?'EDT':'EST';}
 const ET_TZ = 'ET';   // always "ET" — the clock values are already correct, so the DST label never needs switching
 const abbrMatchup = v=>!v?'':String(v).replace(MATCHUP_RE,m=>TEAM_LC[m.toLowerCase()]||m).replace(/\b(?:EST|EDT)\b/g,ET_TZ);   // #13: keep gametime, relabel ET zone
+const fmtStamp = v=>{
+  if(!v) return '';
+  const s=String(v);
+  const tm=s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  const timePart=tm?`${parseInt(tm[1],10)}:${tm[2]} ${tm[3].toUpperCase()}`:'';
+  const dm=s.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  let datePart='';
+  if(dm){const mo=+dm[1],d=+dm[2];let y=dm[3]?(+dm[3]<100?2000+ +dm[3]:+dm[3]):null;
+    const dow=(y!=null)?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y,mo-1,d).getDay()]:'';
+    datePart=(dow?dow+' ':'')+mo+'/'+d;}
+  const left=timePart?timePart+' ET':'';
+  return datePart?(left?left+' · '+datePart:datePart):left;
+};
 const order = v=>{const m=String(v||'').match(/\((\d+)\)/);return m?m[1]:null;};
 const lineupTag = v=>{if(!v)return '';const st=/proj/i.test(v)?'Proj':(/conf/i.test(v)?'Conf':'');const o=order(v);if(!st&&!o)return '';return `${st}${o?' #'+o:''}`;};
 const titleCase = s=>String(s).replace(/\b\w/g,c=>c.toUpperCase());
@@ -431,7 +444,7 @@ function buildGroups(rows){
       g={key:player, player, team:abbrTeam(row[F.team]), opp:abbrTeam(row[F.opponent]), pos:row[F.pos], price:num(row[F.price]),
         rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
         matchup:row[F.matchup], spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], pace:row[F.pace],
-        variants:{}, _q:String(player).toLowerCase(), _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
+        variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
       g.slateMap=parseSlateRost(row[F.slateRost]); g._slates=new Set(Object.keys(g.slateMap));
       map.set(player,g);
     }
@@ -560,7 +573,7 @@ function cardHTML(g){
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
         <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span class="tag">${esc(g.pos||'–')}</span> <span class="tag">${fmtPrice(g.price)}</span></div>
-        <div class="c-matchup">${esc(g._matchupAb)}</div></div>
+        <div class="c-matchup">${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</div></div>
     </div>
     <div class="cgrid">
       ${sortCard(g,'proj:pts','Projected Points',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts',pctColor(projPts(g),VALS.proj,false))}
