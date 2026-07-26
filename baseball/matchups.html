@@ -512,7 +512,7 @@ function cardHTML(c){
     <div class="odds">
       <div class="o"><div class="k">Spread</div><div class="v">${esc(teamSpread(c))}</div></div>
       <div class="o"><div class="k">Total</div><div class="v">${esc(c.game.total||'–')}</div></div>
-      <div class="o"><div class="k">First pitch</div><div class="v">${esc(c.game.gametime||'–')}</div></div>
+      <div class="o"><div class="k">First pitch</div><div class="v">${esc((c.game.gametime||'–').split(' · ')[0])}</div></div>
     </div>
     <div class="expand-row"><div class="status-line">Lineup: <span class="${statusCls}">${esc(c.status)}</span></div>
       <button class="exp-btn" type="button">Detail <span class="car">▾</span></button></div>
