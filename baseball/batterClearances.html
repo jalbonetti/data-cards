@@ -563,7 +563,7 @@ function detailHTML(g){
         <span class="k">Park factor (rank)</span><span class="v">${esc(fmtPark(g.park))}</span>
         <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}</span>
         <span class="k">Dome</span><span class="v">${esc(g.dome||'–')}</span></div>
-      ${/^yes$/i.test(String(g.dome||'').trim())
+      ${/^(dome|yes)$/i.test(String(g.dome||'').trim())
         ? `<div class="wx"><div>No Weather Data - Game Played in Dome</div></div>`
         : (g.wx.length?`<div class="wx">${g.wx.map(w=>`<div>${esc(capWx(w))}</div>`).join('')}</div>`:'')}
     </div>`;
