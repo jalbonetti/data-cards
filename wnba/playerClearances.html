@@ -243,7 +243,7 @@ const PROP_ORDER = ['Points','Rebounds','Assists','3-Pointers','Pts + Rebs','Pts
 const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});};
 
 const F = {player:'Player',team:'Team',opponent:'Opponent',prop:'Prop',line:'Line',period:'Time Period',split:'Location',role:'Role',
-  clearance:'Clearance %',cleared:'Cleared',games:'Games',matchup:'Matchup',
+  clearance:'Clearance %',cleared:'Cleared',games:'Games',matchup:'Matchup',gameTime:'Game Time',
   avg:'Avg',median:'Median',high:'High',low:'Low',oppAllowed:'Opp Allowed',oppRank:'Opp Rank',
   medOver:'Median Over',medUnder:'Median Under',bestOver:'Best Over',bestOverBk:'Best Over Books',bestUnder:'Best Under',bestUnderBk:'Best Under Books'};
 
@@ -274,6 +274,19 @@ const abbrProp = v=>!v?'':(PROP_ABBR[v]||v);
 function etTz(){const d=new Date(),y=d.getFullYear();const m1=new Date(y,2,1),n1=new Date(y,10,1);const dstStart=new Date(y,2,1+((7-m1.getDay())%7)+7);const dstEnd=new Date(y,10,1+((7-n1.getDay())%7));return (d>=dstStart&&d<dstEnd)?'EDT':'EST';}
 const ET_TZ = 'ET';   // always "ET" — the clock values are already correct, so the DST label never needs switching
 const abbrMatchup = v=>!v?'':String(v).replace(MATCHUP_RE,m=>TEAM_LC[m.toLowerCase()]||m).replace(/\b(?:EST|EDT)\b/g,ET_TZ);   // #13: keep gametime, relabel ET zone
+const fmtStamp = v=>{
+  if(!v) return '';
+  const s=String(v);
+  const tm=s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  const timePart=tm?`${parseInt(tm[1],10)}:${tm[2]} ${tm[3].toUpperCase()}`:'';
+  const dm=s.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  let datePart='';
+  if(dm){const mo=+dm[1],d=+dm[2];let y=dm[3]?(+dm[3]<100?2000+ +dm[3]:+dm[3]):null;
+    const dow=(y!=null)?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y,mo-1,d).getDay()]:'';
+    datePart=(dow?dow+' ':'')+mo+'/'+d;}
+  const left=timePart?timePart+' ET':'';
+  return datePart?(left?left+' · '+datePart:datePart):left;
+};
 const order = v=>{const m=String(v||'').match(/\((\d+)\)/);return m?m[1]:null;};
 const lineupTag = v=>{if(!v)return '';const st=/proj/i.test(v)?'Proj':(/conf/i.test(v)?'Conf':'');const o=order(v);if(!st&&!o)return '';return `${st}${o?' #'+o:''}`;};
 const fmtPark = v=>!v?'–':String(v).replace(/\((\d+)\)/g,' (#$1)');
@@ -315,7 +328,7 @@ function buildGroups(rows){
         matchup:row[F.matchup],
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
         bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
-        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup])};
+        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup]),gameTime:row[F.gameTime]};
       map.set(key,g);
     }
     const vk=`${row[F.period]}|${row[F.split]}`;
@@ -467,7 +480,7 @@ function cardHTML(g){
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${rail}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
-        <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${roleTag} <span>${esc(g._matchupAb)}</span></div></div>
+        <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${roleTag} <span>${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</span></div></div>
     </div>
     <div class="bet-line">${esc(abbrProp(g.prop))} <span class="side">Over</span> ${g.line??''}</div>
     <div class="cgrid">
