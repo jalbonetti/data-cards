@@ -321,7 +321,7 @@ function fieldMap(prefix){
       prop: "Game Prop Type", label: "Game Label", line: "Game Line",
       book: "Game Book", bookOdds: "Game Odds", medianOdds: "Game Median Odds",
       bestOdds: "Game Best Odds", bestBooks: "Game Best Odds Books",
-      ev: "EV %", kelly: "Quarter Kelly %", link: "Link"
+      ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: "Game Time"
     };
   }
   return {
@@ -329,7 +329,7 @@ function fieldMap(prefix){
     prop: `${prefix} Prop Type`, label: `${prefix} Over/Under`, line: `${prefix} Prop Line`,
     book: `${prefix} Book`, bookOdds: `${prefix} Prop Odds`, medianOdds: `${prefix} Median Odds`,
     bestOdds: `${prefix} Best Odds`, bestBooks: `${prefix} Best Odds Books`,
-    ev: "EV %", kelly: "Quarter Kelly %", link: "Link"
+    ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: "Game Time"
   };
 }
 
@@ -368,6 +368,20 @@ function abbrTeam(v){ if(!v) return ''; const s=String(v).trim(); return TEAM_NA
 function etTz(){const d=new Date(),y=d.getFullYear();const m1=new Date(y,2,1),n1=new Date(y,10,1);const dstStart=new Date(y,2,1+((7-m1.getDay())%7)+7);const dstEnd=new Date(y,10,1+((7-n1.getDay())%7));return (d>=dstStart&&d<dstEnd)?'EDT':'EST';}
 const ET_TZ = 'ET';   // always "ET" — the clock values are already correct, so the DST label never needs switching
 function abbrMatchup(v){ if(!v) return ''; return v.replace(MATCHUP_RE, m => TEAM_LC[m.toLowerCase()] || m).replace(/\b(?:EST|EDT)\b/g, ET_TZ); }
+
+function fmtStamp(v){
+  if(!v) return '';
+  const s=String(v);
+  const tm=s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  const timePart=tm?`${parseInt(tm[1],10)}:${tm[2]} ${tm[3].toUpperCase()}`:'';
+  const dm=s.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  let datePart='';
+  if(dm){const mo=+dm[1],d=+dm[2];let y=dm[3]?(+dm[3]<100?2000+ +dm[3]:+dm[3]):null;
+    const dow=(y!=null)?['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y,mo-1,d).getDay()]:'';
+    datePart=(dow?dow+' ':'')+mo+'/'+d;}
+  const left=timePart?timePart+' ET':'';
+  return datePart?(left?left+' · '+datePart:datePart):left;
+}
 function abbrProp(v){ if(!v) return ''; return MODES[mode].propAbbr[v] || v; }
 
 function evColors(pct){
@@ -515,6 +529,7 @@ function normalize(rows) {
       bestOdds: oddsInt(row[F.bestOdds]), bestBooks: row[F.bestBooks],
       ev: num(row[F.ev]), kelly: num(row[F.kelly]),
       link: (link && /^https?:\/\//i.test(link)) ? link : null,
+      gameTime: row[F.gameTime],
       /* Precomputed once so filter/sort/render passes don't redo string work */
       _matchupAb: abbrMatchup(matchup),
     };
@@ -687,9 +702,9 @@ function cardHTML(r){
   const isGame = mode === 'game';
   const head = isGame
     ? `<div class="c-name">${gameSelection(r)}</div>
-        <div class="c-sub">${esc(r._matchupAb)}</div>`
+        <div class="c-sub">${esc(r._matchupAb)}${r.gameTime?' · '+esc(fmtStamp(r.gameTime)):''}</div>`
     : `<div class="c-name">${esc(r.name)}</div>
-        <div class="c-sub"><span class="team-tag">${esc(abbrTeam(r.team))}</span> ${esc(r._matchupAb)}</div>`;
+        <div class="c-sub"><span class="team-tag">${esc(abbrTeam(r.team))}</span> ${esc(r._matchupAb)}${r.gameTime?' · '+esc(fmtStamp(r.gameTime)):''}</div>`;
   const betLine = isGame ? esc(r.prop||'') : betDescription(r);   // market name for games
   return `
   <div class="card" style="--edge:${c.edge}">
@@ -792,14 +807,14 @@ els.modeToggle.addEventListener('click', (e)=>{
    silently on 40k-row days; Cache API holds tens of MB) ---------- */
 async function cacheGet(key){
   try {
-    const c = await caches.open('bbprops-v1');
+    const c = await caches.open('wnbaev-v1');
     const r = await c.match('/'+key);
     return r ? await r.json() : null;
   } catch(e){ return null; }
 }
 async function cacheSet(key, obj){
   try {
-    const c = await caches.open('bbprops-v1');
+    const c = await caches.open('wnbaev-v1');
     await c.put('/'+key, new Response(JSON.stringify(obj), { headers: {'Content-Type':'application/json'} }));
   } catch(e){ /* private mode / quota — stay in-memory */ }
 }
@@ -810,7 +825,7 @@ function ingest(rows){ RAW = normalize(rows); populateFilters(); applySort(); }
 async function boot(){
   const seq = ++bootSeq;                 // invalidate any in-flight fetch from a previous mode
   const table = MODES[mode].table;
-  const cacheKey = `bbprops_${mode}`;
+  const cacheKey = `wnbaev_${mode}`;
 
   const cached = await cacheGet(cacheKey);
   if (seq !== bootSeq) return;
