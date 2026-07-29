@@ -527,7 +527,10 @@ function normalize(rows) {
       book: row[F.book],
       bookOdds: oddsInt(row[F.bookOdds]), medianOdds: oddsInt(row[F.medianOdds]),
       bestOdds: oddsInt(row[F.bestOdds]), bestBooks: row[F.bestBooks],
-      ev: num(row[F.ev]), kelly: num(row[F.kelly]),
+      // Game-odds EV/Kelly arrive as fractions (the .gs writes "3.20%" strings, which Sheets
+      // coerces to 0.032); prop-odds arrive as percentages from the CF. Normalize game rows x100.
+      ev: (()=>{const n=num(row[F.ev]);return n==null?null:(isGame?n*100:n);})(),
+      kelly: (()=>{const n=num(row[F.kelly]);return n==null?null:(isGame?n*100:n);})(),
       link: (link && /^https?:\/\//i.test(link)) ? link : null,
       gameTime: row[F.gameTime],
       /* Precomputed once so filter/sort/render passes don't redo string work */
