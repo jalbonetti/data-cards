@@ -243,7 +243,7 @@ const PROP_ORDER = ['Points','Rebounds','Assists','3-Pointers','Pts + Rebs','Pts
 const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});};
 
 const F = {player:'Player',team:'Team',opponent:'Opponent',prop:'Prop',line:'Line',period:'Time Period',split:'Location',role:'Role',
-  clearance:'Clearance %',cleared:'Cleared',games:'Games',matchup:'Matchup',gameTime:'Game Time',
+  clearance:'Clearance %',cleared:'Cleared',games:'Games',matchup:'Matchup',gameTime:'Game Time',spread:'Spread',total:'Total',
   avg:'Avg',median:'Median',high:'High',low:'Low',oppAllowed:'Opp Allowed',oppRank:'Opp Rank',
   medOver:'Median Over',medUnder:'Median Under',bestOver:'Best Over',bestOverBk:'Best Over Books',bestUnder:'Best Under',bestUnderBk:'Best Under Books'};
 
@@ -328,7 +328,7 @@ function buildGroups(rows){
         matchup:row[F.matchup],
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
         bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
-        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup]),gameTime:row[F.gameTime]};
+        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup]),gameTime:row[F.gameTime],spread:row[F.spread],total:row[F.total]};
       map.set(key,g);
     }
     const vk=`${row[F.period]}|${row[F.split]}`;
@@ -519,6 +519,9 @@ function detailHTML(g){
     ? `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Opp Allowed</th></tr>`
     : `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Avg</th><th>Med</th><th>High</th><th>Low</th><th>Opp Allowed</th></tr>`;
   const oppNote=yesNo?"Opp Allowed = total DD/TD the opponent has given up (location-matched)." : "Opp Allowed = opponent's location-matched allowed per game for this stat.";
+  const spTxt=(g.spread!==''&&g.spread!=null)?(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':(g.team+' '+(n>0?'+':'')+n.toFixed(1));})():'–';
+  const toTxt=(g.total!==''&&g.total!=null)?(function(){const n=parseFloat(g.total);return isNaN(n)?'–':('O/U '+(n%1===0?n.toFixed(1):String(n)));})():'–';
+  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Spread</span><span class="v">${esc(spTxt)}</span><span class="k">Total</span><span class="v">${esc(toTxt)}</span></div></div>`;
   return `<div class="panel"><div class="panel-h">Clearance${yesNo?'':' & distribution'} — ${esc(g.role||'')} · vs ${esc(g.opp||'—')}</div>
     <div class="mini-scroll"><table class="mini clr-detail${yesNo?' yn':''}"><thead>${head}</thead><tbody>
       ${rowFor('Season · All','Full Season','All')}
@@ -527,7 +530,7 @@ function detailHTML(g){
       ${rowFor('L30 · '+loc,'Last 30 Days','loc')}
     </tbody></table></div>
     <div class="note-sm" style="color:var(--muted-2);font-size:11px;margin-top:6px">${oppNote} Rank 1 = allows most.</div>
-  </div>`;
+  </div>`+envPanel;
 }
 
 function renderMore(){if(rendered>=VIEW.length)return;const slice=VIEW.slice(rendered,rendered+BATCH);els.grid.insertAdjacentHTML('beforeend',slice.map(cardHTML).join(''));rendered+=slice.length;}
