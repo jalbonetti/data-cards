@@ -484,8 +484,8 @@ function cardHTML(c){
     <div class="mtl">${c.isHome?'vs':'@'} <b>${esc(c.oppFull||c.opp)}</b> · Opp pace ${esc(paceTxt)}</div>
     <div class="odds">
       <div class="o"><div class="k">Spread</div><div class="v">${esc(teamSpread(c))}</div></div>
-      <div class="o"><div class="k">Total</div><div class="v">${c.total!=null?esc(fmt1(c.total)):'–'}</div></div>
-      <div class="o"><div class="k">Moneyline</div><div class="v">${esc(mlTxt)}</div></div>
+      <div class="o"><div class="k">Total</div><div class="v">${c.total!=null?esc('O/U '+fmt1(c.total)):'–'}</div></div>
+      <div class="o"><div class="k">Tip</div><div class="v">${esc((c.gametime||'–').split(' · ')[0])}</div></div>
     </div>
     <div class="expand-row"><div class="status-line">Lineup: <span class="${statusCls}">${esc(c.status)}</span></div>
       <button class="exp-btn" type="button">Detail <span class="car">&#9662;</span></button></div>
