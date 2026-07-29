@@ -504,7 +504,8 @@ function detailHTML(c){
   const defCell=c.defense[perRaw+'|'+defLoc]||c.defense[perRaw+'|All'];
   const defNote=locMode==='loc'?(c.isHome?'away games':'home games'):'all games';
   const defPanel=`<div class="panel"><div class="panel-h">${esc(c.oppFull||c.opp)} defense — allowed / game (rank)</div>${defCell?defenseTable(defCell):'<div class="note-sm">No defensive data for this split.</div>'}<div class="note-sm">${perLbl} · ${defNote} · lower rank = allows more. Opponent pace ${c.oppPace!=null?esc(fmt1(c.oppPace)):'–'}${c.oppPaceRank!=null?(' (#'+c.oppPaceRank+')'):''}.</div></div>`;
-  return startersPanel+benchPanel+npPanel+defPanel;
+  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Spread</span><span class="v">${esc(teamSpread(c))}</span><span class="k">Total</span><span class="v">${c.total!=null?esc('O/U '+fmt1(c.total)):'\u2013'}</span></div></div>`;
+  return startersPanel+benchPanel+npPanel+defPanel+envPanel;
 }
 function renderMore(){if(rendered>=VIEW.length)return;const slice=VIEW.slice(rendered,rendered+BATCH);els.grid.insertAdjacentHTML('beforeend',slice.map(cardHTML).join(''));rendered+=slice.length;}
 function fillViewport(){let guard=0;do{renderMore();guard++;}while(rendered<VIEW.length&&els.sentinel.getBoundingClientRect().top<window.innerHeight+700&&guard<50);}
