@@ -616,9 +616,8 @@ function detailHTML(g){
     ${prodPanel}
     ${oppPanel}
     <div class="panel"><div class="panel-h">Game environment</div>
-      <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread!=null&&g.spread!==''?g.spread:'–')}</span>
-        <span class="k">Total</span><span class="v">${esc(g.total!=null&&g.total!==''?g.total:'–')}</span>
-        <span class="k">Moneyline</span><span class="v">${esc(g.moneyline!=null&&g.moneyline!==''?g.moneyline:'–')}</span>
+      <div class="kv"><span class="k">Spread</span><span class="v">${g.spread!=null&&g.spread!==''?esc(g.team+' '+(parseFloat(g.spread)>0?'+':'')+g.spread):'–'}</span>
+        <span class="k">Total</span><span class="v">${g.total!=null&&g.total!==''?esc('O/U '+g.total):'–'}</span>
         <span class="k">Minutes</span><span class="v">${raw(g.minutes)}</span>
         <span class="k">Games played</span><span class="v">${raw(g.gp)}</span>
         <span class="k">Lineup</span><span class="v">${esc(g.lineup||'–')}</span></div>
