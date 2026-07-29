@@ -132,7 +132,7 @@
     .bar-top,.bar-row2{display:contents;}                                  /* dissolve the row boxes into one flex line */
     .title{order:1;} .search{order:2;margin-right:0;} .seg{order:3;}
     .bar-break{display:block;flex-basis:100%;height:0;order:87;}   /* force the right group onto row 2 */
-    .slate-seg{order:88;margin-left:auto;} #modeToggle{order:89;} #filterToggle{order:90;}
+    .slate-seg{order:88;} #modeToggle{order:89;} #filterToggle{order:90;margin-left:auto;}
     .bar-row2{margin-top:6px;}
     .filters{margin-top:8px;padding-top:8px;padding-bottom:8px;}
     .filters-grid{gap:6px 10px;}
@@ -206,7 +206,6 @@
       <div class="filters-grid">
         <div class="fg"><label>Team</label><div class="ms" data-ms="team"></div></div>
         <div class="fg"><label>Position</label><div class="ms" data-ms="pos"></div></div>
-        <div class="fg"><label data-hand-label>Bats</label><div class="ms" data-ms="hand"></div></div>
         <div class="fg"><label>Price</label>
           <div class="fg-range">
             <input type="number" data-filter="prMin" inputmode="numeric" placeholder="Min" />
@@ -296,9 +295,7 @@ const MODE_FILTERS={};   /* in-memory only: filters persist across tab/mode swit
 function saveFilters(){MODE_FILTERS[mode]=filters;}
 function loadFilters(){filters = MODE_FILTERS[mode] || newFilters();}
 
-const POS_SLOTS = BOOK==='FD'
-  ? [['C/1B',['C','1B']],['2B',['2B']],['3B',['3B']],['SS',['SS']],['OF',['OF']]]
-  : [['C',['C']],['1B',['1B']],['2B',['2B']],['3B',['3B']],['SS',['SS']],['OF',['OF']]];
+const POS_SLOTS = [['G',['G']],['F',['F']]];   // WNBA positions (guard / forward)
 let POS_ACTIVE = POS_SLOTS;
 function playerPositions(str){return new Set(String(str||'').split('/').map(x=>x.trim().toUpperCase()).filter(x=>x&&x!=='UTIL'));}
 function posMatch(g){
@@ -349,7 +346,6 @@ function buildMS(container,key){
 loadFilters();
 buildMS(document.querySelector('.ms[data-ms="team"]'),'team');
 buildMS(document.querySelector('.ms[data-ms="pos"]'),'pos');
-buildMS(document.querySelector('.ms[data-ms="hand"]'),'hand');
 document.addEventListener('click',closeAllMS);
 
 /* ---------- Helpers ---------- */
@@ -503,8 +499,7 @@ function uniq(getter){return [...new Set(GROUPS.map(getter).filter(v=>v!=null&&v
 function populateFilters(){
   populateSlates();
   MS.team.setOptions(uniq(g=>g.team).sort());
-  if(mode==='batter'){ POS_ACTIVE=POS_SLOTS; MS.pos.setOptions(POS_SLOTS.map(x=>x[0])); }
-  else{ filters.pos.clear(); POS_ACTIVE=[]; MS.pos.setOptions([]); }   // pitchers: position filter removed
+  POS_ACTIVE=POS_SLOTS; MS.pos.setOptions(POS_SLOTS.map(x=>x[0]));   // WNBA: single player pool, G/F always available
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=filters[k]||'';});
   els.search.value=filters.search||'';
 }
@@ -542,7 +537,7 @@ function applyFilters(){
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
   if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching players</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=(filters.team.size?1:0)+(filters.pos.size?1:0)+(filters.hand.size?1:0)+['prMin','prMax','projMin','valMin','gMin'].filter(k=>filters[k]!=='').length;
+  const active=(filters.team.size?1:0)+(filters.pos.size?1:0)+['prMin','prMax','projMin','valMin','gMin'].filter(k=>filters[k]!=='').length;
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
