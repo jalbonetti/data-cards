@@ -302,7 +302,7 @@ function buildCards(games,batters,starters,bullpen){
     G.set(String(id),{id:String(id),matchup:r['Matchup'],matchupAb:`${abbrTeam(awayFull)} @ ${abbrTeam(homeFull)}${gameTag?' '+gameTag:''}`,
       awayFull,homeFull,away:abbrTeam(awayFull),home:abbrTeam(homeFull),
       gametime:fmtStamp(r['Gametime']),spread:r['Spread'],total:r['Total'],homeSP:r['Home SP'],awaySP:r['Away SP'],
-      stadium:r['Stadium'],dome:r['Dome'],wx:[r['Weather 1'],r['Weather 2'],r['Weather 3'],r['Weather 4']].filter(Boolean),pf,
+      stadium:r['Stadium'],dome:r['Dome'],wx:[r['Weather 1'],r['Weather 2'],r['Weather 3'],r['Weather 4']].filter(Boolean),pf,neutral:/^yes$/i.test(String(r['Neutral']||'').trim()),
       cnt:{Home:{L:r['Home LHB #'],R:r['Home RHB #'],S:r['Home SWH #'],bpL:r['Home BP L #'],bpR:r['Home BP R #']},
            Away:{L:r['Away LHB #'],R:r['Away RHB #'],S:r['Away SWH #'],bpL:r['Away BP L #'],bpR:r['Away BP R #']}}});
   }
@@ -543,14 +543,16 @@ function detailHTML(c){
   const bpPanel=`<div class="panel"><div class="panel-h">Opposing bullpen${bpCnt?' — '+esc(bpCnt):''}</div>${bpO?bullpenTable(bpO,bpL,bpR)+`<div class="note-sm">tap a pen slot for vs-LHB / vs-RHB.</div>`:'<div class="note-sm">No bullpen data for this split.</div>'}</div>`;
   // park factors
   const pf=c.game.pf;
-  const pfPanel=`<div class="panel"><div class="panel-h">Park factors (rank)</div>${statTable(SET_PF,[['All',pf.All],['vL',pf.L],['vR',pf.R]])}
+  const pfPanel=c.game.neutral
+    ? `<div class="panel"><div class="panel-h">Park factors</div><div class="note-sm">Park Factors Unavailable for Neutral Site Games.</div></div>`
+    : `<div class="panel"><div class="panel-h">Park factors (rank)</div>${statTable(SET_PF,[['All',pf.All],['vL',pf.L],['vR',pf.R]])}
     <div class="note-sm">100 is league average; higher inflates, lower suppresses. Same for both teams in the game.</div></div>`;
   // environment
   const envPanel=`<div class="panel"><div class="panel-h">Environment</div>
     <div class="kv"><span class="k">Spread</span><span class="v">${esc(teamSpread(c))}</span>
       <span class="k">Total</span><span class="v">${esc(c.game.total||'–')}</span>
       <span class="k">First pitch</span><span class="v">${esc(c.game.gametime||'–')}</span>
-      <span class="k">Stadium</span><span class="v">${esc(c.game.stadium||'–')}</span>
+      <span class="k">Stadium</span><span class="v">${esc(c.game.stadium||'–')}${c.game.neutral?' · Neutral site':''}</span>
       <span class="k">Dome</span><span class="v">${esc(c.game.dome||'–')}</span></div>
     ${/^(dome|yes)$/i.test(String(c.game.dome||'').trim())
       ? `<div class="wx"><div>No Weather Data - Game Played in Dome</div></div>`
