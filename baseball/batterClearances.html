@@ -234,7 +234,7 @@ const PROP_ABBR = {'Runs Scored':'Runs','Hits + Runs + RBIs':'H+R+RBI','Total Ba
 const PROP_ORDER = ['Hits','Total Bases','Singles','Doubles','Triples','Home Runs','Runs Scored','RBIs','Hits + Runs + RBIs','Walks','Stolen Bases','Strikeouts'];
 const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});};
 
-const F = {player:'Player',team:'Team',bats:'Bats',prop:'Prop',line:'Line',period:'Time Period',split:'Stat Split',clearance:'Clearance %',games:'Games',matchup:'Matchup',spread:'Spread',total:'Total',lineup:'Lineup Status',park:'Park Factor',stadium:'Stadium',dome:'Dome',
+const F = {player:'Player',team:'Team',bats:'Bats',prop:'Prop',line:'Line',period:'Time Period',split:'Stat Split',clearance:'Clearance %',games:'Games',matchup:'Matchup',spread:'Spread',total:'Total',lineup:'Lineup Status',park:'Park Factor',stadium:'Stadium',dome:'Dome',neutral:'Neutral',
   pTotal:'Player Total',pAvg:'Player Avg',pHigh:'Player High',pRatio:'Player Ratio',
   pLTotal:'Player vL Total',pLAvg:'Player vL Avg',pLHigh:'Player vL High',pLRatio:'Player vL Ratio',
   pRTotal:'Player vR Total',pRAvg:'Player vR Avg',pRHigh:'Player vR High',pRRatio:'Player vR Ratio',
@@ -343,7 +343,7 @@ function buildGroups(rows){
     let g=map.get(key);
     if(!g){
       g={key,player,team:row[F.team],bats:row[F.bats],prop,line:num(line),lineup:row[F.lineup],
-        matchup:row[F.matchup],spread:row[F.spread],total:row[F.total],park:row[F.park],stadium:row[F.stadium],dome:row[F.dome],
+        matchup:row[F.matchup],spread:row[F.spread],total:row[F.total],park:row[F.park],stadium:row[F.stadium],dome:row[F.dome],neutral:/^yes$/i.test(String(row[F.neutral]||'').trim()),
         sp:row[F.sp],
         lefties:K.nL?row[K.nL]:null,righties:K.nR?row[K.nR]:null,
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
@@ -561,7 +561,7 @@ function detailHTML(g){
       <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread||'–')}</span>
         <span class="k">Total</span><span class="v">${esc(g.total||'–')}</span>
         <span class="k">Park factor (rank)</span><span class="v">${esc(fmtPark(g.park))}</span>
-        <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}</span>
+        <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}${g.neutral?' · Neutral site':''}</span>
         <span class="k">Dome</span><span class="v">${esc(g.dome||'–')}</span></div>
       ${/^(dome|yes)$/i.test(String(g.dome||'').trim())
         ? `<div class="wx"><div>No Weather Data - Game Played in Dome</div></div>`
