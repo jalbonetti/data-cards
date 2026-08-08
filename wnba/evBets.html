@@ -231,23 +231,23 @@
         <div class="fg"><label>Label</label><div class="ms" data-ms="label"></div></div>
         <div class="fg"><label>Book</label><div class="ms" data-ms="book"></div></div>
         <div class="fg"><label>Best book</label><div class="ms" data-ms="bestBooks"></div></div>
-        <div class="fg"><label>Min EV %</label><input type="number" data-filter="evMin" inputmode="decimal" placeholder="e.g. 5" /></div>
+        <div class="fg"><label>Min EV %</label><input type="text" data-filter="evMin" inputmode="text" placeholder="e.g. 5" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" /></div>
         <div class="fg"><label>Book odds</label>
           <div class="fg-range">
-            <input type="number" data-filter="bookMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="bookMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="bookMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="bookMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
         <div class="fg"><label>Best odds</label>
           <div class="fg-range">
-            <input type="number" data-filter="bestMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="bestMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="bestMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="bestMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
         <div class="fg"><label>Median odds</label>
           <div class="fg-range">
-            <input type="number" data-filter="medMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="medMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="medMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="medMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
       </div>
