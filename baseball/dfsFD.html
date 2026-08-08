@@ -282,7 +282,7 @@ function fieldMap(){
     ratioMed:'Player Median Ratio', ratioHigh:'Player High Ratio', rostership:`${BOOK} Rostership`, slateRost:`${BOOK} Slate Rost`, projection:`${BOOK} Projection`, gp:'Player Games Played',
     matchup:'Matchup', spread:'Matchup Spread', total:'Matchup Total',
     lineup: isBat ? 'Lineup Status' : 'Opposing Lineup Status',
-    stadium:'Stadium', dome:'Dome', wx1:'Weather 1', wx2:'Weather 2', wx3:'Weather 3', wx4:'Weather 4'
+    stadium:'Stadium', dome:'Dome', wx1:'Weather 1', wx2:'Weather 2', wx3:'Weather 3', wx4:'Weather 4', neutral:'Neutral'
   };
 }
 
@@ -454,6 +454,7 @@ function buildGroups(rows){
         matchup:row[F.matchup], spread:row[F.spread], total:row[F.total],
         stadium:row[F.stadium], dome:row[F.dome], wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(Boolean),
         pf:PF_SET.map(([lbl,col])=>[lbl,row[col]]),
+        neutral:/^yes$/i.test(String(row['Neutral']||'').trim()),
         variants:{}, _q:String(player).toLowerCase(), _matchupAb:abbrMatchup(row[F.matchup])};
       g.slateMap=parseSlateRost(row[F.slateRost]); g._slates=new Set(Object.keys(g.slateMap));
       if(isBat){
@@ -642,7 +643,9 @@ function detailHTML(g){
     <div class="panel"><div class="panel-h">Opposing lineup — ${raw(g.luNL)} LHB / ${raw(g.luNR)} RHB${sw} · ${perLbl}${oppSplitLbl}</div>
       ${statTable(SET_BAT,[['Overall',v&&v.luO],[vsLbl,v&&v.luV]])}</div>`;
   }
-  const pf=`<div class="panel-h" style="margin-top:10px">Park factors (rank)</div>
+  const pf=g.neutral
+    ? `<div class="panel-h" style="margin-top:10px">Park factors</div><div class="note-sm">Park Factors Unavailable for Neutral Site Games.</div>`
+    : `<div class="panel-h" style="margin-top:10px">Park factors (rank)</div>
     <div class="pf-grid">${g.pf.map(([lbl,val])=>`<div><span class="pfk">${esc(lbl)}</span><span class="pfv">${esc(fmtPark(val))}</span></div>`).join('')}</div>`;
   return `
     ${prodPanel}
@@ -651,7 +654,7 @@ function detailHTML(g){
       <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread||'–')}</span>
         <span class="k">Total</span><span class="v">${esc(g.total||'–')}</span>
         <span class="k">Games played</span><span class="v">${raw(g.gp)}</span>
-        <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}</span>
+        <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}${g.neutral?' · Neutral site':''}</span>
         <span class="k">Dome</span><span class="v">${esc(g.dome||'–')}</span></div>
       ${pf}
       ${/^(dome|yes)$/i.test(String(g.dome||'').trim())
