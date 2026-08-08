@@ -232,23 +232,23 @@
         <div class="fg"><label>Label</label><div class="ms" data-ms="label"></div></div>
         <div class="fg"><label>Book</label><div class="ms" data-ms="book"></div></div>
         <div class="fg"><label>Best book</label><div class="ms" data-ms="bestBooks"></div></div>
-        <div class="fg"><label>Min EV %</label><input type="number" data-filter="evMin" inputmode="decimal" placeholder="e.g. 5" /></div>
+        <div class="fg"><label>Min EV %</label><input type="text" data-filter="evMin" inputmode="text" placeholder="e.g. 5" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" /></div>
         <div class="fg"><label>Book odds</label>
           <div class="fg-range">
-            <input type="number" data-filter="bookMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="bookMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="bookMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="bookMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
         <div class="fg"><label>Best odds</label>
           <div class="fg-range">
-            <input type="number" data-filter="bestMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="bestMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="bestMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="bestMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
         <div class="fg"><label>Median odds</label>
           <div class="fg-range">
-            <input type="number" data-filter="medMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="medMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="medMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="medMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
       </div>
@@ -530,7 +530,10 @@ function normalize(rows) {
       book: row[F.book],
       bookOdds: oddsInt(row[F.bookOdds]), medianOdds: oddsInt(row[F.medianOdds]),
       bestOdds: oddsInt(row[F.bestOdds]), bestBooks: row[F.bestBooks],
-      ev: num(row[F.ev]), kelly: num(row[F.kelly]),
+      // Game-odds EV/Kelly arrive as fractions (the .gs writes "3.20%" strings, which Sheets
+      // coerces to 0.032); prop-odds arrive as percentages from the CF. Normalize game rows x100.
+      ev: (()=>{const n=num(row[F.ev]);return n==null?null:(isGame?n*100:n);})(),
+      kelly: (()=>{const n=num(row[F.kelly]);return n==null?null:(isGame?n*100:n);})(),
       link: (link && /^https?:\/\//i.test(link)) ? link : null,
       gameTime: row[F.gameTime],
       /* Precomputed once so filter/sort/render passes don't redo string work */
