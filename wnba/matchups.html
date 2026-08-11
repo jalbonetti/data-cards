@@ -208,7 +208,7 @@ const MAX_PARALLEL = 6;
 const TEAM_NAME_MAP = {'Atlanta Dream':'ATL','Chicago Sky':'CHI','Connecticut Sun':'CON','Dallas Wings':'DAL','Golden State Valkyries':'GSV','Indiana Fever':'IND','Los Angeles Sparks':'LAS','Las Vegas Aces':'LVA','Minnesota Lynx':'MIN','New York Liberty':'NYL','Phoenix Mercury':'PHX','Portland Fire':'POR','Seattle Storm':'SEA','Toronto Tempo':'TOR','Washington Mystics':'WSH'};
 
 /* WNBA card stats — [display, blobKey]. Avg on the face; Median/High/Low in the expand rows. */
-const WNBA_STATS = [['MIN','MIN'],['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S'],['DD','DD'],['TD','TD']];
+const WNBA_STATS = [['G','__games__'],['MIN','MIN'],['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S'],['DD','DD'],['TD','TD']];
   const TOTAL_ONLY = new Set(['DD','TD']);   // shown as a whole season total on the face; blank in Med/High/Low
   // Defense panel stat set: no MIN ('minutes allowed' rank is meaningless); DD/TD are season totals given up.
   const DEF_STATS = [['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S'],['DD','DD'],['TD','TD']];
@@ -445,6 +445,7 @@ function statTable(set,rows){
 function playerTable(players,cardLoc){
   const heads=WNBA_STATS.map(([d])=>`<th>${esc(d)}</th>`).join('');
   const rowFor=(cell,key)=>WNBA_STATS.map(([,k])=>{
+    if(k==='__games__') return `<td>${key==='avg'?(cell&&cell.games!=null?cell.games:'–'):''}</td>`;   // games played: face row only, like baseball's G
     const st=cell&&cell.stats&&cell.stats[k];
     if(TOTAL_ONLY.has(k)) return `<td>${key==='avg'&&st&&st.total!=null?fmt1(st.total):''}</td>`;   // face=total; med/high/low blank
     return `<td>${st?fmt1(st[key]):'–'}</td>`;
