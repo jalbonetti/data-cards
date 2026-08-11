@@ -332,7 +332,7 @@ function buildGroups(rows){
       map.set(key,g);
     }
     const vk=`${row[F.period]}|${row[F.split]}`;
-    g.variants[vk]={clr:num(String(row[F.clearance]||'').replace('%','')),
+    g.variants[vk]={clr:row[F.clearance]!=null&&row[F.clearance]!==''?num(String(row[F.clearance]).replace('%','')):null,   // keep 0% (0 is a real clearance, not "no data")
       gCleared:row[F.cleared]!=null&&row[F.cleared]!==''?parseInt(row[F.cleared],10):null,
       gTotal:row[F.games]!=null&&row[F.games]!==''?parseInt(row[F.games],10):null,
       avg:num(row[F.avg]),median:num(row[F.median]),high:num(row[F.high]),low:num(row[F.low]),
