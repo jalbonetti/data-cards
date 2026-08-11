@@ -227,6 +227,7 @@ const fmtAvg3 = v=>{const n=parseFloat(v);if(isNaN(n))return '–';const sign=n<
 const fmtIP = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.includes('.')?s:s+'.0';};
 const fmtPark = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';return s.replace(/\((\d+)\)/g,' (#$1)');};
 const fmtType = (t,v)=> t==='rate'?fmtAvg3(v) : t==='era'?fmt2(v) : t==='ip'?fmtIP(v) : t==='park'?fmtPark(v) : raw(v);
+const statCell = (col,typ,v)=> (col==='Games' && (v==null || v===''))?'<td></td>':`<td>${fmtType(typ,v)}</td>`;   // Games on split rows: blank cell, not "\u2013" (matches WNBA matchups)
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const CODE_ALIAS={SD:'SDP',SF:'SFG',TB:'TBR',WSH:'WSN',KC:'KCR',CWS:'CHW'};   // tolerate short-code variants
 const canonTeam=c=>{const u=String(c||'').trim().toUpperCase();return CODE_ALIAS[u]||u;};
@@ -453,7 +454,7 @@ function applyFilters(){
 function statTable(set,rows){
   const heads=set.map(([d])=>`<th>${esc(d)}</th>`).join('');
   const body=rows.map(([lbl,obj])=>{
-    const tds=set.map(([,col,typ])=>`<td>${fmtType(typ,obj?obj[col]:null)}</td>`).join('');
+    const tds=set.map(([,col,typ])=>statCell(col,typ,obj?obj[col]:null)).join('');
     return `<tr><td>${esc(lbl)}</td>${tds}</tr>`;
   }).join('');
   return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody>${body}</tbody></table></div>`;
@@ -462,7 +463,7 @@ function lineCountStr(c){const p=[];if(has(c.L))p.push(raw(c.L)+' LHB');if(has(c
 function bpCountStr(c){const p=[];if(has(c.bpL))p.push(raw(c.bpL)+' LH');if(has(c.bpR))p.push(raw(c.bpR)+' RH');return p.join(' / ');}
 function lineupTable(c){
   const heads=SET_BAT.map(([d])=>`<th>${esc(d)}</th>`).join('');
-  const cells=o=>SET_BAT.map(([,col,typ])=>`<td>${fmtType(typ,o?o[col]:null)}</td>`).join('');
+  const cells=o=>SET_BAT.map(([,col,typ])=>statCell(col,typ,o?o[col]:null)).join('');
   let body='';
   c.lineup.forEach((p,i)=>{
     const blankG=v=>v?{...v,Games:null}:v;   // a batter's vs-LHP/vs-RHP "Games" isn't a distinct count — blank it (matches the pitcher rows)
