@@ -340,7 +340,7 @@ function buildCards(games,batters,starters,bullpen){
       const ourSPraw=isHome?game.homeSP:game.awaySP, oppSPraw=isHome?game.awaySP:game.homeSP;
       const oppSP=SP.get(game.id+'|'+oppTeam)||null;
       const card={key:game.id+'|'+team,id:game.id,idNum:num(game.id)||0,team,teamFull:isHome?game.homeFull:game.awayFull,
-        isHome,loc:isHome?'Home':'Away',oppLoc:isHome?'Away':'Home',game,oppTeam,
+        isHome,loc:(game.neutral?'Away':(isHome?'Home':'Away')),oppLoc:(game.neutral?'Away':(isHome?'Away':'Home')),game,oppTeam,   // neutral site: both teams use Away
         lineup,status:lineupStatusOf(lineup),
         oppSP,oppBP:BP.get(oppTeam)||null,
         oppSPName:oppSP?oppSP.name:stripHand(oppSPraw),oppSPHand:oppSP?oppSP.throws:handOf(oppSPraw),
