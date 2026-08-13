@@ -619,7 +619,7 @@ function detailHTML(g){
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
   // the opposing side plays the opposite location (player home => opponent away)
-  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.location==='Home'?'away':'home')):' · all games';
+  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.neutral?g.location.toLowerCase():(g.location==='Home'?'away':'home'))):' · all games';
   const v=g._prodVar||g._season;
   const oppA=isBat?'vs LHP':'vs LHB', oppB=isBat?'vs RHP':'vs RHB';
   const prodH=isBat?'Hitter production':'Pitcher production';
