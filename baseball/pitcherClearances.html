@@ -531,7 +531,7 @@ function detailHTML(g){
   const [perRaw,spRaw]=sortMode.slice(4).split('|');
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
-  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.location==='Home'?'away':'home')):' · all games';   // opposing lineup plays the opposite location
+  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.neutral?g.location.toLowerCase():(g.location==='Home'?'away':'home'))):' · all games';   // opposing lineup plays the opposite location
   const vsP=g.throws==='R'?'RHP':(g.throws==='L'?'LHP':'the SP');
   const v=g._prodVar||g._season;
   return `
