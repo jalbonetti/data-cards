@@ -538,7 +538,7 @@ function detailHTML(g){
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
   // the opposing pitcher/bullpen play the opposite location (batter home => they're away)
-  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.location==='Home'?'away':'home')):' · all games';
+  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.neutral?g.location.toLowerCase():(g.location==='Home'?'away':'home'))):' · all games';
   const spHand=/\(L\)/i.test(g.sp||'')?'L':(/\(R\)/i.test(g.sp||'')?'R':null);
   const faceHand=g.bats==='B'?(spHand==='R'?'L':spHand==='L'?'R':null):(g.bats==='L'?'L':g.bats==='R'?'R':null);
   const faceLbl=faceHand==='L'?'vs LHB':faceHand==='R'?'vs RHB':'Platoon';
