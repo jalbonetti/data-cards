@@ -253,5 +253,19 @@ setInterval(load, REFRESH_MS);
 /* re-apply the kickoff filter every 30s so cards retire as games start */
 setInterval(function(){ if(lastRows.length) render(lastRows); }, 30000);
 document.addEventListener("visibilitychange", function(){ if(!document.hidden) load(); });
+
+/* Auto-height handshake: when embedded in an iframe, report rendered height
+   so the host frame hugs the content (full rail vs. short empty state). */
+function reportHeight(){
+  if(window.parent === window) return;
+  var h = document.getElementById("fpbWrap").getBoundingClientRect().height;
+  window.parent.postMessage({ type: "fpb:height", height: Math.ceil(h) + 8 }, "*");
+}
+if(window.ResizeObserver){
+  new ResizeObserver(reportHeight).observe(document.getElementById("fpbWrap"));
+} else {
+  setInterval(reportHeight, 1500);
+}
+reportHeight();
 })();
 </script>
