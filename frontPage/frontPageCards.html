@@ -1,0 +1,257 @@
+<!-- ============================================================
+     FRONT PAGE — TODAY'S BEST BETS
+     Reads the anon FrontPageBets table (9 rows max, pre-selected
+     and pre-ranked by the buildFrontPageBets Cloud Function).
+     One horizontal scroll-snap row: 3 cards visible on desktop,
+     ~1 card + a peek on mobile. No libraries, no web fonts.
+     Same scoped-component conventions as the sports-page cards:
+     everything lives under .fpb-wrap, host theme untouched.
+     ============================================================ -->
+<link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin>
+<div class="fpb-wrap" id="fpbWrap">
+  <div class="fpb-head">
+    <div class="fpb-title">Today&rsquo;s Best Bets <span class="fpb-count" id="fpbCount" hidden>0</span></div>
+    <div class="fpb-sub" id="fpbSub">Live +EV plays across every sport we track &mdash; free, updated every few minutes.</div>
+  </div>
+  <div class="fpb-rail-wrap">
+    <button class="fpb-nav prev" id="fpbPrev" aria-label="Scroll left" hidden>&#8249;</button>
+    <div class="fpb-rail" id="fpbRail" tabindex="0" aria-label="Best bets carousel">
+      <!-- skeletons -->
+      <div class="fpb-card skel"></div><div class="fpb-card skel"></div><div class="fpb-card skel"></div>
+    </div>
+    <button class="fpb-nav next" id="fpbNext" aria-label="Scroll right" hidden>&#8250;</button>
+  </div>
+</div>
+
+<style>
+  .fpb-wrap {
+    --brand: #06b6d4; --brand-dark: #0891b2;
+    --accent-soft: rgba(6,182,212,.14);
+    --surface: #2d1b45; --surface-2: #33204d; --inset: #1d1230;
+    --card: #231536; --ink: #e8e0f0; --muted: #a89bbe; --muted-2: #7a6b8f;
+    --good: #6ee7b7; --good-bg: rgba(52,211,153,.16);
+    --line: rgba(255,255,255,.10); --line-2: rgba(255,255,255,.06);
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 22px rgba(0,0,0,.28);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* per-sport badge colors */
+    --sp-nfl: #06b6d4; --sp-ncaaf: #fb923c; --sp-mlb: #f87171; --sp-wnba: #e879f9;
+    --sp-nba: #a78bfa; --sp-nhl: #93c5fd; --sp-default: #a89bbe;
+    max-width: 1180px; margin: 0 auto; padding: 0 12px;
+    color: var(--ink); font-family: var(--font);
+    -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
+  }
+  .fpb-wrap, .fpb-wrap *, .fpb-wrap *::before, .fpb-wrap *::after { box-sizing: border-box; }
+
+  .fpb-head { margin: 0 0 12px; }
+  .fpb-title { font-size: 18px; font-weight: 800; letter-spacing: .2px; display: flex; align-items: baseline; gap: 8px; }
+  .fpb-count { font-size: 11px; font-weight: 700; color: var(--brand); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
+  .fpb-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+
+  .fpb-rail-wrap { position: relative; }
+  .fpb-rail {
+    display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 10px;
+    scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin; scrollbar-color: var(--surface-2) transparent;
+  }
+  .fpb-rail::-webkit-scrollbar { height: 6px; }
+  .fpb-rail::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 999px; }
+  .fpb-rail::-webkit-scrollbar-track { background: transparent; }
+
+  .fpb-card {
+    flex: 0 0 calc((100% - 24px) / 3);
+    min-width: 270px;
+    scroll-snap-align: start;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 14px 14px 12px;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  @media (max-width: 900px) { .fpb-card { flex-basis: calc((100% - 12px) / 2); } }
+  @media (max-width: 640px) { .fpb-card { flex-basis: 86%; } }
+
+  .fpb-card.skel { height: 178px; background: linear-gradient(100deg, var(--card) 40%, var(--surface) 50%, var(--card) 60%); background-size: 200% 100%; animation: fpbShimmer 1.3s infinite linear; border-style: dashed; }
+  @keyframes fpbShimmer { to { background-position: -200% 0; } }
+
+  .fpb-row1 { display: flex; align-items: center; gap: 6px; }
+  .fpb-badge { font-size: 10.5px; font-weight: 800; letter-spacing: .6px; padding: 3px 8px; border-radius: 999px; color: #10071f; }
+  .fpb-type { font-size: 10.5px; font-weight: 700; color: var(--muted); background: var(--inset); border: 1px solid var(--line-2); padding: 3px 8px; border-radius: 999px; }
+  .fpb-ev { margin-left: auto; font-size: 12.5px; font-weight: 800; color: var(--good); background: var(--good-bg); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+
+  .fpb-bet { font-size: 15.5px; font-weight: 800; line-height: 1.28; letter-spacing: .1px; min-height: 40px; }
+  .fpb-meta { font-size: 12px; color: var(--muted); line-height: 1.35; }
+  .fpb-meta .dot { color: var(--muted-2); padding: 0 4px; }
+
+  .fpb-row2 { display: flex; align-items: center; gap: 8px; margin-top: auto; }
+  .fpb-cta {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--brand); color: #06222a; text-decoration: none;
+    font-size: 13px; font-weight: 800; padding: 8px 12px; border-radius: 9px;
+    border: none; white-space: nowrap;
+  }
+  .fpb-cta:hover { background: var(--brand-dark); color: #06222a; }
+  .fpb-cta .bk { font-weight: 700; opacity: .85; font-size: 11.5px; }
+  .fpb-cta.nolink { background: var(--surface); color: var(--ink); cursor: default; }
+  .fpb-kelly { margin-left: auto; text-align: right; }
+  .fpb-kelly .k { font-size: 9.5px; font-weight: 700; letter-spacing: .6px; color: var(--muted-2); text-transform: uppercase; }
+  .fpb-kelly .v { font-size: 13px; font-weight: 800; color: var(--ink); }
+
+  .fpb-foot { font-size: 10.5px; color: var(--muted-2); border-top: 1px solid var(--line-2); padding-top: 7px; }
+
+  .fpb-nav {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+    width: 30px; height: 30px; border-radius: 999px; border: 1px solid var(--line);
+    background: rgba(26,16,40,.92); color: var(--ink); font-size: 17px; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow);
+  }
+  .fpb-nav.prev { left: -8px; } .fpb-nav.next { right: -8px; }
+  .fpb-nav:hover { background: var(--surface-2); }
+  @media (max-width: 640px) { .fpb-nav { display: none; } }
+
+  .fpb-empty {
+    flex: 1 1 100%; background: var(--card); border: 1px dashed var(--line);
+    border-radius: var(--radius); padding: 26px 18px; text-align: center;
+  }
+  .fpb-empty .t { font-size: 14.5px; font-weight: 800; }
+  .fpb-empty .s { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+</style>
+
+<script>
+(function(){
+"use strict";
+/* CONFIG — public anon key, same one shipped on the live site. */
+var SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
+var ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
+var TABLE = "FrontPageBets";
+var REFRESH_MS = 60000;
+
+var SPORT_COLORS = { NFL: "--sp-nfl", NCAAF: "--sp-ncaaf", MLB: "--sp-mlb", WNBA: "--sp-wnba", NBA: "--sp-nba", NHL: "--sp-nhl" };
+
+var rail = document.getElementById("fpbRail");
+var countEl = document.getElementById("fpbCount");
+var prevBtn = document.getElementById("fpbPrev");
+var nextBtn = document.getElementById("fpbNext");
+
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+/* "7:30 PM ET 8/28/2026" -> epoch ms (DST-aware ET), or null */
+function stampToMs(stamp){
+  var m = String(stamp||"").match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*E[DS]?T\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+  if(!m) return null;
+  var h = parseInt(m[1],10)%12; if(m[3].toUpperCase()==="PM") h+=12;
+  var y=+m[6], mo=+m[4]-1, d=+m[5];
+  var mar=new Date(Date.UTC(y,2,1)), nov=new Date(Date.UTC(y,10,1));
+  var dstStart=1+((7-mar.getUTCDay())%7)+7, dstEnd=1+((7-nov.getUTCDay())%7);
+  var off=((mo>2)||(mo===2&&d>=dstStart)) && ((mo<10)||(mo===10&&d<dstEnd)) ? 4 : 5;
+  return Date.UTC(y,mo,d,h+off,+m[2]);
+}
+
+/* "7:30 PM ET 8/28/2026" -> "Thu 7:30 PM ET" style short label */
+function shortTime(stamp){
+  var ms = stampToMs(stamp);
+  var m = String(stamp||"").match(/(\d{1,2}:\d{2}\s*[AP]M)\s*E[DS]?T/i);
+  var clock = m ? m[1].replace(/\s+/," ") + " ET" : String(stamp||"");
+  if(ms==null) return clock;
+  var days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  /* derive ET weekday from the raw date parts (safe: stamp is already ET) */
+  var dm = String(stamp).match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(!dm) return clock;
+  var wd = days[new Date(+dm[3], +dm[1]-1, +dm[2]).getDay()];
+  var today = new Date();
+  var isToday = today.getFullYear()===+dm[3] && (today.getMonth()+1)===+dm[1] && today.getDate()===+dm[2];
+  return (isToday ? "Today " : wd+" ") + clock;
+}
+
+function parseDetails(s){ try { return JSON.parse(s||"{}") || {}; } catch(e){ return {}; } }
+function fmtSigned(v){
+  if(v==null||v==="") return "";
+  var s=String(v).trim(); if(!s) return "";
+  return (s[0]==="+"||s[0]==="-") ? s : (parseFloat(s)>0 ? "+"+s : s);
+}
+
+function render(rows){
+  var now = Date.now();
+  var live = rows.filter(function(r){
+    var ms = stampToMs(r["Game Time"]);
+    return ms!==null && ms>now;
+  });
+  countEl.hidden = live.length===0;
+  countEl.textContent = live.length;
+
+  if(live.length===0){
+    rail.innerHTML =
+      '<div class="fpb-empty"><div class="t">No qualifying bets on the board right now</div>' +
+      '<div class="s">Best bets appear here as soon as lines post and clear once the day&rsquo;s games kick off.<br>' +
+      'The next slate&rsquo;s plays load automatically &mdash; check back soon.</div></div>';
+    updateNav();
+    return;
+  }
+
+  var html = live.map(function(r){
+    var d = parseDetails(r["Details"]);
+    var spVar = SPORT_COLORS[r["Sport"]] || "--sp-default";
+    var ev = parseFloat(r["EV %"]);
+    var qk = r["Quarter Kelly %"] !== "" && r["Quarter Kelly %"] != null ? parseFloat(r["Quarter Kelly %"]) : null;
+    var link = String(r["Link"]||"").trim();
+    var hasLink = /^https?:\/\//i.test(link);
+    var median = fmtSigned(d.medianOdds), fair = fmtSigned(d.trueOdds);
+    var foot = [];
+    if(median) foot.push("Median " + esc(median));
+    if(fair) foot.push("Fair " + esc(fair));
+    var cta = hasLink
+      ? '<a class="fpb-cta" href="'+esc(link)+'" target="_blank" rel="noopener nofollow">'+esc(r["Odds"]||"")+' <span class="bk">'+esc(r["Book"]||"")+' &rarr;</span></a>'
+      : '<span class="fpb-cta nolink">'+esc(r["Odds"]||"")+' <span class="bk">'+esc(r["Book"]||"")+'</span></span>';
+    return (
+      '<div class="fpb-card">' +
+        '<div class="fpb-row1">' +
+          '<span class="fpb-badge" style="background:var('+spVar+')">'+esc(r["Sport"]||"")+'</span>' +
+          '<span class="fpb-type">'+esc(r["Bet Type"]||"")+'</span>' +
+          '<span class="fpb-ev">+'+(isNaN(ev)?esc(r["EV %"]):ev.toFixed(1))+'% EV</span>' +
+        '</div>' +
+        '<div class="fpb-bet">'+esc(r["Bet"]||"")+'</div>' +
+        '<div class="fpb-meta">'+esc(r["Matchup"]||"")+'<span class="dot">&middot;</span>'+esc(shortTime(r["Game Time"]))+'</div>' +
+        '<div class="fpb-row2">' + cta +
+          (qk!=null && !isNaN(qk)
+            ? '<div class="fpb-kelly"><div class="k">&frac14; Kelly</div><div class="v">'+qk.toFixed(1)+'%</div></div>' : '') +
+        '</div>' +
+        (foot.length ? '<div class="fpb-foot">'+foot.join(' &middot; ')+'</div>' : '') +
+      '</div>'
+    );
+  }).join("");
+  rail.innerHTML = html;
+  updateNav();
+}
+
+function updateNav(){
+  var over = rail.scrollWidth > rail.clientWidth + 8;
+  prevBtn.hidden = !over || rail.scrollLeft <= 4;
+  nextBtn.hidden = !over || rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4;
+}
+function scrollByCard(dir){
+  var card = rail.querySelector(".fpb-card");
+  var w = card ? card.getBoundingClientRect().width + 12 : 300;
+  rail.scrollBy({ left: dir*w, behavior: "smooth" });
+}
+prevBtn.addEventListener("click", function(){ scrollByCard(-1); });
+nextBtn.addEventListener("click", function(){ scrollByCard(1); });
+rail.addEventListener("scroll", updateNav, { passive: true });
+window.addEventListener("resize", updateNav);
+
+var lastRows = [];
+function load(){
+  fetch(SUPABASE_URL + "/rest/v1/" + TABLE + "?select=*&order=" + encodeURIComponent('"Rank"') + ".asc", {
+    headers: { apikey: ANON_KEY, Authorization: "Bearer " + ANON_KEY, Accept: "application/json",
+      "Range-Unit": "items", Range: "0-49" }
+  })
+  .then(function(res){ if(!res.ok) throw new Error("Supabase " + res.status); return res.json(); })
+  .then(function(rows){ lastRows = Array.isArray(rows) ? rows : []; render(lastRows); })
+  .catch(function(){ /* keep whatever is shown; retry on next tick */ if(rail.querySelector(".skel")) render([]); });
+}
+
+load();
+setInterval(load, REFRESH_MS);
+/* re-apply the kickoff filter every 30s so cards retire as games start */
+setInterval(function(){ if(lastRows.length) render(lastRows); }, 30000);
+document.addEventListener("visibilitychange", function(){ if(!document.hidden) load(); });
+})();
+</script>
