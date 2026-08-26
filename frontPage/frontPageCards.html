@@ -36,7 +36,8 @@
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     /* per-sport badge colors */
     --sp-nfl: #06b6d4; --sp-ncaaf: #fb923c; --sp-mlb: #f87171; --sp-wnba: #e879f9;
-    --sp-nba: #a78bfa; --sp-nhl: #93c5fd; --sp-default: #a89bbe;
+    --sp-nba: #a78bfa; --sp-nhl: #93c5fd; --sp-ncaam: #fbbf24; --sp-ncaaw: #6ee7b7;
+    --sp-default: #a89bbe;
     max-width: 1180px; margin: 0 auto; padding: 0 12px;
     color: var(--ink); font-family: var(--font);
     -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
@@ -49,6 +50,7 @@
   .fpb-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
 
   .fpb-rail-wrap { position: relative; }
+  @media (min-width: 641px) { .fpb-rail-wrap.has-nav { padding: 0 34px; } }
   .fpb-rail {
     display: flex; gap: 12px; overflow-x: auto; padding: 2px 2px 10px;
     scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
@@ -104,7 +106,7 @@
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     box-shadow: var(--shadow);
   }
-  .fpb-nav.prev { left: -8px; } .fpb-nav.next { right: -8px; }
+  .fpb-nav.prev { left: 0; } .fpb-nav.next { right: 0; }
   .fpb-nav:hover { background: var(--surface-2); }
   @media (max-width: 640px) { .fpb-nav { display: none; } }
 
@@ -125,7 +127,7 @@ var ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 var TABLE = "FrontPageBets";
 var REFRESH_MS = 60000;
 
-var SPORT_COLORS = { NFL: "--sp-nfl", NCAAF: "--sp-ncaaf", MLB: "--sp-mlb", WNBA: "--sp-wnba", NBA: "--sp-nba", NHL: "--sp-nhl" };
+var SPORT_COLORS = { NFL: "--sp-nfl", NCAAF: "--sp-ncaaf", MLB: "--sp-mlb", WNBA: "--sp-wnba", NBA: "--sp-nba", NHL: "--sp-nhl", NCAAM: "--sp-ncaam", NCAAW: "--sp-ncaaw" };
 
 var rail = document.getElementById("fpbRail");
 var countEl = document.getElementById("fpbCount");
@@ -222,8 +224,10 @@ function render(rows){
   updateNav();
 }
 
+var railWrap = rail.parentElement;
 function updateNav(){
   var over = rail.scrollWidth > rail.clientWidth + 8;
+  railWrap.classList.toggle("has-nav", over);
   prevBtn.hidden = !over || rail.scrollLeft <= 4;
   nextBtn.hidden = !over || rail.scrollLeft >= rail.scrollWidth - rail.clientWidth - 4;
 }
