@@ -850,6 +850,11 @@ async function boot(){
     if (complete) ingest(rows);          // verified full read → adopt it
     else if (!warm) ingest(rows);        // cold load we couldn't verify → show it, but don't cache
     // (!complete && warm) → leave the good cached view untouched
+    if (!RAW.length){                    // dataset genuinely empty → family-standard blank state
+      els.grid.hidden = true;
+      els.content.hidden = false;
+      els.content.innerHTML = `<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`;
+    }
     if (complete && rows.length) cacheSet(cacheKey, { t: Date.now(), rows });   // only cache a verified full read
   } catch(err){
     if (seq !== bootSeq) return;
