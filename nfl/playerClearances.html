@@ -1,52 +1,10 @@
-<!-- ============================================================
-     NFL — PLAYER PROP CLEARANCES
-     Same architecture as the WNBA/MLB clearances cards; football
-     additions: Position + Game Day filters, Last 5 Games windows,
-     positional-funnel opponent context (Opp vs Pos),
-     weather + environment panels, TD-scorer yes/no props.
-     Reads FootballPlayerClearances (anon). Serve standalone; embed via the tabs shell.
-     ============================================================ -->
-<link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin>
-<div class="wrap" id="wrap">
-  <div class="hdr"><div class="bar">
-    <div class="bar-top">
-      <div class="title">NFL Prop Clearances <span class="count" id="count">0</span><span id="loadpill" class="loadpill" hidden></span></div>
-      <input id="search" class="search" type="search" placeholder="Search players…" autocomplete="off" />
-      <button class="icon-btn" id="filterToggle" aria-expanded="false">Filters <span class="badge-dot" id="filterCount" hidden>0</span></button>
-      <div class="sortbox">
-        <label for="sortSel">Sort</label>
-        <select id="sortSel">
-          <option value="clr">Clearance %</option>
-          <option value="bo">Best Over</option>
-          <option value="bu">Best Under</option>
-          <option value="line">Line</option>
-          <option value="player">Player A–Z</option>
-        </select>
-        <button class="icon-btn" id="sortDir" title="Toggle direction">▼</button>
-      </div>
-    </div>
-    <div class="filters" id="filters" hidden>
-      <div class="fg"><label>Game Day</label><div class="ms" data-ms="day"></div></div>
-      <div class="fg"><label>Team</label><div class="ms" data-ms="team"></div></div>
-      <div class="fg"><label>Position</label><div class="ms" data-ms="pos"></div></div>
-      <div class="fg"><label>Prop</label><div class="ms" data-ms="prop"></div></div>
-      <div class="fg"><label>Line</label><div class="ms" data-ms="line"></div></div>
-      <div class="fg"><label>Min games (season)</label><input type="number" data-filter="gMin" inputmode="numeric" value="0" /></div>
-      <div class="fg"><label>Min clearance %</label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
-      <div class="fg"><label>Best Over odds</label><div class="pair">
-        <input type="number" data-filter="boMin" inputmode="numeric" placeholder="Min" />
-        <input type="number" data-filter="boMax" inputmode="numeric" placeholder="Max" /></div></div>
-      <div class="fg"><label>Best Under odds</label><div class="pair">
-        <input type="number" data-filter="buMin" inputmode="numeric" placeholder="Min" />
-        <input type="number" data-filter="buMax" inputmode="numeric" placeholder="Max" /></div></div>
-      <button class="icon-btn" id="clearFilters">Reset all</button>
-    </div>
-  </div></div>
-  <div id="content" class="state" hidden></div>
-  <div id="grid" class="grid" hidden></div>
-  <div id="sentinel"></div>
-</div>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>WNBA Player Prop Clearances</title>
+<link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin />
 <style>
   /* All styles scoped to .wrap so the host page's theme (background, fonts, CSS vars) is never touched. */
   .wrap{--brand:#06b6d4;--brand-dark:#0891b2;--glow:rgba(6,182,212,.28);--accent-soft:rgba(6,182,212,.14);--page-bg:#1a1028;--card:#231536;--inset:#1d1230;--surface:#2d1b45;--surface-2:#33204d;--ink:#e8e0f0;--muted:#a89bbe;--muted-2:#7a6b8f;--line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.06);--good:#6ee7b7;--good-bg:rgba(52,211,153,.16);--warn:#fcd34d;--warn-bg:rgba(251,191,36,.14);--away:#a5b4fc;--away-bg:rgba(129,140,248,.18);--radius:14px;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.28);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -156,6 +114,7 @@
   .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:11.5px;}
   .kv .k{color:var(--muted);} .kv .v{font-weight:600;text-align:right;}
   .wx{font-size:11px;color:var(--ink);display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+  .wx{font-size:11px;color:var(--ink);display:flex;flex-direction:column;gap:2px;margin-top:6px;}
   .state{text-align:center;padding:60px 20px;color:var(--muted);}
   .state h3{color:var(--ink);margin:0 0 6px;font-size:16px;}
   .state code{background:var(--surface);border:1px solid var(--line);padding:1px 5px;border-radius:4px;}
@@ -204,52 +163,124 @@
     .filters{padding:8px 10px;margin-top:8px;}
     .fg select,.fg input,.ms-btn{height:32px;font-size:12.5px;}
   }
-
-  .wx{font-size:11px;color:var(--ink);display:flex;flex-direction:column;gap:2px;margin-top:6px;}
-  .env-note{color:var(--muted-2);font-size:11px;margin-top:6px;}
 </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hdr">
+    <div class="bar">
+      <div class="bar-top"><div class="title">NFL Prop Clearances <span class="count" id="count">—</span></div></div>
+      <div class="bar-top" style="margin-top:8px;">
+        <input class="field search" id="search" type="search" placeholder="Search player…" autocomplete="off" aria-label="Search player" />
+        <button class="icon-btn" id="filterToggle" aria-expanded="false">Filters <span class="badge-dot" id="filterCount" hidden>0</span></button>
+      </div>
+      <div class="bar-row2">
+        <div class="seg"><label for="sortSel">Rank by</label>
+          <select id="sortSel">
+            <option value="clr:Full Season|All">Season · all games</option>
+            <option value="clr:Full Season|loc">Season · game location</option>
+            <option value="clr:Last 5 Games|All">Last 5 Games · all games</option>
+            <option value="clr:Last 5 Games|loc">Last 5 Games · game location</option>
+          </select>
+          <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filters" id="filters">
+      <div class="filters-grid">
+        <div class="fg"><label>Game Day</label><div class="ms" data-ms="day"></div></div>
+        <div class="fg"><label>Team</label><div class="ms" data-ms="team"></div></div>
+        <div class="fg"><label>Prop</label><div class="ms" data-ms="prop"></div></div>
+        <div class="fg"><label>Line</label><div class="ms" data-ms="line"></div></div>
+        <div class="fg"><label>Position</label><div class="ms" data-ms="role"></div></div>
+        <div class="fg"><label>Min games (season)</label><input type="number" data-filter="gMin" inputmode="numeric" value="0" /></div>
+        <div class="fg"><label>Min clearance %</label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
+        <div class="fg"><label>Best over odds</label>
+          <div class="fg-range">
+            <input type="number" data-filter="boMin" inputmode="numeric" placeholder="Min" />
+            <input type="number" data-filter="boMax" inputmode="numeric" placeholder="Max" />
+          </div>
+        </div>
+        <div class="fg"><label>Best under odds</label>
+          <div class="fg-range">
+            <input type="number" data-filter="buMin" inputmode="numeric" placeholder="Min" />
+            <input type="number" data-filter="buMax" inputmode="numeric" placeholder="Max" />
+          </div>
+        </div>
+        <div class="fg"><label>Median odds (over)</label>
+          <div class="fg-range">
+            <input type="number" data-filter="medMin" inputmode="numeric" placeholder="Min" />
+            <input type="number" data-filter="medMax" inputmode="numeric" placeholder="Max" />
+          </div>
+        </div>
+      </div>
+      <div class="filters-foot"><button class="clear-btn" id="clearFilters">Clear all</button></div>
+    </div>
+    </div>
+
+    <div id="content"><div class="state"><div class="spinner"></div><p>Loading…</p></div></div>
+    <div class="grid" id="grid" hidden></div>
+    <div class="sentinel" id="sentinel"></div>
+    <div class="loadpill" id="loadpill" hidden></div>
+  </div>
 
 <script>
-(function(){
-"use strict";
+/* ============================================================
+   CONFIG — public anon key. Read-only public access.
+   ============================================================ */
 const SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
 const TABLE = "FootballPlayerClearances";
-const SHOW_VS_POS = true;   // NFL: positional funnel context; CFB: columns blank by design
-const CACHE_TTL = 3*60*1000, BATCH = 24, PAGE_SIZE = 1000;
+const SHOW_VS_POS = true;
+const CACHE_TTL = 3 * 60 * 1000;
+const BATCH = 24;
+const PAGE_SIZE = 1000;
+const MAX_PARALLEL = 6;
 
+const TEAM_NAME_MAP = {'Atlanta Dream':'ATL','Chicago Sky':'CHI','Connecticut Sun':'CON','Dallas Wings':'DAL','Golden State Valkyries':'GSV','Indiana Fever':'IND','Los Angeles Sparks':'LAS','Las Vegas Aces':'LVA','Minnesota Lynx':'MIN','New York Liberty':'NYL','Phoenix Mercury':'PHX','Portland Fire':'POR','Seattle Storm':'SEA','Toronto Tempo':'TOR','Washington Mystics':'WSH'};
+const TEAM_LC = Object.fromEntries(Object.entries(TEAM_NAME_MAP).map(([k,v])=>[k.toLowerCase(),v]));
+const MATCHUP_RE = new RegExp(Object.keys(TEAM_NAME_MAP).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'gi');
 const PROP_ABBR = {'Pass Yards':'Pass Yds','Pass Touchdowns':'Pass TDs','Pass Attempts':'Pass Att','Pass Completions':'Completions','Pass Intercepts':'INTs Thrown','1st Quarter Pass Yards':'1Q Pass Yds','Longest Pass Completion':'Long Pass','Rush Yards':'Rush Yds','Rush Attempts':'Carries','Rush Touchdowns':'Rush TDs','Longest Rush':'Long Rush','Receptions':'Receptions','Reception Yards':'Rec Yds','Reception Touchdowns':'Rec TDs','Longest Reception':'Long Rec','Pass + Rush Yards':'Pass+Rush Yds','Rush + Reception Yards':'Rush+Rec Yds','Pass + Rush + Reception Yards':'P+R+R Yds','Rush + Reception Touchdowns':'R+R TDs','Pass + Rush + Reception Touchdowns':'P+R+R TDs','Touchdowns':'TDs','Anytime Touchdown Scorer':'Anytime TD','1st Touchdown Scorer':'1st TD','Last Touchdown Scorer':'Last TD','Field Goals':'FGs Made','Kicking Points':'Kicking Pts','Points After Touchdown':'PATs','Sacks':'Sacks','Solo Tackles':'Solo Tackles','Tackles + Assists':'Tkl+Ast','Defensive Interceptions':'Def INTs'};
 const PROP_ORDER = Object.keys(PROP_ABBR);
 const POS_ORDER = ['QB','RB','FB','WR','TE','K'];
-const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});};
 const orderPos = vals=>{const idx=p=>{const i=POS_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});};
+const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});};
 
-const F = {player:'Player',team:'Team',opponent:'Opponent',pos:'Position',prop:'Prop',line:'Line',period:'Time Period',split:'Location',
-  clearance:'Clearance %',cleared:'Cleared',games:'Games',avg:'Avg',median:'Median',high:'High',low:'Low',
-  medOver:'Median Over',medUnder:'Median Under',bestOver:'Best Over',bestOverBk:'Best Over Books',bestUnder:'Best Under',bestUnderBk:'Best Under Books',
-  oppAllowed:'Opp Allowed',oppRank:'Opp Rank',oppAllowedPos:'Opp Allowed vs Pos',oppRankPos:'Opp Rank vs Pos',
-  matchup:'Matchup',gameTime:'Game Time',spread:'Spread',total:'Total',stadium:'Stadium',dome:'Dome',
-  wx1:'Weather 1',wx2:'Weather 2',wx3:'Weather 3',wx4:'Weather 4'};
+const F = {player:'Player',team:'Team',opponent:'Opponent',prop:'Prop',line:'Line',period:'Time Period',split:'Location',role:'Position',
+  clearance:'Clearance %',cleared:'Cleared',games:'Games',matchup:'Matchup',gameTime:'Game Time',spread:'Spread',total:'Total',
+  avg:'Avg',median:'Median',high:'High',low:'Low',oppAllowed:'Opp Allowed',oppRank:'Opp Rank',oppAllowedPos:'Opp Allowed vs Pos',oppRankPos:'Opp Rank vs Pos',stadium:'Stadium',dome:'Dome',wx1:'Weather 1',wx2:'Weather 2',wx3:'Weather 3',wx4:'Weather 4',
+  medOver:'Median Over',medUnder:'Median Under',bestOver:'Best Over',bestOverBk:'Best Over Books',bestUnder:'Best Under',bestUnderBk:'Best Under Books'};
 
-let GROUPS=[],SORTED=[],VIEW=[],rendered=0,sortMode='clr:Full Season|All',sortMetric='clr',sortDir='desc',filters=null;
-const GMAP=new Map();
-const CAT=['day','team','pos','prop','line'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax'];
-const newFilters=()=>({day:new Set(),team:new Set(),pos:new Set(),prop:new Set(),line:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',search:''});
+/* ---------- State ---------- */
+let GROUPS = [], SORTED = [], VIEW = [], rendered = 0;
+const GMAP = new Map();
+let sortMode = 'clr:Full Season|All', sortDir = 'desc';
+const CAT=['day','team','prop','line','role'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
+function newFilters(){return {search:'',day:new Set(),team:new Set(),prop:new Set(),line:new Set(),role:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
+let filters = newFilters();
+const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill')};
 
-const els={content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill')};
-
-const num=v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
-const oddsInt=v=>{if(v==null||v===''||v==='-')return null;const n=parseInt(String(v).replace('+',''),10);return isNaN(n)?null:n;};
-const fmtOdds=n=>n==null?'–':(n>0?'+'+n:''+n);
-const fmtPct=n=>n==null?'–':n.toFixed(1)+'%';
-const raw=v=>{if(v==null)return '–';const s=String(v).trim();return s===''?'–':s;};
-const fmtAvg=v=>{const n=parseFloat(v);return isNaN(n)?'–':(Math.abs(n)>=100?n.toFixed(0):n.toFixed(1));};
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const abbrProp=v=>!v?'':(PROP_ABBR[v]||v);
-const titleCase=s=>String(s).replace(/\b\w/g,c=>c.toUpperCase());
-const capWx=w=>{const parts=String(w).split('|');if(parts.length)parts[parts.length-1]=titleCase(parts[parts.length-1].trim());return parts.map(x=>String(x).trim()).join(' | ');};
-const fmtStamp=v=>{
-  if(!v)return '';
+/* ---------- Helpers ---------- */
+const num = v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
+const pick = (row,...names)=>{for(const n of names){const v=row[n];if(v!=null&&String(v).trim()!=='')return v;}return null;};
+const findKey = (row,...cands)=>{for(const c of cands){if(c in row)return c;}const norm=s=>String(s).toLowerCase().replace(/[^a-z0-9]/g,'');const want=cands.map(norm);for(const k of Object.keys(row)){if(want.includes(norm(k)))return k;}return null;};
+const oddsInt = v=>{if(v==null||v===''||v==='-')return null;const n=parseInt(String(v).replace('+',''),10);return isNaN(n)?null:n;};
+const fmtOdds = n=>n==null?'–':(n>0?'+'+n:''+n);
+const fmtPct = n=>n==null?'–':n.toFixed(1)+'%';
+const raw = v=>{if(v==null)return '–';const s=String(v).trim();return s===''?'–':s;};
+const fmtAvg = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};
+const fmtRate = v=>{if(v==null)return '–';const s=String(v).trim();if(s==='')return '–';return s.replace(/^(-?)0\.(?=\d)/,'$1.');};
+const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const CODE_ALIAS={};
+const canonTeam=c=>String(c||'').trim();
+const abbrTeam=v=>String(v||'').trim();
+const abbrProp = v=>!v?'':(PROP_ABBR[v]||v);
+function etTz(){const d=new Date(),y=d.getFullYear();const m1=new Date(y,2,1),n1=new Date(y,10,1);const dstStart=new Date(y,2,1+((7-m1.getDay())%7)+7);const dstEnd=new Date(y,10,1+((7-n1.getDay())%7));return (d>=dstStart&&d<dstEnd)?'EDT':'EST';}
+const ET_TZ = 'ET';   // always "ET" — the clock values are already correct, so the DST label never needs switching
+const abbrMatchup = v=>!v?'':String(v).replace(/\b(?:EST|EDT)\b/g,ET_TZ);
+const fmtStamp = v=>{
+  if(!v) return '';
   const s=String(v);
   const tm=s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   const timePart=tm?`${parseInt(tm[1],10)}:${tm[2]} ${tm[3].toUpperCase()}`:'';
@@ -262,15 +293,37 @@ const fmtStamp=v=>{
   return datePart?(left?left+' · '+datePart:datePart):left;
 };
 const dayKeyOf=v=>{const dm=String(v||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(!dm)return null;return `${dm[3]}-${String(dm[1]).padStart(2,'0')}-${String(dm[2]).padStart(2,'0')}`;};
-const dayLabelOf=k=>{if(!k)return '';const [y,m,d]=k.split('-').map(Number);return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(y,m-1,d).getDay()]+' '+m+'/'+d;};
-const isYesNo=p=>/touchdown scorer/i.test(String(p||''));
+const dayLabelOf=k=>{if(!k)return '';const p=k.split('-').map(Number);return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(p[0],p[1]-1,p[2]).getDay()]+' '+p[1]+'/'+p[2];};
+const order = v=>{const m=String(v||'').match(/\((\d+)\)/);return m?m[1]:null;};
+const lineupTag = v=>{if(!v)return '';const st=/proj/i.test(v)?'Proj':(/conf/i.test(v)?'Conf':'');const o=order(v);if(!st&&!o)return '';return `${st}${o?' #'+o:''}`;};
+const fmtPark = v=>!v?'–':String(v).replace(/\((\d+)\)/g,' (#$1)');
+const titleCase = s=>String(s).replace(/\b\w/g,c=>c.toUpperCase());
+const capWx = w=>{const parts=String(w).split('|');if(parts.length)parts[parts.length-1]=titleCase(parts[parts.length-1]);return parts.join('|');};
 function clrColors(p){if(p==null)return{edge:'var(--line)',bg:'rgba(255,255,255,.05)',fg:'#7a6b8f'};if(p<25)return{edge:'#f87171',bg:'rgba(248,113,113,.16)',fg:'#fca5a5'};if(p<40)return{edge:'#fb923c',bg:'rgba(251,146,60,.16)',fg:'#fdba74'};if(p<55)return{edge:'#fbbf24',bg:'rgba(251,191,36,.15)',fg:'#fcd34d'};if(p<70)return{edge:'#34d399',bg:'rgba(52,211,153,.16)',fg:'#6ee7b7'};return{edge:'#10b981',bg:'rgba(16,185,129,.24)',fg:'#34d399'};}
 
 /* ---------- Data ---------- */
-async function fetchPage(offset){const res=await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=*`,{headers:{apikey:ANON_KEY,Authorization:"Bearer "+ANON_KEY,Accept:"application/json",'Range-Unit':'items',Range:`${offset}-${offset+PAGE_SIZE-1}`}});if(!res.ok)throw new Error(`Supabase ${res.status}`);return res.json();}
-async function fetchAll(){let out=[],offset=0;while(true){const rows=await fetchPage(offset);out=out.concat(rows);if(rows.length<PAGE_SIZE)break;offset+=PAGE_SIZE;}return out;}
+function buildQuery(){return `${SUPABASE_URL}/rest/v1/${TABLE}?select=*`;}
+async function fetchPage(url,offset,extra,limit){const lim=limit||PAGE_SIZE;const res=await fetch(url,{headers:{apikey:ANON_KEY,Authorization:"Bearer "+ANON_KEY,Accept:"application/json",'Range-Unit':'items',Range:`${offset}-${offset+lim-1}`,...(extra||{})}});if(!res.ok){const e=new Error(`Supabase ${res.status}`);e.status=res.status;throw e;}return {rows:await res.json()};}
+// Paginate until a short page — no count=exact (COUNT on the daily delete+insert table gets slow with dead tuples).
+async function fetchAll(cb){
+  const url=buildQuery();let out=[],offset=0,first=true;
+  while(true){
+    const r=await fetchPage(url,offset,{},PAGE_SIZE);
+    out=out.concat(r.rows);
+    if(cb&&first&&r.rows.length){cb(r.rows,null,true,out.length);first=false;}
+    else if(cb)cb(null,null,false,out.length);
+    if(r.rows.length<PAGE_SIZE)break;
+    offset+=PAGE_SIZE;
+  }
+  return out;
+}
+async function fetchVerified(cb){
+  let rows=await fetchAll(cb);
+  if(rows.length===0){await new Promise(r=>setTimeout(r,500));rows=await fetchAll(null);}   // possibly mid delete+insert
+  return {rows, complete:true};
+}
 
-/* ---------- Grouping: one card per player|prop|line ---------- */
+/* ---------- Grouping ---------- */
 function buildGroups(rows){
   const map=new Map();
   for(const row of rows){
@@ -278,165 +331,170 @@ function buildGroups(rows){
     const prop=row[F.prop],line=row[F.line],key=`${player}|${prop}|${line}`;
     let g=map.get(key);
     if(!g){
-      g={key,player,team:row[F.team]||'',opp:row[F.opponent]||'',pos:row[F.pos]||'',prop,line:num(line),yn:isYesNo(prop),
-        matchup:row[F.matchup]||'',gameTime:row[F.gameTime]||'',dayKey:dayKeyOf(row[F.gameTime]),
-        spread:row[F.spread],total:row[F.total],stadium:row[F.stadium]||'',dome:row[F.dome]||'',
-        wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(w=>w!=null&&String(w).trim()!==''),
+      g={key,player,team:abbrTeam(row[F.team]),opp:abbrTeam(row[F.opponent]),role:row[F.role]||'',prop,line:num(line),
+        matchup:row[F.matchup],
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
-        bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk]||'',bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk]||'',
-        variants:{},_q:String(player).toLowerCase()};
+        bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
+        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup]),gameTime:row[F.gameTime],spread:row[F.spread],total:row[F.total],
+        dayKey:dayKeyOf(row[F.gameTime]),stadium:row[F.stadium]||'',dome:row[F.dome]||'',
+        wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(w=>w!=null&&String(w).trim()!=='')};
       map.set(key,g);
     }
     const vk=`${row[F.period]}|${row[F.split]}`;
-    g.variants[vk]={clr:row[F.clearance]!=null&&row[F.clearance]!==''?num(String(row[F.clearance]).replace('%','')):null,
+    g.variants[vk]={clr:row[F.clearance]!=null&&row[F.clearance]!==''?num(String(row[F.clearance]).replace('%','')):null,   // keep 0% (0 is a real clearance, not "no data")
       gCleared:row[F.cleared]!=null&&row[F.cleared]!==''?parseInt(row[F.cleared],10):null,
       gTotal:row[F.games]!=null&&row[F.games]!==''?parseInt(row[F.games],10):null,
       avg:num(row[F.avg]),median:num(row[F.median]),high:num(row[F.high]),low:num(row[F.low]),
-      oppAllowed:num(row[F.oppAllowed]),oppRank:num(row[F.oppRank]),
-      oppAllowedPos:num(row[F.oppAllowedPos]),oppRankPos:num(row[F.oppRankPos])};
+      oppAllowed:num(row[F.oppAllowed]),oppRank:num(row[F.oppRank]),oppAllowedPos:num(row[F.oppAllowedPos]),oppRankPos:num(row[F.oppRankPos])};
   }
   const arr=[...map.values()];
   GMAP.clear();
   for(const g of arr){
-    const parts=String(g.matchup||'').split('@').map(x=>x.trim());
-    g.location=parts.length===2?(parts[1]===g.team?'Home':(parts[0]===g.team?'Away':null)):null;
+    // player's location TODAY (for the 'loc' cell) from the matchup: "AWAY @ HOME"
+    const parts=String(g.matchup||'').split('@').map(x=>abbrTeam(x.trim()));
+    g.location = parts.length===2 ? (parts[1]===g.team?'Home':'Away') : null;
     g._season=g.variants['Full Season|All']||Object.values(g.variants)[0]||null;
     GMAP.set(g.key,g);
   }
   return arr;
 }
 
+/* variant getters */
+function variantFor(g,period,splitMode){const split=splitMode==='loc'?(g.location||'All'):splitMode;return g.variants[`${period}|${split}`]||g.variants[`${period}|All`]||null;}
 function cellVar(g,period,sp){if(sp==='loc'){if(!g.location)return null;return g.variants[`${period}|${g.location}`]||null;}return g.variants[`${period}|${sp}`]||null;}
 function clrVar(g,key){const [period,sp]=key.slice(4).split('|');return cellVar(g,period,sp);}
-function activeClr(g){const v=clrVar(g,sortMode);return v?v.clr:null;}
+function activeVar(g){const [period,sp]=sortMode.slice(4).split('|');return cellVar(g,period,sp)||variantFor(g,period,'All')||g._season;}
+function recomputeProd(){for(const g of GROUPS){g._prodVar=activeVar(g);}}
 
-/* ---------- Filters (multi-select, deselected-set semantics) ---------- */
+/* ---------- Filters / sort ---------- */
 function uniq(getter){return [...new Set(GROUPS.map(getter).filter(v=>v!=null&&v!==''))];}
-const MS={};
+/* ---------- Filters: persistence + multi-select (#9/#10) ---------- */
+function saveFilters(){}   /* filters live in memory only: persist across tab switches (iframe stays mounted), reset on a real (re)load */
+function loadFilters(){filters=newFilters();}
+const MS = {};
 function closeAllMS(){Object.values(MS).forEach(c=>{c.pop.hidden=true;c.btn.setAttribute('aria-expanded','false');});}
 function buildMS(container,key){
-  if(!container)return;
+  if(!container) return;
   container.innerHTML='';
-  const btn=document.createElement('button');btn.type='button';btn.className='ms-btn';btn.setAttribute('aria-expanded','false');btn.textContent='All';
-  const pop=document.createElement('div');pop.className='ms-pop';pop.hidden=true;
-  container.appendChild(btn);container.appendChild(pop);
+  const btn=document.createElement('button'); btn.type='button'; btn.className='ms-btn'; btn.setAttribute('aria-expanded','false'); btn.textContent='All';
+  const pop=document.createElement('div'); pop.className='ms-pop'; pop.hidden=true;
+  container.appendChild(btn); container.appendChild(pop);
   const ctrl={key,btn,pop,options:[],
-    syncLabel(){const ex=filters[key].size;btn.textContent=ex===0?'All':((ctrl.options.length-ex)+' selected');},
+    syncLabel(){const ex=filters[key].size; btn.textContent = ex===0 ? 'All' : ((ctrl.options.length-ex)+' selected');},   // set = DESELECTED values
     setOptions(opts){
       const norm=opts.map(o=>Array.isArray(o)?o:[o,o]);
       ctrl.options=norm;
       const vals=new Set(norm.map(x=>String(x[0])));
       [...filters[key]].forEach(v=>{if(!vals.has(v))filters[key].delete(v);});
       pop.innerHTML='';
-      const allBtn=document.createElement('button');allBtn.type='button';allBtn.className='ms-all';
-      const syncAll=()=>{allBtn.textContent=filters[key].size===0?'Deselect all':'Select all';};
+      const allBtn=document.createElement('button'); allBtn.type='button'; allBtn.className='ms-all';
+      const syncAll=()=>{allBtn.textContent = filters[key].size===0 ? 'Deselect all' : 'Select all';};
       allBtn.addEventListener('click',e=>{
         e.stopPropagation();
-        if(filters[key].size===0){norm.forEach(x=>filters[key].add(String(x[0])));}else{filters[key].clear();}
+        if(filters[key].size===0){ norm.forEach(x=>filters[key].add(String(x[0]))); } else { filters[key].clear(); }
         pop.querySelectorAll('input[type=checkbox]').forEach(cb=>{cb.checked=!filters[key].has(cb.value);});
-        syncAll();ctrl.syncLabel();applyFilters();
+        syncAll(); ctrl.syncLabel(); saveFilters(); applyFilters();
       });
       pop.appendChild(allBtn);
       norm.forEach(([value,label])=>{
         const val=String(value);
-        const row=document.createElement('label');row.className='ms-opt';
-        const cb=document.createElement('input');cb.type='checkbox';cb.value=val;cb.checked=!filters[key].has(val);
-        cb.addEventListener('change',()=>{if(cb.checked)filters[key].delete(val);else filters[key].add(val);syncAll();ctrl.syncLabel();applyFilters();});
-        const span=document.createElement('span');span.textContent=label;
-        row.appendChild(cb);row.appendChild(span);pop.appendChild(row);
+        const row=document.createElement('label'); row.className='ms-opt';
+        const cb=document.createElement('input'); cb.type='checkbox'; cb.value=val; cb.checked=!filters[key].has(val);
+        cb.addEventListener('change',()=>{if(cb.checked)filters[key].delete(val);else filters[key].add(val);syncAll();ctrl.syncLabel();saveFilters();applyFilters();});
+        const span=document.createElement('span'); span.textContent=label;
+        row.appendChild(cb); row.appendChild(span); pop.appendChild(row);
       });
-      syncAll();ctrl.syncLabel();
-    }};
+      syncAll(); ctrl.syncLabel();
+    }
+  };
   btn.addEventListener('click',e=>{e.stopPropagation();const willOpen=pop.hidden;closeAllMS();pop.hidden=!willOpen;btn.setAttribute('aria-expanded',String(willOpen));});
   pop.addEventListener('click',e=>e.stopPropagation());
-  MS[key]=ctrl;return ctrl;
+  MS[key]=ctrl; return ctrl;
 }
-filters=newFilters();
+loadFilters();
 buildMS(document.querySelector('.ms[data-ms="day"]'),'day');
 buildMS(document.querySelector('.ms[data-ms="team"]'),'team');
-buildMS(document.querySelector('.ms[data-ms="pos"]'),'pos');
 buildMS(document.querySelector('.ms[data-ms="prop"]'),'prop');
 buildMS(document.querySelector('.ms[data-ms="line"]'),'line');
+buildMS(document.querySelector('.ms[data-ms="role"]'),'role');
 document.addEventListener('click',closeAllMS);
 
 function populateFilters(){
   MS.day.setOptions(uniq(g=>g.dayKey).sort().map(k=>[k,dayLabelOf(k)]));
   MS.team.setOptions(uniq(g=>g.team).sort());
-  MS.pos.setOptions(orderPos(uniq(g=>g.pos).filter(Boolean)));
   MS.prop.setOptions(orderProps(uniq(g=>g.prop)).map(v=>[v,abbrProp(v)]));
   MS.line.setOptions(uniq(g=>g.line).sort((a,b)=>a-b).map(v=>[String(v),String(v)]));
-  document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.value=(filters[k]!=null)?filters[k]:'';});
+  MS.role.setOptions(orderPos(uniq(g=>g.role).filter(Boolean)));
+  document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=(filters[k]!=null)?filters[k]:'';});
   els.search.value=filters.search||'';
 }
-
 function applySort(){
+  recomputeProd();
   const dir=sortDir==='asc'?1:-1;
-  const metric=g=>{
-    if(sortMetric==='bo')return g.bestOver;
-    if(sortMetric==='bu')return g.bestUnder;
-    if(sortMetric==='line')return g.line;
-    if(sortMetric==='player')return null;
-    return activeClr(g);
-  };
+  const cv=g=>clrVar(g,sortMode);
   SORTED=GROUPS.slice().sort((a,b)=>{
-    if(sortMetric==='player')return (a._q<b._q?-1:a._q>b._q?1:0)*(sortDir==='asc'?1:-1)*-1;
-    const va=metric(a),vb=metric(b);
-    if(va==null&&vb==null)return a._q<b._q?-1:1;
-    if(va==null)return 1;if(vb==null)return -1;
-    if(va!==vb)return (va-vb)*dir;
-    return a._q<b._q?-1:1;
+    const va=cv(a),vb=cv(b);
+    const pa=va?va.clr:null,pb=vb?vb.clr:null;
+    if(pa==null&&pb==null) return a._q<b._q?-1:a._q>b._q?1:0;
+    if(pa==null) return 1; if(pb==null) return -1;
+    if(pa!==pb) return (pa-pb)*dir;                                  // 1) clearance %
+    const na=(va&&va.gCleared!=null)?va.gCleared:-1, nb=(vb&&vb.gCleared!=null)?vb.gCleared:-1;
+    if(na!==nb) return nb-na;                                        // 2) tie -> more games cleared first
+    return a._q<b._q?-1:a._q>b._q?1:0;                               // 3) still tied -> name A->Z
   });
+  applyFilters();
 }
-
 function applyFilters(){
-  applySort();
-  const s=(filters.search||'').trim().toLowerCase();
-  const gMin=filters.gMin!==''?num(filters.gMin):null;
-  const cMin=filters.clrMin!==''?num(filters.clrMin):null;
-  const boMin=filters.boMin!==''?num(filters.boMin):null,boMax=filters.boMax!==''?num(filters.boMax):null;
-  const buMin=filters.buMin!==''?num(filters.buMin):null,buMax=filters.buMax!==''?num(filters.buMax):null;
+  const s=filters.search.trim().toLowerCase();
+  const gMin=filters.gMin!==''?parseInt(filters.gMin,10):null;
+  const cMin=filters.clrMin!==''?parseFloat(filters.clrMin):null;
+  const boMin=filters.boMin!==''?parseInt(filters.boMin,10):null,boMax=filters.boMax!==''?parseInt(filters.boMax,10):null;
+  const buMin=filters.buMin!==''?parseInt(filters.buMin,10):null,buMax=filters.buMax!==''?parseInt(filters.buMax,10):null;
+  const moMin=filters.medMin!==''?parseInt(filters.medMin,10):null,moMax=filters.medMax!==''?parseInt(filters.medMax,10):null;
+  const activeClr=g=>{const v=sortMode.startsWith('clr:')?clrVar(g,sortMode):cellVar(g,'Full Season','All');return v?v.clr:null;};
   VIEW=SORTED.filter(g=>{
     if(s&&!g._q.includes(s))return false;
     if(g.dayKey&&filters.day.has(g.dayKey))return false;
     if(filters.team.has(g.team))return false;
-    if(filters.pos.has(g.pos))return false;
     if(filters.prop.has(g.prop))return false;
     if(filters.line.has(String(g.line)))return false;
-    if(gMin!=null&&gMin>0){const sv=cellVar(g,'Full Season','All');if(!sv||sv.gTotal==null||sv.gTotal<gMin)return false;}
+    if(filters.role.has(g.role))return false;
+    if(gMin!=null){const sv=cellVar(g,'Full Season','All');if(!sv||sv.gTotal==null||sv.gTotal<gMin)return false;}
     if(cMin!=null){const c=activeClr(g);if(c==null||c<cMin)return false;}
     if(boMin!=null&&(g.bestOver==null||g.bestOver<boMin))return false;
     if(boMax!=null&&(g.bestOver==null||g.bestOver>boMax))return false;
     if(buMin!=null&&(g.bestUnder==null||g.bestUnder<buMin))return false;
     if(buMax!=null&&(g.bestUnder==null||g.bestUnder>buMax))return false;
+    if(moMin!=null&&(g.medOver==null||g.medOver<moMin))return false;
+    if(moMax!=null&&(g.medOver==null||g.medOver>moMax))return false;
     return true;
   });
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
-  if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching props</h3><p>Loosen a filter — or if the board is empty, clearances appear as soon as books post player props.</p></div>';els.content.hidden=false;}
+  if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching props</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=CAT.reduce((n,k)=>n+(filters[k].size?1:0),0)+['clrMin','boMin','boMax','buMin','buMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
+  const active=(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.role.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
 /* ---------- Render ---------- */
 function clrCell(g,key,label){
-  const v=clrVar(g,key);const active=sortMetric==='clr'&&sortMode===key?' active':'';
+  const v=clrVar(g,key);const active=sortMode===key?' active':'';
   if(!v||v.clr==null)return `<div class="cell empty${active}"><div class="cl">${esc(label)}</div><div class="cv">–</div><div class="cg">&nbsp;</div></div>`;
   const c=clrColors(v.clr);
   return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtPct(v.clr)}</div><div class="cg">${v.gCleared??'–'}/${v.gTotal??'–'}</div></button>`;
 }
 function cardHTML(g){
-  const posTag=g.pos?`<span class="tag lu proj">${esc(g.pos)}</span>`:'';
+  const roleTag=g.role&&g.role!=='All'?`<span class="tag lu ${/starter/i.test(g.role)?'conf':'proj'}">${esc(g.role)}</span>`:'';
   const loc=g.location||'Loc';
-  const av=clrVar(g,sortMetric==='clr'?sortMode:'clr:Full Season|All');
+  const av=clrVar(g,sortMode.startsWith('clr:')?sortMode:'clr:Full Season|All');
   const rail=clrColors(av?av.clr:null).edge;
-  const betLine=g.yn?`${esc(abbrProp(g.prop))} <span class="side">Yes</span>`:`${esc(abbrProp(g.prop))} <span class="side">Over</span> ${g.line??''}`;
   return `
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${rail}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
-        <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${posTag} <span>${esc(g.matchup)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</span></div></div>
+        <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${roleTag} <span>${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</span></div></div>
     </div>
-    <div class="bet-line">${betLine}</div>
+    <div class="bet-line">${esc(abbrProp(g.prop))} <span class="side">Over</span> ${g.line??''}</div>
     <div class="cgrid">
       ${clrCell(g,'clr:Full Season|All','Season · All')}
       ${clrCell(g,'clr:Full Season|loc','Season · '+loc)}
@@ -444,9 +502,9 @@ function cardHTML(g){
       ${clrCell(g,'clr:Last 5 Games|loc','L5 · '+loc)}
     </div>
     <div class="odds">
-      <div class="o"><div class="k">Best ${g.yn?'Yes':'Over'}</div><div class="v">${fmtOdds(g.bestOver)}</div><div class="b">${esc(g.bestOverBk||'')}</div></div>
-      <div class="o"><div class="k">Median</div><div class="v">${fmtOdds(g.medOver)}</div><div class="b">${g.yn?'':'U '+fmtOdds(g.medUnder)}</div></div>
-      <div class="o"><div class="k">Best ${g.yn?'No':'Under'}</div><div class="v">${fmtOdds(g.bestUnder)}</div><div class="b">${esc(g.bestUnderBk||'')}</div></div>
+      <div class="o"><div class="k">Best Over</div><div class="v">${fmtOdds(g.bestOver)}</div><div class="b">${esc(g.bestOverBk||'')}</div></div>
+      <div class="o"><div class="k">Median</div><div class="v">${fmtOdds(g.medOver)}</div><div class="b">U ${fmtOdds(g.medUnder)}</div></div>
+      <div class="o"><div class="k">Best Under</div><div class="v">${fmtOdds(g.bestUnder)}</div><div class="b">${esc(g.bestUnderBk||'')}</div></div>
     </div>
     <div class="expand-row"><div class="matchup-mini">${g.location==='Home'?'vs':'@'} <b>${esc(g.opp||'—')}</b></div>
       <button class="exp-btn" type="button">Detail <span class="car">▾</span></button></div>
@@ -456,43 +514,40 @@ function cardHTML(g){
 
 /* ---------- Detail (lazy) ---------- */
 function detailHTML(g){
-  const yn=g.yn;
+  const yesNo=/touchdown scorer/i.test(g.prop);   // TD-scorer props: Avg/Med/High/Low are meaningless (0/1)
+  const oppCell=v=>v.oppAllowed!=null?(fmtAvg(v.oppAllowed)+(v.oppRank!=null?`&nbsp;<span style="color:var(--muted-2)">(#${v.oppRank})</span>`:'')):'–';
   const showPos=SHOW_VS_POS&&Object.values(g.variants).some(v=>v.oppAllowedPos!=null);
-  const oppCell=(a,r)=>a!=null?(fmtAvg(a)+(r!=null?`&nbsp;<span style="color:var(--muted-2)">(#${r})</span>`:'')):'–';
+  const oppPosCell=v=>v.oppAllowedPos!=null?(fmtAvg(v.oppAllowedPos)+(v.oppRankPos!=null?`&nbsp;<span style="color:var(--muted-2)">(#${v.oppRankPos})</span>`:'')):'–';
   const rowFor=(label,period,sp)=>{
     const v=cellVar(g,period,sp);
-    const cols=(yn?4:8)+(showPos?1:0);
+    const cols=(yesNo?4:8)+(showPos?1:0);
     if(!v)return `<tr><td class="rl">${esc(label)}</td><td colspan="${cols-1}" style="color:var(--muted-2)">no games</td></tr>`;
     const clr=v.clr!=null?fmtPct(v.clr):'–';
-    const posTd=showPos?`<td class="oa">${oppCell(v.oppAllowedPos,v.oppRankPos)}</td>`:'';
-    if(yn)return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td class="nw">${v.gCleared??'–'}/${v.gTotal??'–'}</td><td class="oa">${oppCell(v.oppAllowed,v.oppRank)}</td>${posTd}</tr>`;
-    return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td class="nw">${v.gCleared??'–'}/${v.gTotal??'–'}</td><td>${fmtAvg(v.avg)}</td><td>${fmtAvg(v.median)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td class="oa">${oppCell(v.oppAllowed,v.oppRank)}</td>${posTd}</tr>`;
+    if(yesNo){   // Clr% | Cleared | Opp Allowed only
+      return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td class="nw">${v.gCleared??'–'}/${v.gTotal??'–'}</td><td class="oa">${oppCell(v)}</td>${showPos?`<td class="oa">${oppPosCell(v)}</td>`:''}</tr>`;
+    }
+    return `<tr><td class="rl">${esc(label)}</td><td>${clr}</td><td class="nw">${v.gCleared??'–'}/${v.gTotal??'–'}</td><td>${fmtAvg(v.avg)}</td><td>${fmtAvg(v.median)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td class="oa">${oppCell(v)}</td>${showPos?`<td class="oa">${oppPosCell(v)}</td>`:''}</tr>`;
   };
   const loc=g.location||'Loc';
-  const posTh=showPos?`<th>Opp vs ${esc(g.pos||'Pos')}</th>`:'';
-  const head=yn
-    ?`<tr><th></th><th>Clr%</th><th>Cleared</th><th>Opp Allowed</th>${posTh}</tr>`
-    :`<tr><th></th><th>Clr%</th><th>Cleared</th><th>Avg</th><th>Med</th><th>High</th><th>Low</th><th>Opp Allowed</th>${posTh}</tr>`;
-  const oppNote=(yn?"Opp Allowed = TDs per game the opponent gives up":"Opp Allowed = opponent's allowed per game for this stat")+
-    ", period-matched and location-flipped. Rank 1 = fewest allowed."+(showPos?` "Opp vs ${esc(g.pos)}" = the slice given up to ${esc(g.pos)}s only.`:"");
-  const spTxt=(g.spread!==''&&g.spread!=null)?(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':(esc(g.team)+' '+(n>0?'+':'')+n);})():'–';
-  const toTxt=(g.total!==''&&g.total!=null)?(function(){const n=parseFloat(g.total);return isNaN(n)?'–':('O/U '+n);})():'–';
+  const head=yesNo
+    ? `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Opp Allowed</th>${showPos?`<th>vs ${esc(g.role||'Pos')}</th>`:''}</tr>`
+    : `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Avg</th><th>Med</th><th>High</th><th>Low</th><th>Opp Allowed</th>${showPos?`<th>vs ${esc(g.role||'Pos')}</th>`:''}</tr>`;
+  const oppNote=(yesNo?"Opp Allowed = TDs per game the opponent gives up":"Opp Allowed = opponent's allowed per game for this stat")+", period-matched and location-flipped. Rank 1 = fewest allowed."+(showPos?` \"vs ${esc(g.role)}\" = the slice given up to ${esc(g.role)}s only.`:"");
+  const spTxt=(g.spread!==''&&g.spread!=null)?(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':(g.team+' '+(n>0?'+':'')+n.toFixed(1));})():'–';
+  const toTxt=(g.total!==''&&g.total!=null)?(function(){const n=parseFloat(g.total);return isNaN(n)?'–':('O/U '+(n%1===0?n.toFixed(1):String(n)));})():'–';
   const domeYes=/^yes$/i.test(String(g.dome||'').trim())||String(g.wx[0]||'')==='Dome';
-  const wxBody=domeYes
-    ?`<div class="wx"><div>No Weather Data — Game Played in Dome</div></div>`
-    :(g.wx.length?`<div class="wx">${g.wx.map(w=>`<div>${esc(capWx(w))}</div>`).join('')}</div>`:`<div class="wx"><div style="color:var(--muted-2)">No forecast yet</div></div>`);
-  const envPanel=`<div class="panel"><div class="panel-h">Environment</div>
-    <div class="kv"><span class="k">Spread</span><span class="v">${spTxt}</span><span class="k">Total</span><span class="v">${toTxt}</span>
-    <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}${/retract/i.test(String(g.dome))?' (Retractable)':(domeYes?' (Dome)':'')}</span></div>
-    ${wxBody}</div>`;
-  return `<div class="panel"><div class="panel-h">Clearance${yn?'':' & distribution'} — vs ${esc(g.opp||'—')}</div>
-    <div class="mini-scroll"><table class="mini clr-detail${yn?' yn':''}"><thead>${head}</thead><tbody>
+  const titleCaseWx=w=>{const parts=String(w).split('|');if(parts.length)parts[parts.length-1]=parts[parts.length-1].replace(/\b\w/g,c=>c.toUpperCase());return parts.map(x=>String(x).trim()).join(' | ');};
+  const wxBody=domeYes?`<div class="wx"><div>No Weather Data — Game Played in Dome</div></div>`
+    :(g.wx.length?`<div class="wx">${g.wx.map(w=>`<div>${esc(titleCaseWx(w))}</div>`).join('')}</div>`:`<div class="wx"><div style="color:var(--muted-2)">No forecast yet</div></div>`);
+  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Spread</span><span class="v">${esc(spTxt)}</span><span class="k">Total</span><span class="v">${esc(toTxt)}</span><span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}${/retract/i.test(String(g.dome))?' (Retractable)':(domeYes?' (Dome)':'')}</span></div>${wxBody}</div>`;
+  return `<div class="panel"><div class="panel-h">Clearance${yesNo?'':' & distribution'} — ${esc(g.role||'')} · vs ${esc(g.opp||'—')}</div>
+    <div class="mini-scroll"><table class="mini clr-detail${yesNo?' yn':''}"><thead>${head}</thead><tbody>
       ${rowFor('Season · All','Full Season','All')}
       ${rowFor('Season · '+loc,'Full Season','loc')}
       ${rowFor('L5 · All','Last 5 Games','All')}
       ${rowFor('L5 · '+loc,'Last 5 Games','loc')}
     </tbody></table></div>
-    <div class="env-note">${oppNote}</div>
+    <div class="note-sm" style="color:var(--muted-2);font-size:11px;margin-top:6px">${oppNote}</div>
   </div>`+envPanel;
 }
 
@@ -501,44 +556,60 @@ function fillViewport(){let guard=0;do{renderMore();guard++;}while(rendered<VIEW
 const io=new IntersectionObserver(e=>{if(e[0].isIntersecting)fillViewport();},{rootMargin:'700px'});io.observe(els.sentinel);
 
 /* ---------- Events ---------- */
+function setSort(mode){sortMode=mode;sortDir=(mode==='name')?'asc':'desc';if(els.sortSel.value!==mode)els.sortSel.value=mode;els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();}
 els.grid.addEventListener('click',e=>{
   const cell=e.target.closest('.cell[data-sortkey]');
-  if(cell){sortMetric='clr';els.sortSel.value='clr';sortMode=cell.getAttribute('data-sortkey');applyFilters();return;}
-  const btn=e.target.closest('.exp-btn');
-  if(btn){
-    const card=btn.closest('.card');const det=card.querySelector('.detail');const g=GMAP.get(card.getAttribute('data-key'));
-    const open=det.classList.toggle('open');
-    btn.querySelector('.car').textContent=open?'▴':'▾';
-    if(open&&!det.dataset.filled){det.innerHTML=detailHTML(g);det.dataset.filled='1';}
-  }
+  if(cell){setSort(cell.dataset.sortkey);window.scrollTo({top:0,behavior:'smooth'});return;}
+  if(e.target.closest('a'))return;
+  const card=e.target.closest('.card');if(!card)return;
+  if(!e.target.closest('.exp-btn')&&!e.target.closest('.c-head'))return;
+  const opening=!card.classList.contains('open');
+  if(opening){const d=card.querySelector('.detail');if(!d.firstChild){const g=GMAP.get(card.dataset.key);if(g)d.innerHTML=detailHTML(g);}}
+  card.classList.toggle('open');
 });
-els.search.addEventListener('input',()=>{filters.search=els.search.value;applyFilters();});
-els.filterToggle.addEventListener('click',()=>{const open=els.filters.hidden;els.filters.hidden=!open;els.filterToggle.setAttribute('aria-expanded',String(open));});
-els.clearFilters.addEventListener('click',()=>{filters=newFilters();populateFilters();Object.values(MS).forEach(c=>c.setOptions(c.options));applyFilters();});
-document.querySelectorAll('input[data-filter]').forEach(el=>el.addEventListener('input',()=>{filters[el.getAttribute('data-filter')]=el.value;applyFilters();}));
-els.sortSel.addEventListener('change',()=>{sortMetric=els.sortSel.value;applyFilters();});
-els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='desc'?'asc':'desc';els.sortDir.textContent=sortDir==='desc'?'▼':'▲';applyFilters();});
+let searchTimer;
+els.search.addEventListener('input',e=>{filters.search=e.target.value;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{saveFilters();applyFilters();},120);});
+els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.toggle('open');els.filterToggle.setAttribute('aria-expanded',open);});
+document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;saveFilters();applyFilters();});});
+els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=newFilters();filters.search=sv;document.querySelectorAll('input[data-filter]').forEach(el=>{el.value=el.getAttribute('data-filter')==='gMin'?'0':'';});Object.values(MS).forEach(c=>c.setOptions(c.options));saveFilters();applyFilters();});
+els.sortSel.addEventListener('change',e=>setSort(e.target.value));
+els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
 
-/* ---------- Boot + refresh ---------- */
-let lastFetch=0;
-async function load(force){
-  if(!force&&Date.now()-lastFetch<CACHE_TTL)return;
-  els.loadpill.hidden=false;els.loadpill.textContent='Loading…';
+/* ---------- Cache (Cache API) ---------- */
+async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))return null;try{const c=await caches.open('nflclear-v1');const r=await c.match('/'+key);return r?await r.json():null;}catch(e){return null;}}
+async function cacheSet(key,obj){if(location.protocol==='file:'||!('caches'in self))return;try{const c=await caches.open('nflclear-v1');await c.put('/'+key,new Response(JSON.stringify(obj),{headers:{'Content-Type':'application/json'}}));}catch(e){}}
+
+/* ---------- Boot (stream the full table; cache; stale-while-revalidate) ---------- */
+function fmtN(n){return n>=1000?(((n/1000).toFixed(n>=10000?0:1)).replace(/\.0$/,''))+'k':String(n);}
+function setProg(loaded,total){if(!els.loadpill)return;els.loadpill.hidden=false;els.loadpill.textContent='Loading…';}
+function setProgDone(){if(els.loadpill)els.loadpill.hidden=true;}
+function ingest(rows){GROUPS=buildGroups(rows);populateFilters();applySort();}
+async function boot(){
+  const cacheKey=TABLE;
+  const cached=await cacheGet(cacheKey);
+  const warm=cached&&Array.isArray(cached.rows)&&cached.rows.length;
+  if(warm){ingest(cached.rows);if((Date.now()-cached.t)<=CACHE_TTL)return;}
   try{
-    const rows=await fetchAll();
-    lastFetch=Date.now();
-    GROUPS=buildGroups(rows);
-    populateFilters();
-    applyFilters();
-    els.loadpill.hidden=true;
-    if(GROUPS.length===0){els.content.innerHTML='<div class="state"><h3>No props on the board yet</h3><p>Clearances appear automatically as soon as books post player props.</p></div>';els.content.hidden=false;els.grid.hidden=true;}
-  }catch(err){
-    els.loadpill.hidden=true;
-    if(GROUPS.length===0){els.content.innerHTML='<div class="state"><h3>Couldn&rsquo;t load data</h3><p>'+esc(err.message)+' — retrying shortly.</p></div>';els.content.hidden=false;}
+    // stream-paint only on a cold load; on revalidate keep the cached view until a verified read lands
+    const cb=(firstRows,total,isFirst,loaded)=>{
+      if(!warm&&isFirst&&firstRows&&firstRows.length) ingest(firstRows);
+      setProg(loaded,total);
+    };
+    const {rows,complete}=await fetchVerified(warm?null:cb);
+    setProgDone();
+    if(complete) ingest(rows);                 // verified full read → adopt it
+    else if(!warm) ingest(rows);               // cold load we couldn't verify → show it, but don't cache
+    // (!complete && warm) → leave the good cached view untouched
+    if(!GROUPS.length){
+      els.grid.hidden=true;els.content.hidden=false;
+      els.content.innerHTML=`<div class="state"><h3>No props on the board yet</h3><p>Clearances appear automatically as soon as books post player props.</p></div>`;
+      return;
+    }
+    if(complete&&rows.length) cacheSet(cacheKey,{t:Date.now(),rows});   // only cache a verified full read
   }
+  catch(err){setProgDone();if(!GROUPS.length){els.content.innerHTML=`<div class="state"><h3>Couldn't load right now</h3><p>Please refresh in a moment.</p></div>`;els.content.hidden=false;}}
 }
-load(true);
-setInterval(()=>load(false),CACHE_TTL+5000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)load(false);});
-})();
+boot();
 </script>
+</body>
+</html>
