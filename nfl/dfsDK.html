@@ -560,8 +560,7 @@ function valCell(g,key,label){
   return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtAvg(projOf(v))}</div><div class="cg">${valBasis==='high'?'High':'Median'} Output</div></button>`;
 }
 function cardHTML(g){
-  const luCls=/expect|proj/i.test(g.lineup||'')?'proj':(/conf/i.test(g.lineup||'')?'conf':'');
-  const luTag=g.lineup?`<span class="tag lu ${luCls}" title="${esc(g.lineup||'')}">${esc(g.lineup)}</span>`:'';
+  const luTag='';   // football has no expected/confirmed lineup concept
   const hand='';
   const loc=g.location||'Loc';
   const c=pctColor(projPts(g),VALS.proj,false);   // edge accent = projection percentile
@@ -606,8 +605,8 @@ function detailHTML(g){
   }).join('');
   const oppPanel=`<div class="panel"><div class="panel-h">Opposing defense — ${esc(g.opp||'—')} · ${perLbl}${oppSplitLbl}</div>
     <div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span></div>
-    <div class="mini-scroll"><table class="mini"><thead><tr>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
-      <tbody><tr>${defCells}</tr></tbody></table></div>
+    <div class="mini-scroll"><table class="mini"><thead><tr><th></th>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
+      <tbody><tr><td>Allowed</td>${defCells}</tr></tbody></table></div>
     <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. Rank 1 = fewest allowed.</div></div>`;
   return `
     ${prodPanel}
