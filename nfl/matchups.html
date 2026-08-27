@@ -338,7 +338,7 @@ function buildCards(games, players, defense){
     if(!p){p={name,pos:r['Position']||'',primary:r['Primary']||'',groups:String(r['Groups']||'').split(',').map(x=>x.trim()).filter(Boolean),
       status:r['Status']||'',tag:r['Tag']||'',injury:r['Injury']||'',combos:{}};roster.set(name,p);}
     const cell={games:num(r['Games']),stats:{}};
-    for(const st of ALL_STATS) cell.stats[st]={avg:r[st+' Avg'],med:r[st+' Med'],hi:r[st+' Hi'],lo:r[st+' Lo']};
+    for(const st of ALL_STATS) cell.stats[st]={tot:r[st+' Tot'],avg:r[st+' Avg'],med:r[st+' Med'],hi:r[st+' Hi'],lo:r[st+' Lo']};
     p.combos[`${r['Time Period']}|${r['Stat Split']}`]=cell;
   }
   // defense: FLAT rows keyed (Matchup ID, defending Team) -> per period|split cells
@@ -488,7 +488,7 @@ function playerTable(players,cardLoc,group){
   const heads='<th>G</th>'+cols.map(([d])=>`<th>${esc(d)}</th>`).join('');
   const nCols=cols.length+2;
   const cellCells=(cell,k)=>{
-    const gtd=`<td>${k==='avg'?(cell&&cell.games!=null?cell.games:'–'):''}</td>`;
+    const gtd=`<td>${k==='tot'?(cell&&cell.games!=null?cell.games:'–'):''}</td>`;
     return gtd+cols.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?raw(v[k]):'–'}</td>`;}).join('');
   };
   const nested=(p,cell,grp)=>{
@@ -496,7 +496,7 @@ function playerTable(players,cardLoc,group){
     const h=gc.map(([d])=>`<th>${esc(d)}</th>`).join('');
     const row=k=>gc.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?raw(v[k]):'–'}</td>`;}).join('');
     return `<table class="mini"><thead><tr><th>${esc(grp)}</th>${h}</tr></thead><tbody>
-      <tr><td>Avg</td>${row('avg')}</tr><tr><td>Median</td>${row('med')}</tr>
+      <tr><td>Total</td>${row('tot')}</tr><tr><td>Avg</td>${row('avg')}</tr><tr><td>Median</td>${row('med')}</tr>
       <tr><td>High</td>${row('hi')}</tr><tr><td>Low</td>${row('lo')}</tr></tbody></table>`;
   };
   let body='';
@@ -504,7 +504,8 @@ function playerTable(players,cardLoc,group){
     const cell=getCell(p.combos,cardLoc);
     const tag=p.tag?` <span class="tag gm">${esc(p.tag)}</span>`:'';
     const lbl=`${esc(p.name)}${p.pos?' <span style="color:var(--muted-2)">'+esc(p.pos)+'</span>':''}${tag}`;
-    body+=`<tr class="lp-row" data-idx="${i}"><td><span class="car-sm">&#9656;</span> ${lbl}</td>${cellCells(cell,'avg')}</tr>`;
+    body+=`<tr class="lp-row" data-idx="${i}"><td><span class="car-sm">&#9656;</span> ${lbl}</td>${cellCells(cell,'tot')}</tr>`;
+    body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; Avg</td>${cellCells(cell,'avg')}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; Median</td>${cellCells(cell,'med')}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; High</td>${cellCells(cell,'hi')}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; Low</td>${cellCells(cell,'lo')}</tr>`;
@@ -553,7 +554,7 @@ function detailHTML(c){
   for(const grp of GROUP_ORDER){
     const members=c.active.filter(p=>p.primary===grp);
     if(!members.length) continue;
-    groupPanels+=`<div class="panel"><div class="panel-h">${esc(grp)}</div>${playerTable(members,c.loc,grp)}<div class="note-sm">${esc(splitNote)} · tap a player for Median / High / Low and their other stat groups.</div></div>`;
+    groupPanels+=`<div class="panel"><div class="panel-h">${esc(grp)}</div>${playerTable(members,c.loc,grp)}<div class="note-sm">${esc(splitNote)} · totals shown; tap a player for Avg / Median / High / Low and their other stat groups.</div></div>`;
   }
   const others=c.active.filter(p=>!GROUP_COLS[p.primary]);
   if(others.length) groupPanels+=`<div class="panel"><div class="panel-h">Other</div>${others.map(p=>`<div class="np-row"><span class="np-nm">${esc(p.name)}${p.pos?' · '+esc(p.pos):''}</span>${p.tag?`<span class="tag gm">${esc(p.tag)}</span>`:''}</div>`).join('')}</div>`;
