@@ -602,7 +602,7 @@ async function boot(){
     // (!complete && warm) → leave the good cached view untouched
     if(!GROUPS.length){
       els.grid.hidden=true;els.content.hidden=false;
-      els.content.innerHTML=`<div class="state"><h3>No props on the board yet</h3><p>Clearances appear automatically as soon as books post player props.</p></div>`;
+      els.content.innerHTML=`<div class="state"><h3>Nothing to show yet</h3><p>Check back closer to game time.</p></div>`;
       return;
     }
     if(complete&&rows.length) cacheSet(cacheKey,{t:Date.now(),rows});   // only cache a verified full read
