@@ -421,7 +421,7 @@ document.addEventListener('click',closeAllMS);
 
 function populateFilters(){
   MS.day.setOptions(uniq(g=>g.dayKey).sort().map(k=>[k,dayLabelOf(k)]));
-  MS.team.setOptions(uniq(g=>g.team).sort());
+  {const t=uniq(g=>g.team).sort().map(v=>[v,v]); if(GROUPS.some(g=>!g.team)) t.push(['','(No team)']); MS.team.setOptions(t);}
   MS.prop.setOptions(orderProps(uniq(g=>g.prop)).map(v=>[v,abbrProp(v)]));
   MS.line.setOptions(uniq(g=>g.line).sort((a,b)=>a-b).map(v=>[String(v),String(v)]));
   MS.role.setOptions(orderPos(uniq(g=>g.role).filter(Boolean)));
