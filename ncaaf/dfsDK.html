@@ -298,7 +298,7 @@ const MODE_FILTERS={};   /* in-memory only: filters persist across tab/mode swit
 function saveFilters(){MODE_FILTERS[mode]=filters;}
 function loadFilters(){filters = MODE_FILTERS[mode] || newFilters();}
 
-const POS_SLOTS = [['QB',['QB']],['RB',['RB']],['WR',['WR']]];   // DK college slots (TEs list as WR; no K/DST)
+const POS_SLOTS = [['QB',['QB']],['RB',['RB']],['WR',['WR','TE']]];   // college slots: TEs are classified WR for DFS but listed as TE — the WR filter must catch both
 let POS_ACTIVE = POS_SLOTS;
 function playerPositions(str){return new Set(String(str||'').split('/').map(x=>x.trim().toUpperCase()).filter(x=>x&&x!=='UTIL'));}
 function posMatch(g){
