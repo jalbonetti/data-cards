@@ -494,7 +494,7 @@ function cardHTML(g){
       <div class="o"><div class="k">Median</div><div class="v">${fmtOdds(g.medOver)}</div><div class="b">U ${fmtOdds(g.medUnder)}</div></div>
       <div class="o"><div class="k">Best Under</div><div class="v">${fmtOdds(g.bestUnder)}</div><div class="b">${esc(g.bestUnderBk||'')}</div></div>
     </div>
-    <div class="expand-row"><div class="matchup-mini">${g.location==='Home'?'vs':'@'} <b>${esc(g.opp||'—')}</b></div>
+    <div class="expand-row"><div class="matchup-mini"></div>
       <button class="exp-btn" type="button">Detail <span class="car">▾</span></button></div>
     <div class="detail"></div>
   </div>`;
