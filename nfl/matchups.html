@@ -526,7 +526,7 @@ function teamSpread(c){ if(c.spread==null) return '–'; const n=parseFloat(c.sp
 function cardHTML(c){
   const sideTag=c.isHome?'<span class="tag home">Home</span>':'<span class="tag away">Away</span>';
   const edge=c.isHome?'var(--good)':'var(--away)';
-  const allowsTxt=has(c.oppAllows)?raw(c.oppAllows):'–';
+
   const venueTxt=c.stadium?(c.stadium+(c.neutral?' · Neutral site':'')):(c.neutral?'Neutral site':'—');
   return `
   <div class="card" data-key="${esc(c.key)}" style="--edge-c:${edge}">
@@ -534,7 +534,7 @@ function cardHTML(c){
       <div class="c-main"><div class="c-name">${esc(c.teamFull||c.team)}</div>
         <div class="c-sub"><span class="tag">${esc(c.team)}</span> ${sideTag} <span>${esc(c.matchupAb)}${c.gametime?' · '+esc(c.gametime):''}</span></div></div>
     </div>
-    <div class="mtl">${c.isHome?'vs':'@'} <b>${esc(c.oppFull||c.opp)}</b> · Opp allows ${esc(allowsTxt)}</div>
+    <div class="mtl">${c.isHome?'vs':'@'} <b>${esc(c.oppFull||c.opp)}</b></div>
     <div class="odds">
       <div class="o"><div class="k">Spread</div><div class="v">${esc(teamSpread(c))}</div></div>
       <div class="o"><div class="k">Total</div><div class="v">${c.total!=null?esc('O/U '+fmt1(c.total)):'–'}</div></div>
