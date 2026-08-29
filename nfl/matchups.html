@@ -495,7 +495,7 @@ function playerTable(players,cardLoc,group){
     const gc=GROUP_COLS[grp]||[];
     const h=gc.map(([d])=>`<th>${esc(d)}</th>`).join('');
     const row=k=>gc.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?raw(v[k]):'–'}</td>`;}).join('');
-    return `<table class="mini"><thead><tr><th>${esc(grp)}</th>${h}</tr></thead><tbody>
+    return `<table class="mini" style="width:100%"><thead><tr><th>${esc(grp)}</th>${h}</tr></thead><tbody>
       <tr><td>Total</td>${row('tot')}</tr><tr><td>Avg</td>${row('avg')}</tr><tr><td>Median</td>${row('med')}</tr>
       <tr><td>High</td>${row('hi')}</tr><tr><td>Low</td>${row('lo')}</tr></tbody></table>`;
   };
@@ -511,7 +511,7 @@ function playerTable(players,cardLoc,group){
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; Low</td>${cellCells(cell,'lo')}</tr>`;
     for(const grp of p.groups){
       if(grp===group||!GROUP_COLS[grp]) continue;
-      body+=`<tr class="lp-sub" data-idx="${i}" hidden><td colspan="${nCols}" style="text-align:left">${nested(p,cell,grp)}</td></tr>`;
+      body+=`<tr class="lp-sub" data-idx="${i}" hidden><td colspan="${nCols}" style="text-align:left;padding:2px 0 8px">${nested(p,cell,grp)}</td></tr>`;
     }
   });
   return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody>${body}</tbody></table></div>`;
