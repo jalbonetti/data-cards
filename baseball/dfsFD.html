@@ -301,7 +301,8 @@ function parseSlateRost(str){const m={};if(!str)return m;String(str).split('/').
 function populateSlates(){
   const counts={};
   GROUPS.forEach(g=>{ if(g._slates) g._slates.forEach(n=>{counts[n]=(counts[n]||0)+1;}); });
-  const names=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b));
+  const slateMs=n=>{const m=String(n).match(/\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\b/);if(!m)return Infinity;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(m[1]);const now=new Date();let y=now.getFullYear();const d=new Date(y,mo,+m[2]);if(d.getTime()<now.getTime()-45*864e5)y+=1;return new Date(y,mo,+m[2]).getTime();};
+  const names=Object.keys(counts).sort((a,b)=>slateMs(a)-slateMs(b)||counts[b]-counts[a]||a.localeCompare(b));
   els.slateSel.innerHTML='<option value="">All slates</option>'+names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+' ('+counts[n]+')</option>').join('');
   if(currentSlate&&names.includes(currentSlate)) els.slateSel.value=currentSlate; else { currentSlate=''; els.slateSel.value=''; }
 }
