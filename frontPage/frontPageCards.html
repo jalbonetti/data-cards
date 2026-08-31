@@ -25,19 +25,20 @@
 
 <style>
   .fpb-wrap {
-    --brand: #06b6d4; --brand-dark: #0891b2;
-    --accent-soft: rgba(6,182,212,.14);
+    --brand: #6FD5DC; --brand-dark: #57C6CE;
+    --accent-soft: rgba(111,213,220,.14);
     --surface: #2d1b45; --surface-2: #33204d; --inset: #1d1230;
-    --card: #231536; --ink: #e8e0f0; --muted: #a89bbe; --muted-2: #7a6b8f;
+    --card: #1E1830; --ink: #e8e0f0; --muted: #a89bbe; --muted-2: #7a6b8f;
     --good: #6ee7b7; --good-bg: rgba(52,211,153,.16);
     --line: rgba(255,255,255,.10); --line-2: rgba(255,255,255,.06);
     --radius: 14px;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 22px rgba(0,0,0,.28);
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     /* per-sport badge colors */
-    --sp-nfl: #06b6d4; --sp-ncaaf: #fb923c; --sp-mlb: #f87171; --sp-wnba: #e879f9;
+    --sp-nfl: #6FD5DC; --sp-ncaaf: #fb923c; --sp-mlb: #f87171; --sp-wnba: #e879f9;
     --sp-nba: #a78bfa; --sp-nhl: #93c5fd; --sp-ncaam: #fbbf24; --sp-ncaaw: #6ee7b7;
     --sp-default: #a89bbe;
+    --page-ink:#2A2333; --page-muted:#6A6377; --page-accent:#0E7C86;
     max-width: 1180px; margin: 0 auto; padding: 0 12px;
     color: var(--ink); font-family: var(--font);
     -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
@@ -45,9 +46,9 @@
   .fpb-wrap, .fpb-wrap *, .fpb-wrap *::before, .fpb-wrap *::after { box-sizing: border-box; }
 
   .fpb-head { margin: 0 0 12px; }
-  .fpb-title { font-size: 18px; font-weight: 800; letter-spacing: .2px; display: flex; align-items: baseline; gap: 8px; }
-  .fpb-count { font-size: 11px; font-weight: 700; color: var(--brand); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
-  .fpb-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .fpb-title { color: var(--page-ink); font-size: 18px; font-weight: 800; letter-spacing: .2px; display: flex; align-items: baseline; gap: 8px; }
+  .fpb-count { font-size: 11px; font-weight: 700; color: var(--page-accent); background: rgba(14,124,134,.12); padding: 2px 8px; border-radius: 999px; }
+  .fpb-sub { font-size: 12.5px; color: var(--page-muted); margin-top: 3px; }
 
   .fpb-rail-wrap { position: relative; }
   @media (min-width: 641px) { .fpb-rail-wrap.has-nav { padding: 0 34px; } }
@@ -86,11 +87,11 @@
   .fpb-row2 { display: flex; align-items: center; gap: 8px; margin-top: auto; }
   .fpb-cta {
     display: inline-flex; align-items: center; gap: 7px;
-    background: var(--brand); color: #06222a; text-decoration: none;
+    background: var(--brand); color: #0F2A2D; text-decoration: none;
     font-size: 13px; font-weight: 800; padding: 8px 12px; border-radius: 9px;
     border: none; white-space: nowrap;
   }
-  .fpb-cta:hover { background: var(--brand-dark); color: #06222a; }
+  .fpb-cta:hover { background: var(--brand-dark); color: #0F2A2D; }
   .fpb-cta .bk { font-weight: 700; opacity: .85; font-size: 11.5px; }
   .fpb-cta.nolink { background: var(--surface); color: var(--ink); cursor: default; }
   .fpb-kelly { margin-left: auto; text-align: right; }
@@ -102,7 +103,7 @@
   .fpb-nav {
     position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
     width: 30px; height: 30px; border-radius: 999px; border: 1px solid var(--line);
-    background: rgba(26,16,40,.92); color: var(--ink); font-size: 17px; line-height: 1;
+    background: #1E1830; color: var(--ink); font-size: 17px; line-height: 1;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     box-shadow: var(--shadow);
   }
