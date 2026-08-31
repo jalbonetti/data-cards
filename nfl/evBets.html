@@ -15,10 +15,11 @@
      ============================================================ */
   /* All styles scoped to .wrap so the host page's theme (background, fonts, CSS vars) is never touched. */
   .wrap {
-    --brand: #06b6d4;
-    --brand-dark: #0891b2;
-    --glow: rgba(6,182,212,.28);
-    --accent-soft: rgba(6,182,212,.14);
+    --brand: #6FD5DC;
+    --page-ink:#2A2333; --page-muted:#6A6377; --page-accent:#0E7C86;
+    --brand-dark: #57C6CE;
+    --glow: rgba(111,213,220,.28);
+    --accent-soft: rgba(111,213,220,.14);
     --surface: #2d1b45;
     --surface-2: #33204d;
     --inset: #1d1230;
@@ -29,7 +30,7 @@
     --away: #a5b4fc;
     --away-bg: rgba(129,140,248,.18);
     --page-bg: #eef0f2;
-    --card: #231536;
+    --card: #1E1830;
     --ink: #e8e0f0;
     --muted: #a89bbe;
     --muted-2: #7a6b8f;
@@ -46,7 +47,7 @@
 
   /* ---------- Sticky control bar ---------- */
   .hdr { position: sticky; top: 0; z-index: 30; }
-  .bar { background: rgba(26,16,40,.86); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--line); margin: 0 -12px; padding: 10px 12px; border-radius: 0 0 14px 14px; }
+  .bar { background: #1E1830; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--line); margin: 0 -12px; padding: 10px 12px; border-radius: 0 0 14px 14px; }
   .bar-top { display: flex; align-items: center; gap: 8px; }
   .title { font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: .2px; margin-right: auto; display: flex; align-items: baseline; gap: 8px; }
   .title .count { font-size: 11px; font-weight: 700; color: var(--brand); background: var(--accent-soft); padding: 2px 7px; border-radius: 999px; }
@@ -54,7 +55,7 @@
   /* Players / Game toggle */
   .toggle { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 2px; }
   .toggle button { border: none; background: transparent; color: var(--muted); font-family: var(--font); font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
-  .toggle button.on { background: var(--brand); color: #06222a; }
+  .toggle button.on { background: var(--brand); color: #0F2A2D; }
 
   .field { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; font-family: var(--font); font-size: 13px; color: var(--ink); padding: 8px 10px; height: 36px; }
   .field::placeholder { color: var(--muted-2); }
@@ -63,7 +64,7 @@
 
   .icon-btn { height: 36px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink); font-size: 13px; font-weight: 600; padding: 0 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
   .icon-btn:hover { border-color: var(--brand); color: var(--brand); }
-  .badge-dot { background: var(--brand); color: #06222a; border-radius: 999px; font-size: 10px; min-width: 16px; height: 16px; padding: 0 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
+  .badge-dot { background: var(--brand); color: #0F2A2D; border-radius: 999px; font-size: 10px; min-width: 16px; height: 16px; padding: 0 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; }
 
   .bar-row2 { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
   .seg { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 0 4px 0 10px; height: 36px; }
@@ -139,7 +140,7 @@
   .bet-btn.dead { background: var(--line-2); color: var(--muted-2); pointer-events: none; }
 
   /* ---------- States ---------- */
-  .state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .state { text-align: center; padding: 60px 20px; color:var(--page-muted); }
   .state h3 { color: var(--ink); margin: 0 0 6px; font-size: 16px; }
   .state p { margin: 0; font-size: 13px; }
   .state code { background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; border-radius: 4px; }
