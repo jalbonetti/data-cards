@@ -250,6 +250,8 @@
             <input type="text" data-filter="medMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
+        <div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0"><input type="checkbox" data-filter-chk="cap" checked style="margin:0" /> Recommended Book Odds Cap</label>
+        </div>
       </div>
       <div class="filters-foot">
         <span class="note"></span>
@@ -350,7 +352,17 @@ const els = {
 };
 
 const CAT=['matchup','team','prop','label','book','bestBooks'], NUM=['evMin','bestMin','bestMax','medMin','medMax'];
-function newFilters(){return { search:'', matchup:new Set(), team:new Set(), prop:new Set(), label:new Set(), book:new Set(), bestBooks:new Set(), evMin:'', bookMin:'', bookMax:'', bestMin:'', bestMax:'', medMin:'', medMax:'' };}
+// Recommended Book Odds Cap — the same odds window the front page uses
+// (frontPageBets: floor -300, cap +250; there the named book offers the best
+// price, so best == book). Here each row is one book's line, so the cap is a
+// PRESET for the BOOK-odds min/max inputs, which remain the single source of
+// truth:
+//   check / Clear all -> writes -300 / +250 into min & max
+//   uncheck           -> clears both (no cap; full board)
+//   edit either input -> unchecks the box, leaves the other bound alone
+const CAP_ODDS_FLOOR = -300, CAP_ODDS_CEIL = 250;
+function newFilters(){return { search:'', matchup:new Set(), team:new Set(), prop:new Set(), label:new Set(), book:new Set(), bestBooks:new Set(), evMin:'', bookMin:String(CAP_ODDS_FLOOR), bookMax:String(CAP_ODDS_CEIL), bestMin:'', bestMax:'', medMin:'', medMax:'', cap:true };}
+function syncCapChk(){ document.querySelectorAll('[data-filter-chk]').forEach(el=>{ el.checked = filters[el.getAttribute('data-filter-chk')] !== false; }); }
 let filters = newFilters();
 const sort = { field:'ev', dir:'desc' };
 
@@ -619,6 +631,7 @@ function populateFilters(){
   MS.book.setOptions(uniqueSorted('book'));
   MS.bestBooks.setOptions(uniqueBooksSorted('bestBooks'));
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=(filters[k]!=null)?filters[k]:'';});
+  syncCapChk();
   els.search.value=filters.search||'';
 }
 
@@ -693,7 +706,7 @@ function applyFilters(){
 }
 
 function updateFilterBadge(){
-  const active = (filters.matchup.size?1:0)+(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.label.size?1:0)+(filters.book.size?1:0)+(filters.bestBooks.size?1:0)+['evMin','bookMin','bookMax','bestMin','bestMax','medMin','medMax'].filter(k => filters[k]!=='').length;
+  const active = (filters.matchup.size?1:0)+(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.label.size?1:0)+(filters.book.size?1:0)+(filters.bestBooks.size?1:0)+['evMin','bestMin','bestMax','medMin','medMax'].filter(k => filters[k]!=='').length+(filters.cap ? 0 : ['bookMin','bookMax'].filter(k => filters[k]!=='').length);
   els.filterCount.hidden = active===0; els.filterCount.textContent = active;
 }
 
@@ -768,11 +781,23 @@ els.filterToggle.addEventListener('click', ()=>{
 });
 document.querySelectorAll('input[data-filter]').forEach(el=>{
   const key = el.getAttribute('data-filter');
-  el.addEventListener('input', ()=>{ filters[key]=el.value; saveFilters(); applyFilters(); });
+  el.addEventListener('input', ()=>{
+    filters[key]=el.value;
+    if ((key==='bookMin' || key==='bookMax') && filters.cap) { filters.cap=false; syncCapChk(); }
+    saveFilters(); applyFilters();
+  });
 });
+document.querySelectorAll('[data-filter-chk]').forEach(el=>{ el.addEventListener('change', ()=>{
+  filters.cap = el.checked;
+  if (el.checked) { filters.bookMin = String(CAP_ODDS_FLOOR); filters.bookMax = String(CAP_ODDS_CEIL); }
+  else { filters.bookMin = ''; filters.bookMax = ''; }
+  document.querySelectorAll('input[data-filter="bookMin"],input[data-filter="bookMax"]').forEach(i=>{ i.value = filters[i.getAttribute('data-filter')]; });
+  saveFilters(); applyFilters();
+}); });
 els.clearFilters.addEventListener('click', ()=>{
   const sv=filters.search; filters=newFilters(); filters.search=sv;
-  document.querySelectorAll('input[data-filter]').forEach(el=>{ el.value=''; });
+  document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=(filters[k]!=null)?filters[k]:'';});
+  syncCapChk();   // "Clear all" restores the recommended preset (checked, -300 / +250)
   Object.values(MS).forEach(c=>c.setOptions(c.options));
   saveFilters(); applyFilters();
 });
@@ -800,6 +825,7 @@ els.modeToggle.addEventListener('click', (e)=>{
     b.setAttribute('aria-pressed', on);
   });
   loadFilters();
+  syncCapChk();
   applyModeUI();
   RAW = []; SORTED = []; els.grid.innerHTML=''; els.grid.hidden=true;
   els.content.hidden=false; els.content.innerHTML='<div class="state"><div class="spinner"></div><p>Loading…</p></div>';
