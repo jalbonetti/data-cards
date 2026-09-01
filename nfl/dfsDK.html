@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>WNBA DraftKings DFS</title>
+<title>Bettor Results — NFL DraftKings DFS</title>
+<meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin />
 <style>
   /* All styles scoped to .wrap so the host page's theme (background, fonts, CSS vars) is never touched. */
@@ -132,7 +133,7 @@
     .bar-top,.bar-row2{display:contents;}                                  /* dissolve the row boxes into one flex line */
     .title{order:1;} .search{order:2;margin-right:0;} .seg{order:3;}
     .bar-break{display:block;flex-basis:100%;height:0;order:87;}   /* force the right group onto row 2 */
-    .slate-seg{order:88;} #modeToggle{order:89;} #filterToggle{order:90;margin-left:auto;}
+    .slate-seg{order:88;margin-left:auto;} #modeToggle{order:89;} #filterToggle{order:90;}
     .bar-row2{margin-top:6px;}
     .filters{margin-top:8px;padding-top:8px;padding-bottom:8px;}
     .filters-grid{gap:6px 10px;}
@@ -264,7 +265,7 @@ let valBasis = 'med';   // 'med' | 'high' — which projection drives the value 
 const M = ()=>MODES[mode];
 const ownSet = ()=> SET_OPP_DEF;
 
-/* Column-name map (single WNBA player pool). */
+/* Column-name map (single NFL player pool). */
 function fieldMap(){
   return {
     player:'Player Name', team:'Team', opponent:'Opponent', pos:`${BOOK} Position`, price:`${BOOK} Price`,
@@ -552,7 +553,7 @@ function uniq(getter){return [...new Set(GROUPS.map(getter).filter(v=>v!=null&&v
 function populateFilters(){
   populateSlates();
   MS.team.setOptions(uniq(g=>g.team).sort());
-  POS_ACTIVE=POS_SLOTS; MS.pos.setOptions(POS_SLOTS.map(x=>x[0]));   // WNBA: single player pool, G/F always available
+  POS_ACTIVE=POS_SLOTS; MS.pos.setOptions(POS_SLOTS.map(x=>x[0]));   // NFL: single player pool, all positions always available
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=filters[k]||'';});
   els.search.value=filters.search||'';
 }
@@ -704,7 +705,7 @@ function applyModeUI(){
   els.titleText.textContent=BOOK_NAME+' DFS · '+M().title;
   const hl=document.querySelector('[data-hand-label]'); if(hl) hl.textContent=M().handLabel;
   const posEl=document.querySelector('.ms[data-ms="pos"]'), posFg=posEl&&posEl.closest('.fg');
-  if(posFg) posFg.style.display='';   // WNBA: single player pool, position filter always applies
+  if(posFg) posFg.style.display='';   // NFL: single player pool, position filter always applies
 }
 /* ---------- Cache (Cache API) ---------- */
 async function cacheGet(key){if(location.protocol==='file:'||!('caches'in self))return null;try{const c=await caches.open('nfldfsdk-v1');const r=await c.match('/'+key);return r?await r.json():null;}catch(e){return null;}}
@@ -731,7 +732,7 @@ async function fetchVerified(cb){
 }
 async function boot(){
   const seq=++bootSeq;
-  const table=M().table, cacheKey='wnbadfs_'+BOOK+'_'+mode;
+  const table=M().table, cacheKey='nfldfs_'+BOOK+'_'+mode;
   const cached=await cacheGet(cacheKey);
   if(seq!==bootSeq)return;
   const warm=cached&&Array.isArray(cached.rows)&&cached.rows.length;
