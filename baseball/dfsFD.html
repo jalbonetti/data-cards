@@ -416,6 +416,33 @@ function rampColor(t){
 }
 function pct(v,arr){if(v==null||!arr||arr.length<2)return null;let below=0;for(const x of arr)if(x<v)below++;return below/(arr.length-1);}   // percentile rank in the field (outlier-robust)
 function pctColor(v,arr,invert){const t=pct(v,arr);if(t==null)return rampColor(null);return rampColor(invert?1-t:t);}
+/* Ownership color: absolute bands first, percentile second.
+   Low ownership is good (contrarian), so the ramp is inverted — but on slates where most of the
+   field sits at 0-1%, a pure percentile paints a perfectly fine 4% player red. So:
+     <= ROST_GREEN_FLOOR  -> always darkest green
+     >= ROST_RED_CEIL     -> always red
+     in between           -> inverted percentile among ONLY the players inside the band,
+                             so the pile of near-zero entries no longer compresses the scale. */
+const ROST_GREEN_FLOOR = 5;    // % owned — at or below this is always the best color
+const ROST_RED_CEIL    = 30;   // % owned — at or above this is always the worst color
+function rostColor(v,arr){
+  if(v==null||isNaN(v))return rampColor(null);
+  if(v<=ROST_GREEN_FLOOR)return rampColor(1);
+  if(v>=ROST_RED_CEIL)return rampColor(0);
+  const band=(arr||[]).filter(x=>x>ROST_GREEN_FLOOR&&x<ROST_RED_CEIL);
+  if(band.length<2){ // not enough peers to rank: fall back to linear position inside the band
+    return rampColor(1-(v-ROST_GREEN_FLOOR)/(ROST_RED_CEIL-ROST_GREEN_FLOOR));
+  }
+  return rampColor(1-pct(v,band));
+}
+/* Slate-aware ownership number: the selected slate's value when one is chosen, else overall. */
+function rostNum(g){
+  const sv=(currentSlate&&g.slateMap)?g.slateMap[currentSlate]:null;
+  const raw=(sv!=null&&sv!=='')?sv:g.rostership;
+  if(raw==null)return NaN;
+  const n=parseFloat(String(raw).replace('%',''));
+  return isNaN(n)?NaN:n;
+}
 
 /* ---------- Data ---------- */
 function buildQuery(){ return `${SUPABASE_URL}/rest/v1/${M().table}?select=*`; }
@@ -501,7 +528,7 @@ function outputLabel(g){const [period,sp]=dispWS.split('|');const per=period==='
 function sortValue(g){
   if(sortMode==='proj:pts')return projPts(g);
   if(sortMode==='proj:val')return projValue(g);
-  if(sortMode==='rost'){const r=Number(g.rostership);return isNaN(r)?null:r;}
+  if(sortMode==='rost'){const r=rostNum(g);return isNaN(r)?null:r;}
   if(sortMode==='output')return outputVal(g);
   return null;
 }
@@ -513,7 +540,7 @@ function recomputeProd(){
     g._prodVar=activeVar(g);
     const p=projPts(g); if(p!=null)proj.push(p);
     const vv=projValue(g); if(vv!=null)val.push(vv);
-    const r=Number(g.rostership); if(!isNaN(r))rost.push(r);
+    if(!currentSlate||(g._slates&&g._slates.has(currentSlate))){const r=rostNum(g); if(!isNaN(r))rost.push(r);}
     const o=outputVal(g); if(o!=null)out.push(o);
   }
   const sort=a=>a.slice().sort((x,y)=>x-y);
@@ -604,7 +631,7 @@ function cardHTML(g){
     <div class="cgrid">
       ${sortCard(g,'proj:pts','Projected Points',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts',pctColor(projPts(g),VALS.proj,false))}
       ${sortCard(g,'proj:val','Projected Value',projValue(g)!=null?fmtRatio(projValue(g)):'–','pts/$',pctColor(projValue(g),VALS.val,false))}
-      ${sortCard(g,'rost','Projected Rostership',rostDisp(g),'',pctColor(Number(g.rostership),VALS.rost,true))}
+      ${sortCard(g,'rost','Projected Rostership',rostDisp(g),'',rostColor(rostNum(g),VALS.rost))}
       ${sortCard(g,'output',outputLabel(g),outputVal(g)!=null?fmtAvg(outputVal(g)):'–','output',pctColor(outputVal(g),VALS.out,false))}
     </div>
     <div class="expand-row"><div class="matchup-mini">${mini}</div>
@@ -686,7 +713,7 @@ els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.
 document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;saveFilters();applyFilters();});});
 els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=newFilters();filters.search=sv;document.querySelectorAll('input[data-filter]').forEach(el=>el.value='');Object.values(MS).forEach(c=>c.setOptions(c.options));saveFilters();applyFilters();});
 els.sortSel.addEventListener('change',e=>setSort(e.target.value));
-els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;applyFilters();});
+els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;applySort();});
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
 els.owSel.addEventListener('change',e=>{dispWS=e.target.value;applySort();});
 els.basisSel.addEventListener('change',e=>{valBasis=e.target.value;applySort();});
