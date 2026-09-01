@@ -10,8 +10,14 @@
 <link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin>
 <div class="fpb-wrap" id="fpbWrap">
   <div class="fpb-head">
-    <div class="fpb-title">Today&rsquo;s Best Bets <span class="fpb-count" id="fpbCount" hidden>0</span></div>
-    <div class="fpb-sub" id="fpbSub">Live +EV plays across every sport we track.</div>
+    <div class="fpb-head-text">
+      <div class="fpb-title">Today&rsquo;s Best Bets <span class="fpb-count" id="fpbCount" hidden>0</span></div>
+      <div class="fpb-sub" id="fpbSub">Live +EV plays across every sport we track.</div>
+    </div>
+    <label class="fpb-bankroll" for="fpbBankroll" title="Used to turn &frac14; Kelly % into a dollar stake">
+      <span class="lbl">Bankroll</span>
+      <span class="field"><span class="cur">$</span><input id="fpbBankroll" type="number" inputmode="numeric" min="1" step="1" value="1000" aria-label="Bankroll in dollars"></span>
+    </label>
   </div>
   <div class="fpb-rail-wrap">
     <button class="fpb-nav prev" id="fpbPrev" aria-label="Scroll left" hidden>&#8249;</button>
@@ -45,7 +51,14 @@
   }
   .fpb-wrap, .fpb-wrap *, .fpb-wrap *::before, .fpb-wrap *::after { box-sizing: border-box; }
 
-  .fpb-head { margin: 0 0 12px; }
+  .fpb-head { margin: 0 0 12px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .fpb-bankroll { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--page-muted); cursor: text; }
+  .fpb-bankroll .field { display: inline-flex; align-items: center; background: rgba(30,24,48,.06); border: 1px solid rgba(42,35,51,.25); border-radius: 8px; padding: 0 8px 0 9px; }
+  .fpb-bankroll .cur { color: var(--page-muted); font-size: 13px; font-weight: 700; margin-right: 2px; }
+  .fpb-bankroll input { width: 76px; border: 0; background: transparent; color: var(--page-ink); font: inherit; font-size: 13px; font-weight: 800; letter-spacing: 0; text-transform: none; padding: 6px 0; outline: none; -moz-appearance: textfield; }
+  .fpb-bankroll input::-webkit-outer-spin-button, .fpb-bankroll input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .fpb-bankroll .field:focus-within { border-color: var(--page-accent); box-shadow: 0 0 0 3px rgba(14,124,134,.15); }
+  .fpb-kelly .usd { color: var(--brand); margin-left: 5px; }
   .fpb-title { color: var(--page-ink); font-size: 18px; font-weight: 800; letter-spacing: .2px; display: flex; align-items: baseline; gap: 8px; }
   .fpb-count { font-size: 11px; font-weight: 700; color: var(--page-accent); background: rgba(14,124,134,.12); padding: 2px 8px; border-radius: 999px; }
   .fpb-sub { font-size: 12.5px; color: var(--page-muted); margin-top: 3px; }
@@ -107,6 +120,7 @@
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     box-shadow: var(--shadow);
   }
+  .fpb-nav[hidden] { display: none; }
   .fpb-nav.prev { left: 0; } .fpb-nav.next { right: 0; }
   .fpb-nav:hover { background: var(--surface-2); }
   @media (max-width: 640px) { .fpb-nav { display: none; } }
@@ -134,6 +148,7 @@ var rail = document.getElementById("fpbRail");
 var countEl = document.getElementById("fpbCount");
 var prevBtn = document.getElementById("fpbPrev");
 var nextBtn = document.getElementById("fpbNext");
+var lastRows = [];
 
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 
@@ -171,6 +186,33 @@ function fmtSigned(v){
   var s=String(v).trim(); if(!s) return "";
   return (s[0]==="+"||s[0]==="-") ? s : (parseFloat(s)>0 ? "+"+s : s);
 }
+
+/* ---- Bankroll: persisted locally, drives the dollar stake shown next to &frac14; Kelly ---- */
+var BANKROLL_KEY = "fpb:bankroll", DEFAULT_BANKROLL = 1000;
+var bankrollEl = document.getElementById("fpbBankroll");
+function readBankroll(){
+  var v = parseFloat(bankrollEl && bankrollEl.value);
+  return (isFinite(v) && v > 0) ? v : DEFAULT_BANKROLL;
+}
+function stakeHtml(qk){
+  var stake = readBankroll() * qk / 100;
+  if(!isFinite(stake) || stake <= 0) return "";
+  var txt = stake >= 100 ? "$" + Math.round(stake) : "$" + (Math.round(stake * 2) / 2).toFixed(stake % 1 ? 2 : 0).replace(/\.00$/, "");
+  return '<span class="usd">' + txt + '</span>';
+}
+(function initBankroll(){
+  if(!bankrollEl) return;
+  try { var saved = parseFloat(localStorage.getItem(BANKROLL_KEY)); if(isFinite(saved) && saved > 0) bankrollEl.value = saved; } catch(e){}
+  var t = null;
+  bankrollEl.addEventListener("input", function(){
+    clearTimeout(t);
+    t = setTimeout(function(){
+      try { localStorage.setItem(BANKROLL_KEY, String(readBankroll())); } catch(e){}
+      if(lastRows.length) render(lastRows);
+    }, 250);
+  });
+  bankrollEl.addEventListener("blur", function(){ if(!(parseFloat(bankrollEl.value) > 0)) bankrollEl.value = DEFAULT_BANKROLL; });
+})();
 
 function render(rows){
   var now = Date.now();
@@ -214,7 +256,7 @@ function render(rows){
         '<div class="fpb-meta">'+esc(r["Matchup"]||"")+'<span class="tm">'+esc(shortTime(r["Game Time"]))+'</span></div>' +
         '<div class="fpb-row2">' + cta +
           (qk!=null && !isNaN(qk)
-            ? '<div class="fpb-kelly"><div class="k">&frac14; Kelly</div><div class="v">'+qk.toFixed(1)+'%</div></div>' : '') +
+            ? '<div class="fpb-kelly"><div class="k">&frac14; Kelly</div><div class="v">'+qk.toFixed(1)+'%'+stakeHtml(qk)+'</div></div>' : '') +
         '</div>' +
         (foot.length ? '<div class="fpb-foot">'+foot.join(' &middot; ')+'</div>' : '') +
       '</div>'
@@ -241,7 +283,6 @@ nextBtn.addEventListener("click", function(){ scrollByCard(1); });
 rail.addEventListener("scroll", updateNav, { passive: true });
 window.addEventListener("resize", updateNav);
 
-var lastRows = [];
 function load(){
   fetch(SUPABASE_URL + "/rest/v1/" + TABLE + "?select=*&order=" + encodeURIComponent('"Rank"') + ".asc", {
     headers: { apikey: ANON_KEY, Authorization: "Bearer " + ANON_KEY, Accept: "application/json",
