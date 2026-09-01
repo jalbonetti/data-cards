@@ -299,7 +299,7 @@ function populateSlates(){
   els.slateSel.innerHTML='<option value="">All slates</option>'+names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+' ('+counts[n]+')</option>').join('');
   if(currentSlate&&names.includes(currentSlate)) els.slateSel.value=currentSlate; else { currentSlate=''; els.slateSel.value=''; }
 }
-function rostDisp(g){const v=(currentSlate&&g.slateMap)?g.slateMap[currentSlate]:null;return (v!=null&&v!=='')?fmtRostPct(v):fmtRostPct(g.rostership);}
+function rostDisp(g){const n=rostNum(g);return isNaN(n)?'–':fmtRostPct(n);}
 
 /* ---------- Filters: persistence + multi-select + positions (#9/#10/#11) ---------- */
 const MODE_FILTERS={};   /* in-memory only: filters persist across tab/mode switches within a page load, but reset on a real (re)load */
@@ -440,13 +440,28 @@ function rostColor(v,arr){
   }
   return rampColor(1-pct(v,band));
 }
-/* Slate-aware ownership number: the selected slate's value when one is chosen, else overall. */
+/* Slate-aware ownership number: the selected slate's value when one is chosen, else overall.
+   "Overall" tolerates both formats seen in Supabase: a plain number (baseball) or the same
+   "Slate:value/Slate:value" string used by the slate column (football). With no slate selected
+   and only slate-formatted data, prefer a slate named "Main", otherwise the highest exposure. */
+function rostOverall(g){
+  const raw=g.rostership;
+  if(raw!=null&&String(raw).trim()!==''){
+    const n=parseFloat(String(raw).replace('%',''));
+    if(!isNaN(n)&&!String(raw).includes(':'))return n;
+  }
+  const map=Object.assign({},g.slateMap||{},(raw!=null&&String(raw).includes(':'))?parseSlateRost(raw):{});
+  const keys=Object.keys(map); if(!keys.length)return NaN;
+  const main=keys.find(k=>/main/i.test(k));
+  const pick=v=>{const n=parseFloat(String(v).replace('%',''));return isNaN(n)?NaN:n;};
+  if(main){const n=pick(map[main]);if(!isNaN(n))return n;}
+  let best=NaN;for(const k of keys){const n=pick(map[k]);if(!isNaN(n)&&(isNaN(best)||n>best))best=n;}
+  return best;
+}
 function rostNum(g){
   const sv=(currentSlate&&g.slateMap)?g.slateMap[currentSlate]:null;
-  const raw=(sv!=null&&sv!=='')?sv:g.rostership;
-  if(raw==null)return NaN;
-  const n=parseFloat(String(raw).replace('%',''));
-  return isNaN(n)?NaN:n;
+  if(sv!=null&&sv!==''){const n=parseFloat(String(sv).replace('%',''));return isNaN(n)?NaN:n;}
+  return rostOverall(g);
 }
 
 /* ---------- Data ---------- */
@@ -479,7 +494,7 @@ function buildGroups(rows){
         rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
         matchup:row[F.matchup], spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], pace:row[F.pace],
         variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
-      g.slateMap=parseSlateRost(row[F.slateRost]); g._slates=new Set(Object.keys(g.slateMap));
+      g.slateMap=parseSlateRost(row[F.slateRost]); if(!Object.keys(g.slateMap).length&&String(row[F.rostership]||'').includes(':'))g.slateMap=parseSlateRost(row[F.rostership]); g._slates=new Set(Object.keys(g.slateMap));
       map.set(player,g);
     }
     const period=row[F.period], sp=row[F.split];
