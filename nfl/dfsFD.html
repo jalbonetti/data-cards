@@ -182,6 +182,7 @@
           <select id="sortSel">
             <option value="proj:pts">Projection</option>
             <option value="proj:val">Value (pts/$)</option>
+<option value="rost">Rostership</option>
             <option value="output">Output</option>
           </select>
           <button class="dir-btn" id="sortDir" title="Toggle direction">▼</button>
@@ -213,6 +214,12 @@
           <div class="fg-range">
             <input type="number" data-filter="prMin" inputmode="numeric" placeholder="Min" />
             <input type="number" data-filter="prMax" inputmode="numeric" placeholder="Max" />
+          </div>
+        </div>
+        <div class="fg"><label>Ownership %</label>
+          <div class="fg-range">
+            <input type="number" data-filter="rostMin" inputmode="decimal" placeholder="Min" />
+            <input type="number" data-filter="rostMax" inputmode="decimal" placeholder="Max" />
           </div>
         </div>
         <div class="fg"><label>Min points</label><input type="number" data-filter="projMin" inputmode="decimal" placeholder="e.g. 8" /></div>
@@ -276,8 +283,8 @@ let GROUPS = [], SORTED = [], VIEW = [], rendered = 0, bootSeq = 0;
 const GMAP = new Map();
 let sortMode = 'proj:pts', sortDir = 'desc';
 let dispWS = 'Full Season|All';   // window|split for the in-card stats + split-square context
-const CAT=['team','pos'], NUM=['prMin','prMax','projMin','valMin','gMin'];
-function newFilters(){return {search:'',team:new Set(),pos:new Set(),prMin:'',prMax:'',projMin:'',valMin:'',gMin:''};}
+const CAT=['team','pos'], NUM=['prMin','prMax','rostMin','rostMax','projMin','valMin','gMin'];
+function newFilters(){return {search:'',team:new Set(),pos:new Set(),prMin:'',prMax:'',rostMin:'',rostMax:'',projMin:'',valMin:'',gMin:''};}
 let filters = newFilters();
 const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),owSel:document.getElementById('owSel'),basisSel:document.getElementById('basisSel'),titleText:document.getElementById('titleText'),slateSel:document.getElementById('slateSel')};
 /* ---------- Slate ownership (Phase 1c) ---------- */
@@ -414,6 +421,33 @@ function rampColor(t){
 }
 function pct(v,arr){if(v==null||!arr||arr.length<2)return null;let below=0;for(const x of arr)if(x<v)below++;return below/(arr.length-1);}   // percentile rank in the field (outlier-robust)
 function pctColor(v,arr,invert){const t=pct(v,arr);if(t==null)return rampColor(null);return rampColor(invert?1-t:t);}
+/* Ownership color: absolute bands first, percentile second.
+   Low ownership is good (contrarian), so the ramp is inverted — but on slates where most of the
+   field sits at 0-1%, a pure percentile paints a perfectly fine 4% player red. So:
+     <= ROST_GREEN_FLOOR  -> always darkest green
+     >= ROST_RED_CEIL     -> always red
+     in between           -> inverted percentile among ONLY the players inside the band,
+                             so the pile of near-zero entries no longer compresses the scale. */
+const ROST_GREEN_FLOOR = 5;    // % owned — at or below this is always the best color
+const ROST_RED_CEIL    = 30;   // % owned — at or above this is always the worst color
+function rostColor(v,arr){
+  if(v==null||isNaN(v))return rampColor(null);
+  if(v<=ROST_GREEN_FLOOR)return rampColor(1);
+  if(v>=ROST_RED_CEIL)return rampColor(0);
+  const band=(arr||[]).filter(x=>x>ROST_GREEN_FLOOR&&x<ROST_RED_CEIL);
+  if(band.length<2){ // not enough peers to rank: fall back to linear position inside the band
+    return rampColor(1-(v-ROST_GREEN_FLOOR)/(ROST_RED_CEIL-ROST_GREEN_FLOOR));
+  }
+  return rampColor(1-pct(v,band));
+}
+/* Slate-aware ownership number: the selected slate's value when one is chosen, else overall. */
+function rostNum(g){
+  const sv=(currentSlate&&g.slateMap)?g.slateMap[currentSlate]:null;
+  const raw=(sv!=null&&sv!=='')?sv:g.rostership;
+  if(raw==null)return NaN;
+  const n=parseFloat(String(raw).replace('%',''));
+  return isNaN(n)?NaN:n;
+}
 
 /* ---------- Data ---------- */
 function buildQuery(){ return `${SUPABASE_URL}/rest/v1/${M().table}?select=*`; }
@@ -479,7 +513,7 @@ function outputLabel(g){const [period,sp]=dispWS.split('|');const per=period==='
 function sortValue(g){
   if(sortMode==='proj:pts')return projPts(g);
   if(sortMode==='proj:val')return projValue(g);
-  if(sortMode==='rost'){return projPts(g);}   // rostership retired for WNBA — rank by projection
+  if(sortMode==='rost'){const r=rostNum(g);return isNaN(r)?null:r;}
   if(sortMode==='output')return outputVal(g);
   return null;
 }
@@ -491,7 +525,7 @@ function recomputeProd(){
     g._prodVar=activeVar(g);
     const p=projPts(g); if(p!=null)proj.push(p);
     const vv=projValue(g); if(vv!=null)val.push(vv);
-    const r=Number(g.rostership); if(!isNaN(r))rost.push(r);
+    if(!currentSlate||(g._slates&&g._slates.has(currentSlate))){const r=rostNum(g); if(!isNaN(r))rost.push(r);}
     const o=outputVal(g); if(o!=null)out.push(o);
   }
   const sort=a=>a.slice().sort((x,y)=>x-y);
@@ -525,6 +559,7 @@ function applyFilters(){
   const pjMin=filters.projMin!==''?parseFloat(filters.projMin):null;
   const vMin=filters.valMin!==''?parseFloat(filters.valMin):null;
   const gMin=filters.gMin!==''?parseInt(filters.gMin,10):null;
+  const roMin=filters.rostMin!==''?parseFloat(filters.rostMin):null, roMax=filters.rostMax!==''?parseFloat(filters.rostMax):null;
   const av=g=>keyVar(g,sortMode);
   VIEW=SORTED.filter(g=>{
     if(s&&!g._q.includes(s))return false;
@@ -533,6 +568,7 @@ function applyFilters(){
     if(!posMatch(g))return false;
     if(prMin!=null&&(g.price==null||g.price<prMin))return false;
     if(prMax!=null&&(g.price==null||g.price>prMax))return false;
+    if(roMin!=null||roMax!=null){const ro=rostNum(g);if(isNaN(ro))return false;if(roMin!=null&&ro<roMin)return false;if(roMax!=null&&ro>roMax)return false;}
     if(pjMin!=null){const p=projPts(g);if(p==null||p<pjMin)return false;}
     if(vMin!=null){const r=projValue(g);if(r==null||r<vMin)return false;}
     if(gMin!=null){const gp=Number(g.gp);if(!isFinite(gp)||gp<gMin)return false;}
@@ -541,7 +577,7 @@ function applyFilters(){
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
   if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching players</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=(filters.team.size?1:0)+(filters.pos.size?1:0)+['prMin','prMax','projMin','valMin','gMin'].filter(k=>filters[k]!=='').length;
+  const active=(filters.team.size?1:0)+(filters.pos.size?1:0)+['prMin','prMax','rostMin','rostMax','projMin','valMin','gMin'].filter(k=>filters[k]!=='').length;
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
@@ -576,6 +612,7 @@ function cardHTML(g){
     <div class="cgrid">
       ${sortCard(g,'proj:pts','Projected Points',projPts(g)!=null?fmtAvg(projPts(g)):'–','pts',pctColor(projPts(g),VALS.proj,false))}
       ${sortCard(g,'proj:val','Projected Value',projValue(g)!=null?fmtRatio(projValue(g)):'–','pts/$',pctColor(projValue(g),VALS.val,false))}
+      ${sortCard(g,'rost','Projected Rostership',rostDisp(g),'',rostColor(rostNum(g),VALS.rost))}
       ${sortCard(g,'output',outputLabel(g),outputVal(g)!=null?fmtAvg(outputVal(g)):'–','output',pctColor(outputVal(g),VALS.out,false))}
     </div>
     <div class="expand-row"><div class="matchup-mini">${mini}</div>
@@ -643,7 +680,7 @@ els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.
 document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;saveFilters();applyFilters();});});
 els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=newFilters();filters.search=sv;document.querySelectorAll('input[data-filter]').forEach(el=>el.value='');Object.values(MS).forEach(c=>c.setOptions(c.options));saveFilters();applyFilters();});
 els.sortSel.addEventListener('change',e=>setSort(e.target.value));
-if(els.slateSel) els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;applyFilters();});
+if(els.slateSel) els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;applySort();});
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
 els.owSel.addEventListener('change',e=>{dispWS=e.target.value;applySort();});
 els.basisSel.addEventListener('change',e=>{valBasis=e.target.value;applySort();});
