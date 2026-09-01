@@ -221,6 +221,12 @@
             <input type="number" data-filter="prMax" inputmode="numeric" placeholder="Max" />
           </div>
         </div>
+        <div class="fg"><label>Ownership %</label>
+          <div class="fg-range">
+            <input type="number" data-filter="rostMin" inputmode="decimal" placeholder="Min" />
+            <input type="number" data-filter="rostMax" inputmode="decimal" placeholder="Max" />
+          </div>
+        </div>
         <div class="fg"><label>Min points</label><input type="number" data-filter="projMin" inputmode="decimal" placeholder="e.g. 8" /></div>
         <div class="fg"><label>Min value</label><input type="number" data-filter="valMin" inputmode="decimal" placeholder="e.g. 2.5" /></div>
         <div class="fg"><label>Min games</label><input type="number" data-filter="gMin" inputmode="numeric" placeholder="e.g. 20" /></div>
@@ -291,8 +297,8 @@ let GROUPS = [], SORTED = [], VIEW = [], rendered = 0, bootSeq = 0;
 const GMAP = new Map();
 let sortMode = 'proj:pts', sortDir = 'desc';
 let dispWS = 'Full Season|All';   // window|split for the in-card stats + split-square context
-const CAT=['team','pos','hand'], NUM=['prMin','prMax','projMin','valMin','gMin'];
-function newFilters(){return {search:'',team:new Set(),pos:new Set(),hand:new Set(),prMin:'',prMax:'',projMin:'',valMin:'',gMin:''};}
+const CAT=['team','pos','hand'], NUM=['prMin','prMax','rostMin','rostMax','projMin','valMin','gMin'];
+function newFilters(){return {search:'',team:new Set(),pos:new Set(),hand:new Set(),prMin:'',prMax:'',rostMin:'',rostMax:'',projMin:'',valMin:'',gMin:''};}
 let filters = newFilters();
 const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),modeToggle:document.getElementById('modeToggle'),owSel:document.getElementById('owSel'),basisSel:document.getElementById('basisSel'),titleText:document.getElementById('titleText'),slateSel:document.getElementById('slateSel')};
 /* ---------- Slate ownership (Phase 1c) ---------- */
@@ -306,7 +312,7 @@ function populateSlates(){
   els.slateSel.innerHTML='<option value="">All slates</option>'+names.map(n=>'<option value="'+esc(n)+'">'+esc(n)+' ('+counts[n]+')</option>').join('');
   if(currentSlate&&names.includes(currentSlate)) els.slateSel.value=currentSlate; else { currentSlate=''; els.slateSel.value=''; }
 }
-function rostDisp(g){const v=(currentSlate&&g.slateMap)?g.slateMap[currentSlate]:null;return (v!=null&&v!=='')?fmtRostPct(v):fmtRostPct(g.rostership);}
+function rostDisp(g){const n=rostNum(g);return isNaN(n)?'–':fmtRostPct(n);}
 
 /* ---------- Filters: persistence + multi-select + positions (#9/#10/#11) ---------- */
 const MODE_FILTERS={};   /* in-memory only: filters persist across tab/mode switches within a page load, but reset on a real (re)load */
@@ -435,13 +441,28 @@ function rostColor(v,arr){
   }
   return rampColor(1-pct(v,band));
 }
-/* Slate-aware ownership number: the selected slate's value when one is chosen, else overall. */
+/* Slate-aware ownership number: the selected slate's value when one is chosen, else overall.
+   "Overall" tolerates both formats seen in Supabase: a plain number (baseball) or the same
+   "Slate:value/Slate:value" string used by the slate column (football). With no slate selected
+   and only slate-formatted data, prefer a slate named "Main", otherwise the highest exposure. */
+function rostOverall(g){
+  const raw=g.rostership;
+  if(raw!=null&&String(raw).trim()!==''){
+    const n=parseFloat(String(raw).replace('%',''));
+    if(!isNaN(n)&&!String(raw).includes(':'))return n;
+  }
+  const map=Object.assign({},g.slateMap||{},(raw!=null&&String(raw).includes(':'))?parseSlateRost(raw):{});
+  const keys=Object.keys(map); if(!keys.length)return NaN;
+  const main=keys.find(k=>/main/i.test(k));
+  const pick=v=>{const n=parseFloat(String(v).replace('%',''));return isNaN(n)?NaN:n;};
+  if(main){const n=pick(map[main]);if(!isNaN(n))return n;}
+  let best=NaN;for(const k of keys){const n=pick(map[k]);if(!isNaN(n)&&(isNaN(best)||n>best))best=n;}
+  return best;
+}
 function rostNum(g){
   const sv=(currentSlate&&g.slateMap)?g.slateMap[currentSlate]:null;
-  const raw=(sv!=null&&sv!=='')?sv:g.rostership;
-  if(raw==null)return NaN;
-  const n=parseFloat(String(raw).replace('%',''));
-  return isNaN(n)?NaN:n;
+  if(sv!=null&&sv!==''){const n=parseFloat(String(sv).replace('%',''));return isNaN(n)?NaN:n;}
+  return rostOverall(g);
 }
 
 /* ---------- Data ---------- */
@@ -484,7 +505,7 @@ function buildGroups(rows){
         pf:PF_SET.map(([lbl,col])=>[lbl,row[col]]),
         neutral:/^yes$/i.test(String(row['Neutral']||'').trim()),
         variants:{}, _q:String(player).toLowerCase(), _matchupAb:abbrMatchup(row[F.matchup])};
-      g.slateMap=parseSlateRost(row[F.slateRost]); g._slates=new Set(Object.keys(g.slateMap));
+      g.slateMap=parseSlateRost(row[F.slateRost]); if(!Object.keys(g.slateMap).length&&String(row[F.rostership]||'').includes(':'))g.slateMap=parseSlateRost(row[F.rostership]); g._slates=new Set(Object.keys(g.slateMap));
       if(isBat){
         g.sp=row['Starter'];
         g.bpNL=row['Bullpen L Count']; g.bpNR=row['Bullpen R Count'];
@@ -576,6 +597,7 @@ function applyFilters(){
   const pjMin=filters.projMin!==''?parseFloat(filters.projMin):null;
   const vMin=filters.valMin!==''?parseFloat(filters.valMin):null;
   const gMin=filters.gMin!==''?parseInt(filters.gMin,10):null;
+  const roMin=filters.rostMin!==''?parseFloat(filters.rostMin):null, roMax=filters.rostMax!==''?parseFloat(filters.rostMax):null;
   const av=g=>keyVar(g,sortMode);
   VIEW=SORTED.filter(g=>{
     if(s&&!g._q.includes(s))return false;
@@ -585,6 +607,7 @@ function applyFilters(){
     if(filters.hand.has(g.hand))return false;
     if(prMin!=null&&(g.price==null||g.price<prMin))return false;
     if(prMax!=null&&(g.price==null||g.price>prMax))return false;
+    if(roMin!=null||roMax!=null){const ro=rostNum(g);if(isNaN(ro))return false;if(roMin!=null&&ro<roMin)return false;if(roMax!=null&&ro>roMax)return false;}
     if(pjMin!=null){const p=projPts(g);if(p==null||p<pjMin)return false;}
     if(vMin!=null){const r=projValue(g);if(r==null||r<vMin)return false;}
     if(gMin!=null){const gp=Number(g.gp);if(!isFinite(gp)||gp<gMin)return false;}
@@ -593,7 +616,7 @@ function applyFilters(){
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
   if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching players</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=(filters.team.size?1:0)+(filters.pos.size?1:0)+(filters.hand.size?1:0)+['prMin','prMax','projMin','valMin','gMin'].filter(k=>filters[k]!=='').length;
+  const active=(filters.team.size?1:0)+(filters.pos.size?1:0)+(filters.hand.size?1:0)+['prMin','prMax','rostMin','rostMax','projMin','valMin','gMin'].filter(k=>filters[k]!=='').length;
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
