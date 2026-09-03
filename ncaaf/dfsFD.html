@@ -268,7 +268,8 @@ function fieldMap(){
     projection:`${BOOK} Projection`, gp:'Player Games Played', minutes:'Minutes',
     matchup:'Matchup', spread:'Matchup Spread', total:'Matchup Total', moneyline:'Matchup Moneyline',
     pace:'Opp Pace', lineup:'Lineup Status',
-    oppDfsAllowed:`Opp ${BOOK} Pts Allowed`, oppDfsRank:`Opp ${BOOK} Pts Rank`, gameTime:'Game Time'
+    oppDfsAllowed:`Opp ${BOOK} Pts Allowed`, oppDfsRank:`Opp ${BOOK} Pts Rank`, gameTime:'Game Time',
+    stadium:'Stadium', dome:'Dome', wx1:'Weather 1', wx2:'Weather 2', wx3:'Weather 3', wx4:'Weather 4'
   };
 }
 
@@ -445,6 +446,7 @@ function buildGroups(rows){
       g={key:player, player, team:abbrTeam(row[F.team]), opp:abbrTeam(row[F.opponent]), pos:row[F.pos], price:num(row[F.price]),
         rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
         matchup:row[F.matchup], spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], pace:row[F.pace],
+        stadium:row[F.stadium], dome:row[F.dome], wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(w=>w!=null&&String(w).trim()!==''),
         variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
       g.slateMap=parseSlateRost(row[F.slateRost]); g._slates=new Set(Object.keys(g.slateMap));
       map.set(player,g);
@@ -615,7 +617,11 @@ function detailHTML(g){
     ${oppPanel}
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${g.spread!=null&&g.spread!==''?esc(g.team+' '+(parseFloat(g.spread)>0?'+':'')+g.spread):'–'}</span>
-        <span class="k">Total</span><span class="v">${g.total!=null&&g.total!==''?esc('O/U '+g.total):'–'}</span></div>
+        <span class="k">Total</span><span class="v">${g.total!=null&&g.total!==''?esc('O/U '+g.total):'–'}</span>
+        <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}${/retract/i.test(String(g.dome))?' (Retractable)':(/^(dome|yes)$/i.test(String(g.dome||'').trim())?' (Dome)':'')}</span></div>
+      ${/^(dome|yes)$/i.test(String(g.dome||'').trim())||String((g.wx&&g.wx[0])||'')==='Dome'
+        ? `<div class="wx"><div>No Weather Data — Game Played in Dome</div></div>`
+        : (g.wx&&g.wx.length?`<div class="wx">${g.wx.map(w=>`<div>${esc(capWx(w))}</div>`).join('')}</div>`:`<div class="wx"><div style="color:var(--muted-2)">No forecast yet</div></div>`)}
     </div>
     <div class="panel"><div class="panel-h">Playing time</div>
       <div class="kv"><span class="k">Games played</span><span class="v">${raw(g.gp)}</span></div>
