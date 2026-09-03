@@ -569,8 +569,9 @@ function detailHTML(c){
   const defNote=locMode==='loc'?(c.isHome?'away games':'home games'):'all games';
   const defPanel=`<div class="panel"><div class="panel-h">${esc(c.oppFull||c.opp)} defense — allowed / game (rank)</div>${defCell?defenseTable(defCell):'<div class="note-sm">No defensive data for this split.</div>'}<div class="note-sm">${perLbl} · ${defNote} · rank 1 = fewest allowed.</div></div>`;
   const domeYes=/^yes$/i.test(String(c.dome||'').trim())||String(c.wx[0]||'')==='Dome';
+  const titleCaseWx=w=>{const parts=String(w).split('|');if(parts.length)parts[parts.length-1]=parts[parts.length-1].replace(/\b\w/g,c=>c.toUpperCase());return parts.map(x=>String(x).trim()).join(' | ');};
   const wxBody=domeYes?`<div class="wx"><div>No Weather Data — Game Played in Dome</div></div>`
-    :(c.wx.length?`<div class="wx">${c.wx.map(w=>`<div>${esc(String(w).split('|').map(x=>String(x).trim()).join(' | '))}</div>`).join('')}</div>`:`<div class="wx"><div style="color:var(--muted-2)">No forecast yet</div></div>`);
+    :(c.wx.length?`<div class="wx">${c.wx.map(w=>`<div>${esc(titleCaseWx(w))}</div>`).join('')}</div>`:`<div class="wx"><div style="color:var(--muted-2)">No forecast yet</div></div>`);
   const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Spread</span><span class="v">${esc(teamSpread(c))}</span><span class="k">Total</span><span class="v">${c.total!=null?esc('O/U '+fmt1(c.total)):'\u2013'}</span><span class="k">Stadium</span><span class="v">${esc(c.stadium||'\u2013')}${/retract/i.test(String(c.dome))?' (Retractable)':(domeYes?' (Dome)':'')}${c.neutral?' · Neutral':''}</span></div>${wxBody}</div>`;
   return groupPanels+npPanel+defPanel+envPanel;
 }
