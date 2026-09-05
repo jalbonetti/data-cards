@@ -616,8 +616,8 @@ function detailHTML(g){
     ${prodPanel}
     ${oppPanel}
     <div class="panel"><div class="panel-h">Game environment</div>
-      <div class="kv"><span class="k">Spread</span><span class="v">${g.spread!=null&&g.spread!==''?esc(g.team+' '+(parseFloat(g.spread)>0?'+':'')+g.spread):'–'}</span>
-        <span class="k">Total</span><span class="v">${g.total!=null&&g.total!==''?esc('O/U '+g.total):'–'}</span>
+      <div class="kv"><span class="k">Spread</span><span class="v">${(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':esc(g.team+' '+(n>0?'+':'')+n.toFixed(1));})()}</span>
+        <span class="k">Total</span><span class="v">${(function(){const n=parseFloat(g.total);return isNaN(n)?'–':esc('O/U '+n.toFixed(1));})()}</span>
         <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}${/retract/i.test(String(g.dome))?' (Retractable)':(/^(dome|yes)$/i.test(String(g.dome||'').trim())?' (Dome)':'')}</span></div>
       ${/^(dome|yes)$/i.test(String(g.dome||'').trim())||String((g.wx&&g.wx[0])||'')==='Dome'
         ? `<div class="wx"><div>No Weather Data — Game Played in Dome</div></div>`
