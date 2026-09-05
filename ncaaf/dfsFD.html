@@ -503,9 +503,10 @@ function recomputeProd(){
 
 /* ---------- Filters / sort ---------- */
 function uniq(getter){return [...new Set(GROUPS.map(getter).filter(v=>v!=null&&v!==''))];}
+function slateTeams(){const src=currentSlate?GROUPS.filter(g=>g._slates&&g._slates.has(currentSlate)):GROUPS;return [...new Set(src.map(g=>g.team).filter(v=>v!=null&&v!==''))].sort();}
 function populateFilters(){
   populateSlates();
-  MS.team.setOptions(uniq(g=>g.team).sort());
+  MS.team.setOptions(slateTeams());
   POS_ACTIVE=POS_SLOTS; MS.pos.setOptions(POS_SLOTS.map(x=>x[0]));   // NCAAF: single player pool, all positions always available
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=filters[k]||'';});
   els.search.value=filters.search||'';
@@ -650,7 +651,7 @@ els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.
 document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;saveFilters();applyFilters();});});
 els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=newFilters();filters.search=sv;document.querySelectorAll('input[data-filter]').forEach(el=>el.value='');Object.values(MS).forEach(c=>c.setOptions(c.options));saveFilters();applyFilters();});
 els.sortSel.addEventListener('change',e=>setSort(e.target.value));
-if(els.slateSel) els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;applyFilters();});
+if(els.slateSel) els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;MS.team.setOptions(slateTeams());MS.team.syncLabel();saveFilters();applySort();});
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
 els.owSel.addEventListener('change',e=>{dispWS=e.target.value;applySort();});
 els.basisSel.addEventListener('change',e=>{valBasis=e.target.value;applySort();});
