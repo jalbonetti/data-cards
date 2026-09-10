@@ -604,7 +604,7 @@ function detailHTML(g){
   const v=activeVar(g)||g._season;
   // Player's own DFS-point distribution for the active window/split
   const distRow=v?`<table class="mini"><thead><tr><th></th><th>Median</th><th>Avg</th><th>High</th><th>Low</th><th>Mode</th></tr></thead>
-      <tbody><tr><td class="rl">${esc(BOOK)} pts</td><td>${fmtStat(v.med)}</td><td>${fmtStat(v.avg)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td>${raw(v.mode)}</td></tr></tbody></table>`:'';
+      <tbody><tr><td class="rl">${esc(BOOK)} pts</td><td>${fmtStat(v.med)}</td><td>${fmtStat(v.avg)}</td><td>${fmtStat(v.high)}</td><td>${fmtStat(v.low)}</td><td>${fmtStat(v.mode)}</td></tr></tbody></table>`:'';
   const prodPanel=`<div class="panel"><div class="panel-h">${esc(BOOK)} production — ${perLbl}${splitLbl}</div>${distRow}</div>`;
   // Opposing defense: DFS points allowed + component stats allowed (location-matched)
   const dfsLine=v&&v.oppDfs!=null?`${fmtStat(v.oppDfs)}${v.oppDfsRank!=null?` <span style="color:var(--muted-2)">(#${v.oppDfsRank})</span>`:''}`:'–';
