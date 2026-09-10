@@ -191,6 +191,7 @@
     <div class="filters" id="filters">
       <div class="filters-grid">
         <div class="fg"><label>Game Day</label><div class="ms" data-ms="day"></div></div>
+        <div class="fg"><label>Matchup</label><div class="ms" data-ms="matchup"></div></div>
         <div class="fg"><label>Team</label><div class="ms" data-ms="team"></div></div>
         <div class="fg"><label>Prop</label><div class="ms" data-ms="prop"></div></div>
         <div class="fg"><label>Line</label><div class="ms" data-ms="line"></div></div>
@@ -257,8 +258,8 @@ const F = {player:'Player',team:'Team',opponent:'Opponent',prop:'Prop',line:'Lin
 let GROUPS = [], SORTED = [], VIEW = [], rendered = 0;
 const GMAP = new Map();
 let sortMode = 'clr:Full Season|All', sortDir = 'desc';
-const CAT=['day','team','prop','line','role'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
-function newFilters(){return {search:'',day:new Set(),team:new Set(),prop:new Set(),line:new Set(),role:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
+const CAT=['day','matchup','team','prop','line','role'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
+function newFilters(){return {search:'',day:new Set(),matchup:new Set(),team:new Set(),prop:new Set(),line:new Set(),role:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
 let filters = newFilters();
 const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill')};
 
@@ -414,6 +415,7 @@ function buildMS(container,key){
 }
 loadFilters();
 buildMS(document.querySelector('.ms[data-ms="day"]'),'day');
+buildMS(document.querySelector('.ms[data-ms="matchup"]'),'matchup');
 buildMS(document.querySelector('.ms[data-ms="team"]'),'team');
 buildMS(document.querySelector('.ms[data-ms="prop"]'),'prop');
 buildMS(document.querySelector('.ms[data-ms="line"]'),'line');
@@ -422,6 +424,7 @@ document.addEventListener('click',closeAllMS);
 
 function populateFilters(){
   MS.day.setOptions(uniq(g=>g.dayKey).sort().map(k=>[k,dayLabelOf(k)]));
+  MS.matchup.setOptions(uniq(g=>g._matchupAb).sort());
   {const t=uniq(g=>g.team).sort().map(v=>[v,v]); if(GROUPS.some(g=>!g.team)) t.push(['','(No team)']); MS.team.setOptions(t);}
   MS.prop.setOptions(orderProps(uniq(g=>g.prop)).map(v=>[v,abbrProp(v)]));
   MS.line.setOptions(uniq(g=>g.line).sort((a,b)=>a-b).map(v=>[String(v),String(v)]));
@@ -456,6 +459,7 @@ function applyFilters(){
   VIEW=SORTED.filter(g=>{
     if(s&&!g._q.includes(s))return false;
     if(g.dayKey&&filters.day.has(g.dayKey))return false;
+    if(filters.matchup.size&&filters.matchup.has(g._matchupAb))return false;
     if(filters.team.has(g.team))return false;
     if(filters.prop.has(g.prop))return false;
     if(filters.line.has(String(g.line)))return false;
@@ -473,7 +477,7 @@ function applyFilters(){
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
   if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching props</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.role.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
+  const active=(filters.matchup.size?1:0)+(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.role.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
