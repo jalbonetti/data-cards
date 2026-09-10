@@ -369,6 +369,7 @@ const raw = v=>{if(v==null)return '–';const s=String(v).trim();return s===''?'
 const fmtAvg = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};                 // projection pts (1 dp)
 const fmt2 = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(2);};                   // ERA (2 dp)
 const fmtRatio = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(2);};               // value ratio
+const fmtStat = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};                // component stats (yards, receptions, TDs): forced 1 dp
 /* averages: truncate (not round) to 3 places, force 3, MLB no-leading-zero (.308, .200, .000) */
 const fmtAvg3 = v=>{const n=parseFloat(v);if(isNaN(n))return '–';const sign=n<0?'-':'';const t=(Math.trunc(Math.abs(n)*1000)/1000).toFixed(3);return (sign+t).replace(/^(-?)0\./,'$1.');};
 /* innings: keep baseball thirds notation but always show a decimal place (47 -> 47.0) */
@@ -655,13 +656,13 @@ function detailHTML(g){
   const v=activeVar(g)||g._season;
   // Player's own DFS-point distribution for the active window/split
   const distRow=v?`<table class="mini"><thead><tr><th></th><th>Median</th><th>Avg</th><th>High</th><th>Low</th><th>Mode</th></tr></thead>
-      <tbody><tr><td class="rl">${esc(BOOK)} pts</td><td>${fmtRatio(v.med)}</td><td>${fmtRatio(v.avg)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td>${raw(v.mode)}</td></tr></tbody></table>`:'';
+      <tbody><tr><td class="rl">${esc(BOOK)} pts</td><td>${fmtStat(v.med)}</td><td>${fmtStat(v.avg)}</td><td>${raw(v.high)}</td><td>${raw(v.low)}</td><td>${raw(v.mode)}</td></tr></tbody></table>`:'';
   const prodPanel=`<div class="panel"><div class="panel-h">${esc(BOOK)} production — ${perLbl}${splitLbl}</div>${distRow}</div>`;
   // Opposing defense: DFS points allowed + component stats allowed (location-matched)
-  const dfsLine=v&&v.oppDfs!=null?`${fmtRatio(v.oppDfs)}${v.oppDfsRank!=null?` <span style="color:var(--muted-2)">(#${v.oppDfsRank})</span>`:''}`:'–';
+  const dfsLine=v&&v.oppDfs!=null?`${fmtStat(v.oppDfs)}${v.oppDfsRank!=null?` <span style="color:var(--muted-2)">(#${v.oppDfsRank})</span>`:''}`:'–';
   const defCells=SET_OPP_DEF.map(([lbl,col])=>{
     const pair=v&&v.def?v.def[col]:null;
-    const val=pair&&pair[0]!=null?fmtRatio(pair[0]):'–';
+    const val=pair&&pair[0]!=null?fmtStat(pair[0]):'–';
     const rk=pair&&pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:'';
     return `<td>${val}${rk}</td>`;
   }).join('');
