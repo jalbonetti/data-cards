@@ -208,6 +208,7 @@
 
     <div class="filters" id="filters">
       <div class="filters-grid">
+        <div class="fg"><label>Matchup</label><div class="ms" data-ms="matchup"></div></div>
         <div class="fg"><label>Team</label><div class="ms" data-ms="team"></div></div>
         <div class="fg"><label>Position</label><div class="ms" data-ms="pos"></div></div>
         <div class="fg"><label>Price</label>
@@ -278,8 +279,8 @@ let GROUPS = [], SORTED = [], VIEW = [], rendered = 0, bootSeq = 0;
 const GMAP = new Map();
 let sortMode = 'proj:pts', sortDir = 'desc';
 let dispWS = 'Full Season|All';   // window|split for the in-card stats + split-square context
-const CAT=['team','pos'], NUM=['prMin','prMax','projMin','valMin','gMin'];
-function newFilters(){return {search:'',team:new Set(),pos:new Set(),prMin:'',prMax:'',projMin:'',valMin:'',gMin:''};}
+const CAT=['matchup','team','pos'], NUM=['prMin','prMax','projMin','valMin','gMin'];
+function newFilters(){return {search:'',matchup:new Set(),team:new Set(),pos:new Set(),prMin:'',prMax:'',projMin:'',valMin:'',gMin:''};}
 let filters = newFilters();
 const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill'),owSel:document.getElementById('owSel'),basisSel:document.getElementById('basisSel'),titleText:document.getElementById('titleText'),slateSel:document.getElementById('slateSel')};
 /* ---------- Slate ownership (Phase 1c) ---------- */
@@ -350,6 +351,7 @@ function buildMS(container,key){
   MS[key]=ctrl; return ctrl;
 }
 loadFilters();
+buildMS(document.querySelector('.ms[data-ms="matchup"]'),'matchup');
 buildMS(document.querySelector('.ms[data-ms="team"]'),'team');
 buildMS(document.querySelector('.ms[data-ms="pos"]'),'pos');
 document.addEventListener('click',closeAllMS);
@@ -445,7 +447,7 @@ function buildGroups(rows){
     if(!g){
       g={key:player, player, team:abbrTeam(row[F.team]), opp:abbrTeam(row[F.opponent]), pos:row[F.pos], price:num(row[F.price]),
         rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
-        matchup:row[F.matchup], spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], pace:row[F.pace],
+        matchup:row[F.matchup], _matchupAb:abbrMatchup(row[F.matchup]||''), spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], pace:row[F.pace],
         stadium:row[F.stadium], dome:row[F.dome], wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(w=>w!=null&&String(w).trim()!==''),
         variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
       g.slateMap=parseSlateRost(row[F.slateRost]); g._slates=new Set(Object.keys(g.slateMap));
@@ -503,9 +505,11 @@ function recomputeProd(){
 
 /* ---------- Filters / sort ---------- */
 function uniq(getter){return [...new Set(GROUPS.map(getter).filter(v=>v!=null&&v!==''))];}
+function slateMatchups(){const src=currentSlate?GROUPS.filter(g=>g._slates&&g._slates.has(currentSlate)):GROUPS;return [...new Set(src.map(g=>g._matchupAb).filter(v=>v!=null&&v!==''))].sort();}
 function slateTeams(){const src=currentSlate?GROUPS.filter(g=>g._slates&&g._slates.has(currentSlate)):GROUPS;return [...new Set(src.map(g=>g.team).filter(v=>v!=null&&v!==''))].sort();}
 function populateFilters(){
   populateSlates();
+  MS.matchup.setOptions(slateMatchups());
   MS.team.setOptions(slateTeams());
   POS_ACTIVE=POS_SLOTS; MS.pos.setOptions(POS_SLOTS.map(x=>x[0]));   // NCAAF: single player pool, all positions always available
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=filters[k]||'';});
@@ -533,6 +537,7 @@ function applyFilters(){
   VIEW=SORTED.filter(g=>{
     if(s&&!g._q.includes(s))return false;
     if(currentSlate&&!(g._slates&&g._slates.has(currentSlate)))return false;
+    if(filters.matchup.size&&filters.matchup.has(g._matchupAb))return false;
     if(filters.team.has(g.team))return false;
     if(!posMatch(g))return false;
     if(prMin!=null&&(g.price==null||g.price<prMin))return false;
@@ -545,7 +550,7 @@ function applyFilters(){
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
   if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching players</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=(filters.team.size?1:0)+(filters.pos.size?1:0)+['prMin','prMax','projMin','valMin','gMin'].filter(k=>filters[k]!=='').length;
+  const active=(filters.matchup.size?1:0)+(filters.team.size?1:0)+(filters.pos.size?1:0)+['prMin','prMax','projMin','valMin','gMin'].filter(k=>filters[k]!=='').length;
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
@@ -651,7 +656,7 @@ els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.
 document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;saveFilters();applyFilters();});});
 els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=newFilters();filters.search=sv;document.querySelectorAll('input[data-filter]').forEach(el=>el.value='');Object.values(MS).forEach(c=>c.setOptions(c.options));saveFilters();applyFilters();});
 els.sortSel.addEventListener('change',e=>setSort(e.target.value));
-if(els.slateSel) els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;MS.team.setOptions(slateTeams());MS.team.syncLabel();saveFilters();applySort();});
+if(els.slateSel) els.slateSel.addEventListener('change',e=>{currentSlate=e.target.value;MS.matchup.setOptions(slateMatchups());MS.matchup.syncLabel();MS.team.setOptions(slateTeams());MS.team.syncLabel();saveFilters();applySort();});
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
 els.owSel.addEventListener('change',e=>{dispWS=e.target.value;applySort();});
 els.basisSel.addEventListener('change',e=>{valBasis=e.target.value;applySort();});
