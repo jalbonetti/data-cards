@@ -218,6 +218,7 @@ const GROUP_COLS = {
   Kicking:   [['FG','Field Goals'],['FGA','Field Goal Attempts'],['PAT','Points After Touchdown'],['Pts','Kicking Points']],
 };
 const GROUP_ORDER = ['Passing','Rushing','Receiving','Kicking'];
+const GROUP_SORT_STAT = { Passing:'Pass Yards', Rushing:'Rush Yards', Receiving:'Reception Yards', Kicking:'Kicking Points' };
 const ALL_STATS = [...new Set(Object.values(GROUP_COLS).flatMap(cols=>cols.map(c=>c[1])))];
   // Defense panel stat set — [display, column base]; value col = base + ' Allowed' except the pre-suffixed ones.
   const DEF_STATS = [['Pts','Points Allowed'],['TDs','Touchdowns'],['Pass Yds','Pass Yards'],['Pass Yds (QB)','Pass Yards (QB)'],['Pass TD','Pass Touchdowns'],['Rush Yds','Rush Yards'],['Rush Yds (RB)','Rush Yards (RB)'],['Rush Yds (QB)','Rush Yards (QB)'],['Car','Rush Attempts'],['Rush TD','Rush Touchdowns'],['Rec','Receptions'],['Rec (WR)','Receptions (WR)'],['Rec (TE)','Receptions (TE)'],['Rec (RB)','Receptions (RB)'],['Rec Yds','Reception Yards'],['Rec Yds (WR)','Reception Yards (WR)'],['Rec Yds (TE)','Reception Yards (TE)'],['Rec Yds (RB)','Reception Yards (RB)'],['Rec TD','Reception Touchdowns'],['FG','Field Goals'],['Kick Pts','Kicking Points'],['DST','DST Points']];
@@ -553,7 +554,10 @@ function detailHTML(c){
   const splitNote=`${perLbl} · ${locLbl}`;
   let groupPanels='';
   for(const grp of GROUP_ORDER){
-    const members=c.active.filter(p=>p.primary===grp);
+    const sortStat=GROUP_SORT_STAT[grp];
+    const sortVal=p=>{const cell=getCell(p.combos,c.loc);const v=cell&&cell.stats[sortStat]?parseFloat(cell.stats[sortStat].tot):NaN;return isNaN(v)?0:v;};
+    const members=c.active.filter(p=>p.primary===grp)
+      .sort((a,b)=>{const d=sortVal(b)-sortVal(a);if(d!==0)return d;return String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base'});});
     if(!members.length) continue;
     groupPanels+=`<div class="panel"><div class="panel-h">${esc(grp)}</div>${playerTable(members,c.loc,grp)}<div class="note-sm">${esc(splitNote)} · totals shown; tap a player for Avg / Median / High / Low and their other stat groups.</div></div>`;
   }
