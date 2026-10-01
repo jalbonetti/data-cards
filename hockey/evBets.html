@@ -307,9 +307,9 @@ const MODES = {
     table: "HockeyPlayerPropOdds",
     prefix: "Player",
     propAbbr: {
-      'Goals':'G','Assists':'A','Points':'PTS','Shots on Goal':'SOG',
-      'Blocked Shots':'BLK','Power Play Points':'PPP','Saves':'SV',
-      'Anytime Goal Scorer':'ATGS','First Goal Scorer':'FGS','Last Goal Scorer':'LGS'
+      'Goals':'Goals','Assists':'Assists','Points':'Points','Shots on Goal':'SOG',
+      'Blocked Shots':'Blocked Shots','Power Play Points':'PP Points','Saves':'Saves',
+      'Anytime Goal Scorer':'Anytime Goal','First Goal Scorer':'First Goal','Last Goal Scorer':'Last Goal'
     }
   },
   game: {
@@ -578,7 +578,7 @@ function uniqueSorted(key){ return [...new Set(RAW.map(r=>r[key]).filter(v=>v!=n
 function splitBooks(v){ return String(v==null?'':v).split('/').map(x=>x.trim()).filter(Boolean); }
 function uniqueBooksSorted(key){ const s=new Set(); RAW.forEach(r=>splitBooks(r[key]).forEach(b=>s.add(b))); return [...s].sort(); }
 
-const PROP_ORDER = ['Goals','Assists','Points','Shots on Goal','Power Play Points','Blocked Shots','Anytime Goal Scorer','First Goal Scorer','Last Goal Scorer','Saves'];
+const PROP_ORDER = ['Goals','Assists','Points','Shots on Goal','Power Play Points','Blocked Shots','First Goal Scorer','Last Goal Scorer','Anytime Goal Scorer','Saves'];
 function orderProps(vals){const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});}
 /* ---------- Filters: in-memory per-mode persistence + multi-select (#9/#10) ---------- */
 const MODE_FILTERS={};   /* in-memory only: persist across tab/mode switches within a page load, reset on a real (re)load */
