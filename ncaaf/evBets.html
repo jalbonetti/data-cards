@@ -373,6 +373,10 @@ const sort = { field:'ev', dir:'desc' };
 
 /* ---------- Helpers ---------- */
 const num = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+/* Percent cells arrive two ways: "3.86%" strings (Cloud Function pivots write RAW) or bare
+   fractions like 0.0386 (the old Apps Script path, where Sheets coerced the % string). A
+   string carrying '%' is already in percent units; anything else is a fraction -> x100. */
+const pctNum = (v) => { const n = num(v); if (n == null) return null; return (typeof v === 'string' && v.includes('%')) ? n : n * 100; };
 const oddsInt = (v) => { if (v==null||v===''||v==='-') return null; const n=parseInt(String(v).replace('+',''),10); return isNaN(n)?null:n; };
 const fmtOdds = (n) => n==null ? '–' : (n>0 ? '+'+n : ''+n);
 const fmtPct = (n) => n==null ? '–' : n.toFixed(1)+'%';
@@ -543,10 +547,10 @@ function normalize(rows) {
       book: row[F.book],
       bookOdds: oddsInt(row[F.bookOdds]), medianOdds: oddsInt(row[F.medianOdds]),
       bestOdds: oddsInt(row[F.bestOdds]), bestBooks: row[F.bestBooks],
-      // Game-odds EV/Kelly arrive as fractions (the .gs writes "3.20%" strings, which Sheets
-      // coerces to 0.032); prop-odds arrive as percentages from the CF. Normalize game rows x100.
-      ev: (()=>{const n=num(row[F.ev]);return n==null?null:(isGame?n*100:n);})(),
-      kelly: (()=>{const n=num(row[F.kelly]);return n==null?null:(isGame?n*100:n);})(),
+      // Prop pivots write "5.12%" strings; game pivots wrote fractions under Apps Script and
+      // "3.86%" strings since the Cloud port. pctNum() handles both by inspecting the cell.
+      ev: isGame ? pctNum(row[F.ev]) : num(row[F.ev]),
+      kelly: isGame ? pctNum(row[F.kelly]) : num(row[F.kelly]),
       link: (link && /^https?:\/\//i.test(link)) ? link : null,
       gameTime: row[F.gameTime],
       /* Precomputed once so filter/sort/render passes don't redo string work */
