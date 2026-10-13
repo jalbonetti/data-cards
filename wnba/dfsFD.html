@@ -469,7 +469,7 @@ function buildGroups(rows){
 function cellVar(g,period,sp){if(sp==='loc'){if(!g.location)return null;return g.variants[`${period}|${g.location}`]||null;}return g.variants[`${period}|${sp}`]||null;}
 function keyVar(g,key){const [period,sp]=key.split('|');return cellVar(g,period,sp);}
 function activeVar(g){const [period,sp]=dispWS.split('|');return cellVar(g,period,sp)||g.variants[`${period}|All`]||g._season;}
-const ratioOf=v=>v?(valBasis==='high'?v.ratioHigh:v.ratio):null;   // value ratio for active basis
+const ratioOf=v=>v?(valBasis==='high'?v.ratioHigh:v.ratioMed):null;   // value ratio for active basis
 const projOf =v=>v?(valBasis==='high'?v.high:v.med):null;          // historical median/high (raw)
 const projPts = g=>{const p=(g.projection===''||g.projection==null)?null:Number(g.projection);return (p==null||isNaN(p))?null:p;};   // market projection (pts)
 const projValue = g=>{const p=projPts(g),pr=Number(g.price);return (p!=null&&pr>0)?p/(pr/1000):null;};                                 // projection value (pts per $1k)
@@ -669,18 +669,14 @@ function setProg(loaded,total){if(!els.loadpill)return;els.loadpill.hidden=false
 function setProgDone(){if(els.loadpill)els.loadpill.hidden=true;}
 function ingest(rows){GROUPS=buildGroups(rows);populateFilters();applySort();}
 /* count-only probe used to confirm the table isn't mid-upload */
-async function countOnly(){return null;}   // no COUNT probe — cache freshness handled by TTL
-/* Load the full table, retrying if we catch it mid-upload (count unstable / rows != count). */
+/* Load the full table. fetchAll paginates until a short page, so one pass IS a complete read —
+   no COUNT probe. (The old countOnly stub returned null, which never satisfied the
+   after===total check: every load ran four full fetches and nothing was ever cached.)
+   One cheap retry on an empty read, which can mean we landed mid delete+insert. */
 async function fetchVerified(cb){
-  const TRIES=4; let last=[];
-  for(let t=0;t<TRIES;t++){
-    const {rows,total,url}=await fetchAll(t===0?cb:null);
-    last=rows;
-    const after=await countOnly(url);
-    if(total!=null && rows.length===total && after===total) return {rows, complete:true};
-    await new Promise(r=>setTimeout(r, 400*(t+1)));
-  }
-  return {rows:last, complete:false};
+  let {rows}=await fetchAll(cb);
+  if(rows.length===0){ await new Promise(r=>setTimeout(r,500)); rows=(await fetchAll(null)).rows; }
+  return {rows, complete:true};
 }
 async function boot(){
   const seq=++bootSeq;
