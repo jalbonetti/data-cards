@@ -194,7 +194,6 @@
         <div class="fg"><label>Team</label><div class="ms" data-ms="team"></div></div>
         <div class="fg"><label>Prop</label><div class="ms" data-ms="prop"></div></div>
         <div class="fg"><label>Line</label><div class="ms" data-ms="line"></div></div>
-        <div class="fg"><label>Position</label><div class="ms" data-ms="position"></div></div>
         <div class="fg"><label>Role</label><div class="ms" data-ms="role"></div></div>
         <div class="fg"><label>Min games (season)</label><input type="number" data-filter="gMin" inputmode="numeric" value="0" /></div>
         <div class="fg"><label>Min clearance %</label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
@@ -257,8 +256,8 @@ let GROUPS = [], SORTED = [], VIEW = [], rendered = 0;
 const GMAP = new Map();
 let sortMode = 'clr:Full Season|All', sortDir = 'desc';
 let mode = 'skaters';   // skaters | goalies — one table, Position column decides
-const CAT=['matchup','team','prop','line','position','role'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
-function newFilters(){return {search:'',matchup:new Set(),team:new Set(),prop:new Set(),line:new Set(),position:new Set(),role:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
+const CAT=['matchup','team','prop','line','role'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
+function newFilters(){return {search:'',matchup:new Set(),team:new Set(),prop:new Set(),line:new Set(),role:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
 let filters = newFilters();
 const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill')};
 
@@ -414,7 +413,6 @@ buildMS(document.querySelector('.ms[data-ms="matchup"]'),'matchup');
 buildMS(document.querySelector('.ms[data-ms="team"]'),'team');
 buildMS(document.querySelector('.ms[data-ms="prop"]'),'prop');
 buildMS(document.querySelector('.ms[data-ms="line"]'),'line');
-buildMS(document.querySelector('.ms[data-ms="position"]'),'position');
 buildMS(document.querySelector('.ms[data-ms="role"]'),'role');
 document.addEventListener('click',closeAllMS);
 
@@ -425,8 +423,6 @@ function populateFilters(){
   MS.line.setOptions(uniq(g=>g.line).sort((a,b)=>a-b).map(v=>[String(v),String(v)]));
   const inMode=GROUPS.filter(g=>(mode==='goalies')===!!g.isGoalie);
   const uniqM=getter=>[...new Set(inMode.map(getter).filter(v=>v!=null&&v!==''))];
-  const POS_ORDER=['C','W','D','G'];
-  MS.position.setOptions(uniqM(g=>g.position).sort((a,b)=>POS_ORDER.indexOf(a)-POS_ORDER.indexOf(b)));
   MS.role.setOptions(uniqM(g=>g.role).filter(v=>v&&v!=='All'&&v!=='Skater').sort());
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=(filters[k]!=null)?filters[k]:'';});
   els.search.value=filters.search||'';
@@ -462,7 +458,6 @@ function applyFilters(){
     if(filters.team.has(g.team))return false;
     if(filters.prop.has(g.prop))return false;
     if(filters.line.has(String(g.line)))return false;
-    if(filters.position.has(g.position))return false;
     if(filters.role.has(g.role))return false;
     if(gMin!=null){const sv=cellVar(g,'Full Season','All');if(!sv||sv.gTotal==null||sv.gTotal<gMin)return false;}
     if(cMin!=null){const c=activeClr(g);if(c==null||c<cMin)return false;}
@@ -477,7 +472,7 @@ function applyFilters(){
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
   if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching props</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=(filters.matchup.size?1:0)+(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.position.size?1:0)+(filters.role.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
+  const active=(filters.matchup.size?1:0)+(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.role.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
@@ -574,7 +569,7 @@ els.filterToggle.addEventListener('click',()=>{const open=els.filters.classList.
 document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter');el.addEventListener('input',()=>{filters[k]=el.value;saveFilters();applyFilters();});});
 els.clearFilters.addEventListener('click',()=>{const sv=filters.search;filters=newFilters();filters.search=sv;document.querySelectorAll('input[data-filter]').forEach(el=>{el.value=el.getAttribute('data-filter')==='gMin'?'0':'';});Object.values(MS).forEach(c=>c.setOptions(c.options));saveFilters();applyFilters();});
 els.sortSel.addEventListener('change',e=>setSort(e.target.value));
-document.getElementById('modeTg').addEventListener('click',e=>{const b=e.target.closest('button[data-mode]');if(!b||b.dataset.mode===mode)return;mode=b.dataset.mode;document.querySelectorAll('#modeTg button').forEach(x=>x.classList.toggle('t-on',x===b));filters.prop.clear();filters.position.clear();filters.role.clear();populateFilters();applyFilters();window.scrollTo({top:0,behavior:'smooth'});});
+document.getElementById('modeTg').addEventListener('click',e=>{const b=e.target.closest('button[data-mode]');if(!b||b.dataset.mode===mode)return;mode=b.dataset.mode;document.querySelectorAll('#modeTg button').forEach(x=>x.classList.toggle('t-on',x===b));filters.prop.clear();filters.role.clear();populateFilters();applyFilters();window.scrollTo({top:0,behavior:'smooth'});});
 els.sortDir.addEventListener('click',()=>{sortDir=sortDir==='asc'?'desc':'asc';els.sortDir.textContent=sortDir==='asc'?'▲':'▼';applySort();});
 
 /* ---------- Cache (Cache API) ---------- */
