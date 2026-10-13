@@ -742,18 +742,14 @@ function setProg(loaded,total){if(!els.loadpill)return;els.loadpill.hidden=false
 function setProgDone(){if(els.loadpill)els.loadpill.hidden=true;}
 function ingest(rows){GROUPS=buildGroups(rows);populateFilters();applySort();}
 /* count-only probe used to confirm the table isn't mid-upload */
-async function countOnly(){return null;}   // no COUNT probe — cache freshness handled by TTL
-/* Load the full table, retrying if we catch it mid-upload (count unstable / rows != count). */
+/* Load the full table. fetchAll paginates until a short page, so one pass IS a complete read —
+   no COUNT probe. (The old countOnly stub returned null, which never satisfied the
+   after===total check: every load ran four full fetches and nothing was ever cached.)
+   One cheap retry on an empty read, which can mean we landed mid delete+insert. */
 async function fetchVerified(cb){
-  const TRIES=4; let last=[];
-  for(let t=0;t<TRIES;t++){
-    const {rows,total,url}=await fetchAll(t===0?cb:null);
-    last=rows;
-    const after=await countOnly(url);
-    if(total!=null && rows.length===total && after===total) return {rows, complete:true};
-    await new Promise(r=>setTimeout(r, 400*(t+1)));
-  }
-  return {rows:last, complete:false};
+  let {rows}=await fetchAll(cb);
+  if(rows.length===0){ await new Promise(r=>setTimeout(r,500)); rows=(await fetchAll(null)).rows; }
+  return {rows, complete:true};
 }
 /* Upfront slate census -- fetch only the player+slate columns for the whole
    table so the default slate (largest player pool) is known before the first
