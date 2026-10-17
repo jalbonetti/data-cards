@@ -216,6 +216,7 @@ const GOALIE_STATS = [['GP','__games__'],['SV','SV'],['SA','SA'],['GA','GA'],['S
   // Defense panel: per-game allowed + rank; SF/GF = the opponent's own shots/goals for (what our goalie faces).
   const DEF_STATS = [['G','G'],['A','A'],['PTS','PTS'],['SOG','SOG'],['BLK','BLK'],['HIT','HIT'],['PPP','PPP'],['PIM','PIM'],['DK','DK'],['FD','FD'],['SF','SF'],['GF','GF']];
 const fmt1 = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};   // always a trailing decimal; toFixed keeps the leading 0
+const fmtTot = v=>{const n=parseFloat(v);return isNaN(n)?'–':(Number.isInteger(n)?String(n):n.toFixed(1));};   // split totals: counts stay whole, DK/FD points keep a decimal
 
 /* ---------- State ---------- */
 let CARDS = [], VIEW = [], rendered = 0;
@@ -455,10 +456,12 @@ function playerTable(players,cardLoc,SET){
   SET=SET||SKATER_STATS;
   const heads=SET.map(([d])=>`<th>${esc(d)}</th>`).join('');
   const rowFor=(cell,key)=>SET.map(([,k])=>{
-    if(k==='__games__') return `<td>${key==='avg'?(cell&&cell.games!=null?cell.games:'–'):''}</td>`;   // games played: face row only
+    if(k==='__games__') return `<td>${key==='total'?(cell&&cell.games!=null?cell.games:'–'):''}</td>`;   // games played: face row only
     const st=cell&&cell.stats&&cell.stats[k];
-    if(SINGLE_ONLY.has(k)) return `<td>${key==='avg'&&st&&st.avg!=null?(RATE3.has(k)?fmtAvg3(st.avg):(k==='GAA'?fmt2(st.avg):String(st.avg))):''}</td>`;   // face only
-    if(k==='SO') return `<td>${key==='avg'?(st&&st.total!=null?String(st.total):'–'):''}</td>`;   // shutouts: season count on the face
+    if(SINGLE_ONLY.has(k)) return `<td>${key==='total'&&st&&st.avg!=null?(RATE3.has(k)?fmtAvg3(st.avg):(k==='GAA'?fmt2(st.avg):String(st.avg))):''}</td>`;   // face only
+    if(k==='SO') return `<td>${key==='total'?(st&&st.total!=null?String(st.total):'–'):''}</td>`;   // shutouts: season count on the face
+    if(k==='TOI') return `<td>${key==='total'?(st?fmt1(st.avg):'–'):key==='avg'?'':(st?fmt1(st[key]):'–')}</td>`;   // TOI: per-game on the face (a split total of minutes says nothing)
+    if(key==='total') return `<td>${st?fmtTot(st.total):'–'}</td>`;   // FACE ROW = split total — the main line
     return `<td>${st?fmt1(st[key]):'–'}</td>`;
   }).join('');
   let body='';
@@ -467,7 +470,8 @@ function playerTable(players,cardLoc,SET){
     const tag=p.tag?` <span class="tag gm">${esc(p.tag)}</span>`:'';
     const roleTag=(p.role==='Starter'||p.role==='Backup')?` <span class="tag ${p.role==='Starter'?'home':'gm'}">${esc(p.role)}</span>`:'';
     const lbl=`${esc(p.name)}${p.pos?' <span style="color:var(--muted-2)">'+esc(p.pos)+'</span>':''}${roleTag}${tag}`;
-    body+=`<tr class="lp-row" data-idx="${i}"><td><span class="car-sm">&#9656;</span> ${lbl}</td>${rowFor(cell,'avg')}</tr>`;
+    body+=`<tr class="lp-row" data-idx="${i}"><td><span class="car-sm">&#9656;</span> ${lbl}</td>${rowFor(cell,'total')}</tr>`;
+    body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; Average</td>${rowFor(cell,'avg')}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; Median</td>${rowFor(cell,'med')}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; High</td>${rowFor(cell,'hi')}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; Low</td>${rowFor(cell,'lo')}</tr>`;
@@ -512,8 +516,8 @@ function detailHTML(c){
   const perLbl=perRaw==='Full Season'?'Full season':'Last 30 days';
   const locLbl=locMode==='loc'?(c.loc==='Home'?'home games':'away games'):'all games';
   const splitNote=`${perLbl} · ${locLbl}`;
-  const goaliePanel=`<div class="panel"><div class="panel-h">Goalies</div>${c.goalies.length?playerTable(c.goalies,c.loc,GOALIE_STATS):'<div class="note-sm">No goalies listed.</div>'}<div class="note-sm">${esc(splitNote)} · tap a goalie for Median / High / Low. SV% / GAA / W-L-OTL / SO / QS are split totals.</div></div>`;
-  const skaterPanel=`<div class="panel"><div class="panel-h">Skaters</div>${c.skaters.length?playerTable(c.skaters,c.loc,SKATER_STATS):'<div class="note-sm">No skaters for this split.</div>'}<div class="note-sm">${esc(splitNote)} · C / W / D · tap a player for Median / High / Low. DK / FD = fantasy points per game.</div></div>`;
+  const goaliePanel=`<div class="panel"><div class="panel-h">Goalies</div>${c.goalies.length?playerTable(c.goalies,c.loc,GOALIE_STATS):'<div class="note-sm">No goalies listed.</div>'}<div class="note-sm">${esc(splitNote)} · face row = split totals (TOI per game) · tap a goalie for per-game Average / Median / High / Low. SV% / GAA are split rates.</div></div>`;
+  const skaterPanel=`<div class="panel"><div class="panel-h">Skaters</div>${c.skaters.length?playerTable(c.skaters,c.loc,SKATER_STATS):'<div class="note-sm">No skaters for this split.</div>'}<div class="note-sm">${esc(splitNote)} · C / W / D · face row = split totals (TOI per game) · tap a player for per-game Average / Median / High / Low. DK / FD = fantasy points.</div></div>`;
   const npPanel=c.notPlaying.length?`<div class="panel"><div class="panel-h">Not playing</div>${c.notPlaying.map(p=>`<div class="np-row"><span class="np-nm">${esc(p.name)}</span><span class="tag gm">${esc(p.tag||'OUT')}</span><span class="np-why">${esc(p.injury||'')}</span></div>`).join('')}</div>`:'';
   const defLoc=locMode==='loc'?(c.isHome?'Away':'Home'):'All';
   const defCell=c.defense[perRaw+'|'+defLoc]||c.defense[perRaw+'|All'];
