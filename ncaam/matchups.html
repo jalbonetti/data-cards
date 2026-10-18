@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bettor Results — NCAAM Matchups</title>
+<style>
+  /* ============================================================
+     NCAAM MATCHUPS — bare-bones slate card
+     One card per game: tip-off, consensus spread / total / moneyline.
+     Same theme tokens as the EV card; all styles scoped to .wrap.
+     ============================================================ */
+  .wrap {
+    --brand: #6FD5DC; --brand-dark: #57C6CE; --glow: rgba(111,213,220,.28); --accent-soft: rgba(111,213,220,.14);
+    --surface: #2d1b45; --surface-2: #33204d; --inset: #1d1230;
+    --good: #6ee7b7; --good-bg: rgba(52,211,153,.16); --warn: #fcd34d; --warn-bg: rgba(251,191,36,.14);
+    --away: #a5b4fc; --away-bg: rgba(129,140,248,.18);
+    --card: #1E1830; --ink: #e8e0f0; --muted: #a89bbe; --muted-2: #7a6b8f;
+    --line: rgba(255,255,255,.10); --line-2: rgba(255,255,255,.06);
+    --radius: 14px; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 22px rgba(0,0,0,.28);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 1180px; margin: 0 auto; padding: 0 12px 48px;
+    background: transparent; color: var(--ink); font-family: var(--font);
+    -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased;
+  }
+  .wrap, .wrap *, .wrap *::before, .wrap *::after { box-sizing: border-box; }
+  .hdr { position: sticky; top: 0; z-index: 30; }
+  .bar { background: #1E1830; backdrop-filter: blur(10px); border: 1px solid var(--line); margin: 0 -12px; padding: 10px 12px; border-radius: 0 0 14px 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .title { font-size: 15px; font-weight: 700; margin-right: auto; display: flex; align-items: baseline; gap: 8px; }
+  .title .count { font-size: 11px; font-weight: 700; color: var(--brand); background: var(--accent-soft); padding: 2px 7px; border-radius: 999px; }
+  .field { background: var(--surface); border: 1px solid var(--line); border-radius: 9px; font-family: var(--font); font-size: 13px; color: var(--ink); padding: 8px 10px; height: 36px; min-width: 200px; }
+  .field::placeholder { color: var(--muted-2); }
+  .seg { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 0 4px 0 10px; height: 36px; }
+  .seg label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .seg select { background: transparent; border: none; color: var(--ink); font-weight: 600; font-size: 13px; height: 34px; }
+  .seg select option { color: var(--ink); background: var(--surface); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; margin-top: 12px; }
+  .card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; padding: 14px 14px 12px; }
+  .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--brand); }
+  .teams { display: flex; flex-direction: column; gap: 2px; }
+  .team { font-size: 15px; font-weight: 700; line-height: 1.25; display: flex; align-items: baseline; gap: 8px; }
+  .team .tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted-2); }
+  .team .ml { margin-left: auto; font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 700; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 2px 8px; }
+  .team .ml.fav { color: var(--good); background: var(--good-bg); border-color: transparent; }
+  .at { font-size: 11px; color: var(--muted-2); font-weight: 700; padding-left: 2px; }
+  .tip { margin-top: 8px; font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .tip b { color: var(--ink); font-weight: 700; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .tile { background: var(--inset); border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 10px; }
+  .tile .k { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted-2); }
+  .tile .v { font-size: 15px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .tile .s { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .state { text-align: center; color: var(--muted); padding: 48px 12px; }
+  .state h3 { margin: 0 0 6px; color: var(--ink); font-size: 16px; }
+  .loadpill { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--surface); color: var(--ink); border: 1px solid var(--line); font-size: 12px; font-weight: 700; padding: 8px 14px; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,.4); z-index: 50; }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } .field { min-width: 0; flex: 1; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="bar">
+      <div class="title">Matchups <span class="count" id="count">0</span></div>
+      <input class="field" id="search" type="search" placeholder="Search team…" autocomplete="off">
+      <div class="seg"><label>Sort</label>
+        <select id="sortSel"><option value="time">Tip-off</option><option value="spread">Spread</option><option value="total">Total</option><option value="name">Matchup</option></select>
+      </div>
+    </div>
+  </div>
+  <div class="grid" id="grid" hidden></div>
+  <div class="state" id="content"><h3>Loading…</h3></div>
+  <div class="loadpill" id="pill" hidden>Loading…</div>
+</div>
+<script>
+const SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
+const TABLE = "CBBallMatchups";
+const PAGE_SIZE = 1000;
+const CACHE_KEY = "ncaammu_v1", CACHE_TTL = 5 * 60 * 1000;
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const els = { grid: document.getElementById('grid'), content: document.getElementById('content'), count: document.getElementById('count'), search: document.getElementById('search'), sort: document.getElementById('sortSel'), pill: document.getElementById('pill') };
+
+/* ---------- Supabase (paginate until a short page = complete) ---------- */
+async function fetchPage(offset){
+  const url = `${SUPABASE_URL}/rest/v1/${TABLE}?select=*`;
+  const res = await fetch(url, { headers: { apikey: ANON_KEY, Authorization: "Bearer " + ANON_KEY, Accept: "application/json", 'Range-Unit': 'items', Range: `${offset}-${offset + PAGE_SIZE - 1}` } });
+  if (!res.ok) throw new Error(`Supabase ${res.status}`);
+  return res.json();
+}
+async function fetchAll(){
+  let out = [], off = 0;
+  for (;;) { const rows = await fetchPage(off); out = out.concat(rows); if (rows.length < PAGE_SIZE) break; off += rows.length; }
+  return out;
+}
+function cacheGet(){ try { const r = sessionStorage.getItem(CACHE_KEY); if (!r) return null; const o = JSON.parse(r); return (Date.now() - o.t) < CACHE_TTL ? o.rows : null; } catch (e) { return null; } }
+function cacheSet(rows){ try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), rows })); } catch (e) {} }
+
+/* ---------- Parse ---------- */
+/* "7:00 PM ET 11/4/2026" -> ms (DST-aware ET); older "…, Nov 4, 7:00 PM EST" strings also parse. */
+function stampMs(v){
+  const s = String(v || '');
+  let m = s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*E[DS]?T\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+  if (!m) return null;
+  let h = +m[1] % 12; if (m[3].toUpperCase() === 'PM') h += 12;
+  const y = +m[6], mo = +m[4] - 1, d = +m[5];
+  const mar = new Date(Date.UTC(y, 2, 1)), nov = new Date(Date.UTC(y, 10, 1));
+  const dstStart = 1 + ((7 - mar.getUTCDay()) % 7) + 7, dstEnd = 1 + ((7 - nov.getUTCDay()) % 7);
+  const off = ((mo > 2) || (mo === 2 && d >= dstStart)) && ((mo < 10) || (mo === 10 && d < dstEnd)) ? 4 : 5;
+  return Date.UTC(y, mo, d, h + off, +m[2]);
+}
+function fmtStamp(v){
+  const s = String(v || ''); const tm = s.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i); const dm = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  const t = tm ? `${+tm[1]}:${tm[2]} ${tm[3].toUpperCase()} ET` : '';
+  if (!dm) return t;
+  const d = new Date(+dm[3], +dm[1] - 1, +dm[2]);
+  return `${t} · ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]} ${+dm[1]}/${+dm[2]}`;
+}
+function parseRow(r){
+  const matchup = String(r['Matchup'] || '').replace(/,.*$/, '').trim();   // tolerate the old "Away @ Home, Nov 4, 7:00 PM EST"
+  const parts = matchup.split('@').map(x => x.trim());
+  const away = parts[0] || '', home = parts[1] || '';
+  const spreadStr = String(r['Spread'] || '').trim();
+  const sm = spreadStr.match(/^(.*?)\s*([+-]?\d+(?:\.\d+)?)$/);
+  const favTeam = sm ? sm[1].trim() : '', favLine = sm ? parseFloat(sm[2]) : null;
+  const tm = String(r['Total'] || '').match(/(\d+(?:\.\d+)?)/);
+  const total = tm ? parseFloat(tm[1]) : null;
+  const mlStr = String(r['Moneyline'] || '');
+  const ml = {};
+  for (const side of mlStr.split('/')) { const m = side.trim().match(/^(.*?)\s*([+-]\d+)$/); if (m) ml[m[1].trim()] = parseInt(m[2], 10); }
+  const stamp = r['Game Time'] || '';
+  return { away, home, matchup: `${away} @ ${home}`, favTeam, favLine, total, ml, stamp, ms: stampMs(stamp), _q: `${away} ${home}`.toLowerCase() };
+}
+
+/* ---------- Render ---------- */
+const fmtOdds = n => n == null ? '–' : (n > 0 ? '+' + n : String(n));
+function card(g){
+  const sideLine = (team) => g.favLine == null ? '' : (team === g.favTeam ? g.favLine : -g.favLine);
+  const fav = (team) => g.favTeam && team === g.favTeam;
+  const teamRow = (team, tag) => `<div class="team"><span class="tag">${tag}</span>${esc(team)}<span class="ml${fav(team) ? ' fav' : ''}">${fmtOdds(g.ml[team])}</span></div>`;
+  const spreadV = g.favLine == null ? '–' : `${esc(g.favTeam)} ${g.favLine > 0 ? '+' : ''}${g.favLine.toFixed(1)}`;
+  const spreadS = g.favLine == null ? '' : `${esc(g.favTeam === g.home ? g.away : g.home)} ${(-g.favLine) > 0 ? '+' : ''}${(-g.favLine).toFixed(1)}`;
+  return `<div class="card">
+    <div class="teams">${teamRow(g.away, 'Away')}<div class="at">@</div>${teamRow(g.home, 'Home')}</div>
+    <div class="tip">Tip-off <b>${esc(fmtStamp(g.stamp) || '–')}</b></div>
+    <div class="tiles">
+      <div class="tile"><div class="k">Spread</div><div class="v">${spreadV}</div><div class="s">${spreadS}</div></div>
+      <div class="tile"><div class="k">Total</div><div class="v">${g.total == null ? '–' : 'O/U ' + g.total}</div><div class="s">consensus median</div></div>
+    </div>
+  </div>`;
+}
+let RAW = [], VIEW = [];
+function apply(){
+  const q = els.search.value.trim().toLowerCase();
+  const now = Date.now();
+  VIEW = RAW.filter(g => (g.ms == null || g.ms > now) && (!q || g._q.includes(q)));
+  const s = els.sort.value;
+  VIEW.sort((a, b) => s === 'name' ? a.matchup.localeCompare(b.matchup)
+    : s === 'spread' ? ((a.favLine == null) - (b.favLine == null)) || (a.favLine - b.favLine)
+    : s === 'total' ? ((b.total || 0) - (a.total || 0))
+    : ((a.ms || Infinity) - (b.ms || Infinity)) || a.matchup.localeCompare(b.matchup));
+  els.count.textContent = VIEW.length;
+  if (!VIEW.length) { els.grid.hidden = true; els.content.hidden = false; els.content.innerHTML = RAW.length ? '<h3>No matching games</h3><p>Try another team.</p>' : '<h3>No games on the board</h3><p>Matchups appear once today\'s lines are posted.</p>'; return; }
+  els.content.hidden = true; els.grid.hidden = false; els.grid.innerHTML = VIEW.map(card).join('');
+}
+els.search.addEventListener('input', apply); els.sort.addEventListener('change', apply);
+(async () => {
+  const cached = cacheGet();
+  if (cached) { RAW = cached.map(parseRow); apply(); }
+  else els.pill.hidden = false;
+  try { const rows = await fetchAll(); cacheSet(rows); RAW = rows.map(parseRow); apply(); }
+  catch (e) { if (!RAW.length) { els.content.innerHTML = '<h3>Couldn\'t load</h3><p>' + esc(e.message) + '</p>'; } }
+  finally { els.pill.hidden = true; }
+  setInterval(apply, 60 * 1000);   // drop games at tip without a reload
+})();
+</script>
+</body>
+</html>
