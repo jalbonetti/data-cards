@@ -321,7 +321,7 @@ function fieldMap(prefix){
       prop: "Game Prop Type", label: "Game Label", line: "Game Line",
       book: "Game Book", bookOdds: "Game Odds", medianOdds: "Game Median Odds",
       bestOdds: "Game Best Odds", bestBooks: "Game Best Odds Books",
-      ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: null   // basketball game pivots carry no Game Time column
+      ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: "Game Time"
     };
   }
   return {
@@ -329,7 +329,7 @@ function fieldMap(prefix){
     prop: `${prefix} Prop Type`, label: `${prefix} Over/Under`, line: `${prefix} Prop Line`,
     book: `${prefix} Book`, bookOdds: `${prefix} Prop Odds`, medianOdds: `${prefix} Median Odds`,
     bestOdds: `${prefix} Best Odds`, bestBooks: `${prefix} Best Odds Books`,
-    ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: null
+    ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: "Game Time"
   };
 }
 
@@ -892,3 +892,4 @@ boot();
 </script>
 </body>
 </html>
+1
