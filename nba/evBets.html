@@ -329,15 +329,15 @@ function fieldMap(prefix){
       prop: "Game Prop Type", label: "Game Label", line: "Game Line",
       book: "Game Book", bookOdds: "Game Odds", medianOdds: "Game Median Odds",
       bestOdds: "Game Best Odds", bestBooks: "Game Best Odds Books",
-      ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: null   // basketball game pivots carry no Game Time column
+      ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: "Game Time"
     };
   }
   return {
-    name: `${prefix} Name`, matchup: `${prefix} Matchup`, team: null,   // basketball prop pivots carry no Player Team column
+    name: `${prefix} Name`, matchup: `${prefix} Matchup`, team: `${prefix} Team`,
     prop: `${prefix} Prop Type`, label: `${prefix} Over/Under`, line: `${prefix} Prop Line`,
     book: `${prefix} Book`, bookOdds: `${prefix} Prop Odds`, medianOdds: `${prefix} Median Odds`,
     bestOdds: `${prefix} Best Odds`, bestBooks: `${prefix} Best Odds Books`,
-    ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: null
+    ev: "EV %", kelly: "Quarter Kelly %", link: "Link", gameTime: "Game Time"
   };
 }
 
@@ -546,10 +546,11 @@ function normalize(rows) {
       book: row[F.book],
       bookOdds: oddsInt(row[F.bookOdds]), medianOdds: oddsInt(row[F.medianOdds]),
       bestOdds: oddsInt(row[F.bestOdds]), bestBooks: row[F.bestBooks],
-      // Both basketball pivots write "3.20%" strings that Sheets coerces to fractions (0.032) before
-      // the Supabase sync; pctNum() x100s a bare fraction and passes a '%'-string through as-is.
-      ev: pctNum(row[F.ev]),
-      kelly: pctNum(row[F.kelly]),
+      // Player props come from the Cloud pivot (propOddsPivot.js): EV/Kelly are plain percent numbers.
+      // Game odds come from the sheet's Apps Script, which writes "3.20%" strings that Sheets coerces to
+      // fractions (0.032) before the sync -> pctNum() x100s those (and passes a '%'-string through as-is).
+      ev: isGame ? pctNum(row[F.ev]) : num(row[F.ev]),
+      kelly: isGame ? pctNum(row[F.kelly]) : num(row[F.kelly]),
       link: (link && /^https?:\/\//i.test(link)) ? link : null,
       gameTime: row[F.gameTime],
       /* Precomputed once so filter/sort/render passes don't redo string work */
