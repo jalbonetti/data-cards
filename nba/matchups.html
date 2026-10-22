@@ -214,6 +214,7 @@ const NBA_STATS = [['G','__games__'],['MIN','MIN'],['PTS','PTS'],['REB','REB'],[
   // Defense panel stat set: no MIN ('minutes allowed' rank is meaningless); DD/TD are season totals given up.
   const DEF_STATS = [['PTS','PTS'],['REB','REB'],['AST','AST'],['3PM','FG3M'],['STL','STL'],['BLK','BLK'],['TOV','TOV'],['P+R','P+R'],['P+A','P+A'],['R+A','R+A'],['PRA','P+R+A'],['B+S','B+S'],['DD','DD'],['TD','TD']];
 const fmt1 = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};   // always a trailing decimal; toFixed keeps the leading 0
+const fmt0 = v=>{const n=parseFloat(v);return isNaN(n)?'–':String(Math.round(n));};   // whole-number stats (DD / TD counts)
 
 /* ---------- State ---------- */
 let CARDS = [], VIEW = [], rendered = 0;
@@ -448,7 +449,7 @@ function playerTable(players,cardLoc){
   const rowFor=(cell,key)=>NBA_STATS.map(([,k])=>{
     if(k==='__games__') return `<td>${key==='avg'?(cell&&cell.games!=null?cell.games:'–'):''}</td>`;   // games played: face row only, like baseball's G
     const st=cell&&cell.stats&&cell.stats[k];
-    if(TOTAL_ONLY.has(k)) return `<td>${key==='avg'&&st&&st.total!=null?fmt1(st.total):''}</td>`;   // face=total; med/high/low blank
+    if(TOTAL_ONLY.has(k)) return `<td>${key==='avg'&&st&&st.total!=null?fmt0(st.total):''}</td>`;   // face=total (whole number); med/high/low blank
     return `<td>${st?fmt1(st[key]):'–'}</td>`;
   }).join('');
   let body='';
@@ -466,7 +467,7 @@ function playerTable(players,cardLoc){
 function defenseTable(cell){
   const heads=DEF_STATS.map(([d])=>`<th>${esc(d)}</th>`).join('');
   // DD/TD are season totals given up; the rest are per-game allowed. Header notes both.
-  const aRow=DEF_STATS.map(([,k])=>`<td>${cell&&cell.data.allowed[k]!=null?fmt1(cell.data.allowed[k]):'–'}</td>`).join('');
+  const aRow=DEF_STATS.map(([,k])=>`<td>${cell&&cell.data.allowed[k]!=null?(TOTAL_ONLY.has(k)?fmt0(cell.data.allowed[k]):fmt1(cell.data.allowed[k])):'–'}</td>`).join('');   // DD/TD totals are whole numbers
   const rRow=DEF_STATS.map(([,k])=>{const rk=cell&&cell.data.ranks[k];return `<td>${rk!=null?('#'+rk):'–'}</td>`;}).join('');
   return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody><tr><td>Allowed</td>${aRow}</tr><tr><td>Rank</td>${rRow}</tr></tbody></table></div>`;
 }
