@@ -416,15 +416,16 @@ function betDescription(r){
 /* Game selection headline: the actual ticket you'd tap.
    Spread → "ATH -1.5" (team + signed line); Total → "Over 6.5" (side + line);
    Moneyline → "BOS" (team, no line). Returns escaped HTML. */
+const fmtLine1 = v=>{const n=Number(v);return isNaN(n)?String(v):n.toFixed(1);};
 function gameSelection(r){
   const mkt = String(r.prop||'').toLowerCase();
   const lab = r.label || '';
   if (mkt === 'total'){
-    const ln = r.line!=null ? ` ${r.line}` : '';
+    const ln = r.line!=null ? ` ${fmtLine1(r.line)}` : '';   // totals always show one decimal (230 -> 230.0)
     return `${esc(lab)}${ln}`;
   }
   if (mkt === 'spread'){
-    const ln = r.line!=null ? ` ${r.line>0?'+':''}${r.line}` : '';
+    const ln = r.line!=null ? ` ${r.line>0?'+':''}${fmtLine1(r.line)}` : '';   // spreads always show one decimal (-3 -> -3.0)
     return `${esc(abbrTeam(lab))}${ln}`;
   }
   return esc(abbrTeam(lab));            // moneyline
