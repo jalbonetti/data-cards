@@ -491,12 +491,12 @@ function playerTable(players,cardLoc,group){
   const nCols=cols.length+2;
   const cellCells=(cell,k)=>{
     const gtd=`<td>${k==='tot'?(cell&&cell.games!=null?cell.games:'–'):''}</td>`;
-    return gtd+cols.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?raw(v[k]):'–'}</td>`;}).join('');
+    return gtd+cols.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?fmt1(v[k]):'–'}</td>`;}).join('');   // one decimal everywhere
   };
   const nested=(p,cell,grp)=>{
     const gc=GROUP_COLS[grp]||[];
     const h=gc.map(([d])=>`<th>${esc(d)}</th>`).join('');
-    const row=k=>gc.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?raw(v[k]):'–'}</td>`;}).join('');
+    const row=k=>gc.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?fmt1(v[k]):'–'}</td>`;}).join('');
     return `<table class="mini" style="width:100%"><thead><tr><th>${esc(grp)}</th>${h}</tr></thead><tbody>
       <tr><td>Total</td>${row('tot')}</tr><tr><td>Avg</td>${row('avg')}</tr><tr><td>Median</td>${row('med')}</tr>
       <tr><td>High</td>${row('hi')}</tr><tr><td>Low</td>${row('lo')}</tr></tbody></table>`;
@@ -520,7 +520,7 @@ function playerTable(players,cardLoc,group){
 }
 function defenseTable(cell){
   const heads=DEF_STATS.map(([d])=>`<th>${esc(d)}</th>`).join('');
-  const aRow=DEF_STATS.map(([,b])=>`<td>${cell&&cell.allowed[b]!=null&&cell.allowed[b]!==''?raw(cell.allowed[b]):'–'}</td>`).join('');
+  const aRow=DEF_STATS.map(([,b])=>`<td>${cell&&cell.allowed[b]!=null&&cell.allowed[b]!==''?fmt1(cell.allowed[b]):'–'}</td>`).join('');
   const rRow=DEF_STATS.map(([,b])=>{const rk=cell&&cell.ranks[b];return `<td>${rk!=null&&rk!==''?('#'+rk):'–'}</td>`;}).join('');
   return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody><tr><td>Allowed</td>${aRow}</tr><tr><td>Rank</td>${rRow}</tr></tbody></table></div>`;
 }
