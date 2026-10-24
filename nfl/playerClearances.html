@@ -537,7 +537,7 @@ function detailHTML(g){
   const head=yesNo
     ? `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Opp Allowed</th>${showPos?`<th>vs ${esc(g.role||'Pos')}</th>`:''}</tr>`
     : `<tr><th></th><th>Clr%</th><th>Cleared</th><th>Avg</th><th>Med</th><th>High</th><th>Low</th><th>Opp Allowed</th>${showPos?`<th>vs ${esc(g.role||'Pos')}</th>`:''}</tr>`;
-  const oppNote=(yesNo?"Opp Allowed = TDs per game the opponent gives up":"Opp Allowed = opponent's allowed per game for this stat")+", period-matched and location-flipped. Rank 1 = fewest allowed."+(showPos?` \"vs ${esc(g.role)}\" = the slice given up to ${esc(g.role)}s only.`:"");
+  const oppNote=(yesNo?"Opp Allowed = TDs per game the opponent gives up":"Opp Allowed = opponent's allowed per game for this stat")+", period-matched and location-flipped. #1 = allows the most."+(showPos?` \"vs ${esc(g.role)}\" = the slice given up to ${esc(g.role)}s only.`:"");
   const spTxt=(g.spread!==''&&g.spread!=null)?(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':(g.team+' '+(n>0?'+':'')+n.toFixed(1));})():'–';
   const toTxt=(g.total!==''&&g.total!=null)?(function(){const n=parseFloat(g.total);return isNaN(n)?'–':('O/U '+(n%1===0?n.toFixed(1):String(n)));})():'–';
   const domeYes=/^yes$/i.test(String(g.dome||'').trim())||String(g.wx[0]||'')==='Dome';
