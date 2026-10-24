@@ -277,7 +277,7 @@ function fieldMap(){
     ratioMed:'Player Median Ratio', ratioHigh:'Player High Ratio', rostership:`${BOOK} Rostership`, slateRost:`${BOOK} Slate Rost`,
     projection:`${BOOK} Projection`, gp:'Player Games Played', minutes:'TOI',
     matchup:'Matchup', spread:'Matchup Spread', total:'Matchup Total', moneyline:'Matchup Moneyline',
-    lineup:'Lineup Status',
+    lineup:'Lineup Status', neutral:'Neutral', venue:'Venue',
     oppDfsAllowed:`Opp ${BOOK} Pts Allowed`, oppDfsRank:`Opp ${BOOK} Pts Rank`, gameTime:'Game Time'
   };
 }
@@ -510,7 +510,7 @@ function buildGroups(rows){
     if(!g){
       g={key:player, player, team:abbrTeam(row[F.team]), opp:abbrTeam(row[F.opponent]), pos:row[F.pos], price:num(row[F.price]),
         rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
-        matchup:row[F.matchup], _matchupAb:abbrMatchup(row[F.matchup]||''), spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline],
+        matchup:row[F.matchup], _matchupAb:abbrMatchup(row[F.matchup]||''), spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], neutral:/^yes$/i.test(String(row[F.neutral]||'').trim()), venue:row[F.venue],
         variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
       g.slateMap=parseSlateRost(row[F.slateRost]); if(!Object.keys(g.slateMap).length&&String(row[F.rostership]||'').includes(':'))g.slateMap=parseSlateRost(row[F.rostership]); g._slates=new Set(Object.keys(g.slateMap));
       map.set(player,g);
@@ -667,7 +667,7 @@ function detailHTML(g){
   const perLbl=perRaw==='Full Season'?'full season':'last 30 days';
   const splitLbl=(spRaw==='loc'&&g.location)?(' · '+g.location.toLowerCase()):' · all games';
   // the opposing side plays the opposite location (player home => opponent away)
-  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.location==='Home'?'away':'home')):' · all games';
+  const oppSplitLbl=(spRaw==='loc'&&g.location)?(' · '+(g.neutral?'away (neutral site)':(g.location==='Home'?'away':'home'))):' · all games';
   const v=activeVar(g)||g._season;
   // Player's own DFS-point distribution for the active window/split
   const distRow=v?`<table class="mini"><thead><tr><th></th><th>Median</th><th>Avg</th><th>High</th><th>Low</th><th>Mode</th></tr></thead>
@@ -694,7 +694,7 @@ function detailHTML(g){
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Puck line</span><span class="v">${(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':esc(g.team+' '+(n>0?'+':'')+n.toFixed(1));})()}</span>
         <span class="k">Moneyline</span><span class="v">${(function(){const n=parseFloat(g.moneyline);return isNaN(n)?'–':esc((n>0?'+':'')+n);})()}</span>
-        <span class="k">Total</span><span class="v">${(function(){const n=parseFloat(g.total);return isNaN(n)?'–':esc('O/U '+n.toFixed(1));})()}</span></div>
+        <span class="k">Total</span><span class="v">${(function(){const n=parseFloat(g.total);return isNaN(n)?'–':esc('O/U '+n.toFixed(1));})()}</span>${g.neutral?`<span class="k">Venue</span><span class="v">Neutral site${g.venue?' · '+esc(g.venue):''}</span>`:''}</div>
     </div>
     <div class="panel"><div class="panel-h">Playing time</div>
       <div class="kv"><span class="k">TOI / game</span><span class="v">${raw(g.minutes)}</span>
