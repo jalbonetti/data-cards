@@ -565,7 +565,7 @@ function detailHTML(g){
     <div class="panel"><div class="panel-h">Environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${esc(g.spread||'–')}</span>
         <span class="k">Total</span><span class="v">${esc(g.total||'–')}</span>
-        <span class="k">Park factor (rank)</span><span class="v">${esc(fmtPark(g.park))}</span>
+        <span class="k">Park factor (rank · #1 = highest)</span><span class="v">${esc(fmtPark(g.park))}</span>
         <span class="k">Stadium</span><span class="v">${esc(g.stadium||'–')}${g.neutral?' · Neutral site':''}</span>
         <span class="k">Dome</span><span class="v">${esc(g.dome||'–')}</span></div>
       ${/^(dome|yes)$/i.test(String(g.dome||'').trim())
