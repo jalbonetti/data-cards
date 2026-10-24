@@ -687,7 +687,7 @@ function detailHTML(g){
       <span class="k">Shots for / Goals for</span><span class="v">${ownCells}</span></div>
     <div class="mini-scroll"><table class="mini"><thead><tr><th></th>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
       <tbody><tr><td>Allowed</td>${defCells}</tr></tbody></table></div>
-    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. Rank 1 = allows most. Shots for / goals for = the opponent's own offense (what a goalie faces).</div></div>`;
+    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. #1 = allows the most. Shots for / goals for = the opponent's own offense (what a goalie faces).</div></div>`;
   return `
     ${prodPanel}
     ${oppPanel}
