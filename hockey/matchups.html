@@ -348,9 +348,9 @@ function buildCards(gameRows,playerRows,defRows){
           notPlaying=players.filter(p=>p.role==='Not Playing').sort(byName);
     const startingGoalie=String(g['Starting Goalie']||'').trim(), goalieStatus=String(g['Goalie Status']||'').trim();
     const card={key,id:String(g['Matchup ID']),team,teamFull:CODE_TO_NAME[team]||team,opp,oppFull:CODE_TO_NAME[opp]||opp,
-      isHome,loc:isHome?'Home':'Away',gametime:fmtStamp(g['Game Time']),matchupAb,
+      isHome,loc:/yes|true|1/i.test(String(g['Neutral']||''))?'Away':(isHome?'Home':'Away'),gametime:fmtStamp(g['Game Time']),matchupAb,   // neutral site: both teams use their road split
       spread:num(g['Spread']),total:num(g['Total']),ml:num(g['Moneyline']),
-      startingGoalie,goalieStatus,b2b:/yes|true|1/i.test(String(g['B2B']||'')),neutral:/yes|true|1/i.test(String(g['Neutral']||'')),
+      startingGoalie,goalieStatus,b2b:/yes|true|1/i.test(String(g['B2B']||'')),neutral:/yes|true|1/i.test(String(g['Neutral']||'')),venue:String(g['Venue']||'').trim(),
       players,goalies,skaters,notPlaying,defense,
       status: goalieStatus || 'Not posted',
       game:{matchupAb},
@@ -424,7 +424,7 @@ document.addEventListener('click',closeAllMS);
 function populateFilters(){
   MS.team.setOptions(uniq(c=>c.team).sort());
   MS.game.setOptions(uniq(c=>c.game.matchupAb));
-  MS.side.setOptions(['Away','Home']);
+  MS.side.setOptions(['Away','Home','Neutral']);
   els.search.value=filters.search||'';
 }
 function applyFilters(){
@@ -433,7 +433,7 @@ function applyFilters(){
     if(s&&!c._q.includes(s))return false;
     if(filters.team.has(c.team))return false;
     if(filters.game.has(c.game.matchupAb))return false;
-    if(filters.side.has(c.loc))return false;
+    if(filters.side.has(c.neutral?'Neutral':(c.isHome?'Home':'Away')))return false;
     return true;
   });
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
@@ -491,7 +491,7 @@ function cardHTML(c){
   const edge=c.isHome?'var(--good)':'var(--away)';
   const statusCls=/confirm/i.test(c.status||'')?'conf':'proj';   // Confirmed = green; Expected / not posted = amber
   const mlTxt=c.ml!=null?((c.ml>0?'+':'')+c.ml):'–';
-  const flags=(c.b2b?'<span class="tag gm" title="Back-to-back">B2B</span> ':'')+(c.neutral?'<span class="tag gm" title="Neutral site">Neutral</span> ':'');
+  const flags=(c.b2b?'<span class="tag gm" title="Back-to-back">B2B</span> ':'')+(c.neutral?`<span class="tag gm" title="${esc(c.venue||'Neutral site')}">Neutral</span> `:'');
   const goalieTxt=c.startingGoalie?`<b>${esc(c.startingGoalie)}</b>${c.goalieStatus?' <span class="op">('+esc(c.goalieStatus)+')</span>':''}`:'<span class="op">not posted</span>';
   return `
   <div class="card" data-key="${esc(c.key)}" style="--edge-c:${edge}">
@@ -514,17 +514,17 @@ function cardHTML(c){
 function detailHTML(c){
   const [perRaw,locMode]=split.split('|');
   const perLbl=perRaw==='Full Season'?'Full season':'Last 30 days';
-  const locLbl=locMode==='loc'?(c.loc==='Home'?'home games':'away games'):'all games';
+  const locLbl=locMode==='loc'?(c.loc==='Home'?'home games':(c.neutral?'away games (neutral site)':'away games')):'all games';
   const splitNote=`${perLbl} · ${locLbl}`;
   const goaliePanel=`<div class="panel"><div class="panel-h">Goalies</div>${c.goalies.length?playerTable(c.goalies,c.loc,GOALIE_STATS):'<div class="note-sm">No goalies listed.</div>'}<div class="note-sm">${esc(splitNote)} · face row = split totals (TOI per game) · tap a goalie for per-game Average / Median / High / Low. SV% / GAA are split rates.</div></div>`;
   const skaterPanel=`<div class="panel"><div class="panel-h">Skaters</div>${c.skaters.length?playerTable(c.skaters,c.loc,SKATER_STATS):'<div class="note-sm">No skaters for this split.</div>'}<div class="note-sm">${esc(splitNote)} · C / W / D · face row = split totals (TOI per game) · tap a player for per-game Average / Median / High / Low. DK / FD = fantasy points.</div></div>`;
   const npPanel=c.notPlaying.length?`<div class="panel"><div class="panel-h">Not playing</div>${c.notPlaying.map(p=>`<div class="np-row"><span class="np-nm">${esc(p.name)}</span><span class="tag gm">${esc(p.tag||'OUT')}</span><span class="np-why">${esc(p.injury||'')}</span></div>`).join('')}</div>`:'';
-  const defLoc=locMode==='loc'?(c.isHome?'Away':'Home'):'All';
+  const defLoc=locMode==='loc'?((c.neutral||c.isHome)?'Away':'Home'):'All';   // neutral site: both sides are road teams → opponent's Away row
   const defCell=c.defense[perRaw+'|'+defLoc]||c.defense[perRaw+'|All'];
-  const defNote=locMode==='loc'?(c.isHome?'away games':'home games'):'all games';
+  const defNote=locMode==='loc'?(c.neutral?'away games (neutral site)':(c.isHome?'away games':'home games')):'all games';
   const defPanel=`<div class="panel"><div class="panel-h">${esc(c.oppFull||c.opp)} defense — allowed / game (rank)</div>${defCell?defenseTable(defCell):'<div class="note-sm">No defensive data for this split.</div>'}<div class="note-sm">${perLbl} · ${defNote} · #1 = allows the most. SF / GF = ${esc(c.opp)}'s own shots / goals for per game (what ${esc(c.team)}'s goalie faces).</div></div>`;
   const mlTxt=c.ml!=null?((c.ml>0?'+':'')+c.ml):'–';
-  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Puck line</span><span class="v">${esc(teamSpread(c))}</span><span class="k">Moneyline</span><span class="v">${esc(mlTxt)}</span><span class="k">Total</span><span class="v">${c.total!=null?esc('O/U '+fmt1(c.total)):'\u2013'}</span><span class="k">Back-to-back</span><span class="v">${c.b2b?'Yes':'No'}</span>${c.neutral?'<span class="k">Venue</span><span class="v">Neutral site</span>':''}</div></div>`;
+  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Puck line</span><span class="v">${esc(teamSpread(c))}</span><span class="k">Moneyline</span><span class="v">${esc(mlTxt)}</span><span class="k">Total</span><span class="v">${c.total!=null?esc('O/U '+fmt1(c.total)):'\u2013'}</span><span class="k">Back-to-back</span><span class="v">${c.b2b?'Yes':'No'}</span>${c.neutral?`<span class="k">Venue</span><span class="v">Neutral site${c.venue?' · '+esc(c.venue):''}</span>`:''}</div></div>`;
   return goaliePanel+skaterPanel+npPanel+defPanel+envPanel;
 }
 function renderMore(){if(rendered>=VIEW.length)return;const slice=VIEW.slice(rendered,rendered+BATCH);els.grid.insertAdjacentHTML('beforeend',slice.map(cardHTML).join(''));rendered+=slice.length;}
