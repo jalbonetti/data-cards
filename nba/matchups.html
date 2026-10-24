@@ -465,8 +465,7 @@ function playerTable(players,cardLoc){
   players.forEach((p,i)=>{
     const cell=getCell(p.blob,cardLoc);
     const tag=p.tag?` <span class="tag gm">${esc(p.tag)}</span>`:'';
-    const lu=p.lineup?` <span class="tag ${/^confirmed/i.test(p.lineup)?'conf':'proj'}" style="font-weight:600">${esc(p.lineup)}</span>`:'';
-    const lbl=`${esc(p.name)}${p.pos?' <span style="color:var(--muted-2)">'+esc(p.pos)+'</span>':''}${lu}${tag}`;
+    const lbl=`${esc(p.name)}${p.pos?' <span style="color:var(--muted-2)">'+esc(p.pos)+'</span>':''}${tag}`;   // lineup certainty lives in the Starters / Bench panel headers, not per player
     body+=`<tr class="lp-row" data-idx="${i}"><td><span class="car-sm">&#9656;</span> ${lbl}</td>${rowFor(cell,'avg')}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; Median</td>${rowFor(cell,'med')}</tr>`;
     body+=`<tr class="lp-sub" data-idx="${i}" hidden><td>&#8627; High</td>${rowFor(cell,'hi')}</tr>`;
