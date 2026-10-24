@@ -630,7 +630,7 @@ function detailHTML(g){
     <div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span></div>
     <div class="mini-scroll"><table class="mini"><thead><tr><th></th>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
       <tbody><tr><td>Allowed</td>${defCells}</tr></tbody></table></div>
-    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. Rank 1 = fewest allowed.</div></div>`;
+    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. #1 = allows the most.</div></div>`;
   return `
     ${prodPanel}
     ${oppPanel}
