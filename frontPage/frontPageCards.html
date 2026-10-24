@@ -1,6 +1,6 @@
 <!-- ============================================================
      FRONT PAGE — TODAY'S BEST BETS
-     Reads the anon FrontPageBets table (9 rows max, pre-selected
+     Reads the anon FrontPageBets table (15 rows max, pre-selected
      and pre-ranked by the buildFrontPageBets Cloud Function).
      One horizontal scroll-snap row: 3 cards visible on desktop,
      ~1 card + a peek on mobile. No libraries, no web fonts.
@@ -290,7 +290,7 @@ function load(){
       "Range-Unit": "items", Range: "0-49" }
   })
   .then(function(res){ if(!res.ok) throw new Error("Supabase " + res.status); return res.json(); })
-  .then(function(rows){ lastRows = Array.isArray(rows) ? rows : []; render(lastRows); })
+  .then(function(rows){ lastRows = Array.isArray(rows) ? rows : []; lastRows.sort(function(a,b){ return (parseInt(a.Rank,10)||0) - (parseInt(b.Rank,10)||0); }); /* Rank is text: "10" would sort before "2" */ render(lastRows); })
   .catch(function(){ /* keep whatever is shown; retry on next tick */ if(rail.querySelector(".skel")) render([]); });
 }
 
