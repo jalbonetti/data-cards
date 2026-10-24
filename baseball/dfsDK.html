@@ -717,7 +717,7 @@ function detailHTML(g){
   }
   const pf=g.neutral
     ? `<div class="panel-h" style="margin-top:10px">Park factors</div><div class="note-sm">Park Factors Unavailable for Neutral Site Games.</div>`
-    : `<div class="panel-h" style="margin-top:10px">Park factors (rank)</div>
+    : `<div class="panel-h" style="margin-top:10px">Park factors (rank · #1 = highest factor)</div>
     <div class="pf-grid">${g.pf.map(([lbl,val])=>`<div><span class="pfk">${esc(lbl)}</span><span class="pfv">${esc(fmtPark(val))}</span></div>`).join('')}</div>`;
   return `
     ${prodPanel}
