@@ -548,7 +548,7 @@ function detailHTML(c){
   const pfPanel=c.game.neutral
     ? `<div class="panel"><div class="panel-h">Park factors</div><div class="note-sm">Park Factors Unavailable for Neutral Site Games.</div></div>`
     : `<div class="panel"><div class="panel-h">Park factors (rank)</div>${statTable(SET_PF,[['All',pf.All],['vL',pf.L],['vR',pf.R]])}
-    <div class="note-sm">100 is league average; higher inflates, lower suppresses. Same for both teams in the game.</div></div>`;
+    <div class="note-sm">100 is league average; higher inflates, lower suppresses. #1 = highest factor. Same for both teams in the game.</div></div>`;
   // environment
   const envPanel=`<div class="panel"><div class="panel-h">Environment</div>
     <div class="kv"><span class="k">Spread</span><span class="v">${esc(teamSpread(c))}</span>
