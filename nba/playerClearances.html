@@ -194,6 +194,7 @@
         <div class="fg"><label>Prop</label><div class="ms" data-ms="prop"></div></div>
         <div class="fg"><label>Line</label><div class="ms" data-ms="line"></div></div>
         <div class="fg"><label>Role</label><div class="ms" data-ms="role"></div></div>
+        <div class="fg"><label>Lineup</label><div class="ms" data-ms="lineup"></div></div>
         <div class="fg"><label>Min games (season)</label><input type="number" data-filter="gMin" inputmode="numeric" value="0" /></div>
         <div class="fg"><label>Min clearance %</label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
         <div class="fg"><label>Best over odds</label>
@@ -246,15 +247,15 @@ const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0
 
 const F = {player:'Player',team:'Team',opponent:'Opponent',prop:'Prop',line:'Line',period:'Time Period',split:'Location',role:'Role',
   clearance:'Clearance %',cleared:'Cleared',games:'Games',matchup:'Matchup',gameTime:'Game Time',spread:'Spread',total:'Total',
-  avg:'Avg',median:'Median',high:'High',low:'Low',oppAllowed:'Opp Allowed',oppRank:'Opp Rank',
+  avg:'Avg',median:'Median',high:'High',low:'Low',oppAllowed:'Opp Allowed',oppRank:'Opp Rank',lineup:'Lineup Status',pace:'Opp Pace',paceRank:'Opp Pace Rank',neutral:'Neutral',venue:'Venue',
   medOver:'Median Over',medUnder:'Median Under',bestOver:'Best Over',bestOverBk:'Best Over Books',bestUnder:'Best Under',bestUnderBk:'Best Under Books'};
 
 /* ---------- State ---------- */
 let GROUPS = [], SORTED = [], VIEW = [], rendered = 0;
 const GMAP = new Map();
 let sortMode = 'clr:Full Season|All', sortDir = 'desc';
-const CAT=['matchup','team','prop','line','role'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
-function newFilters(){return {search:'',matchup:new Set(),team:new Set(),prop:new Set(),line:new Set(),role:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
+const CAT=['matchup','team','prop','line','role','lineup'], NUM=['gMin','clrMin','boMin','boMax','buMin','buMax','medMin','medMax'];
+function newFilters(){return {search:'',matchup:new Set(),team:new Set(),prop:new Set(),line:new Set(),role:new Set(),lineup:new Set(),gMin:'0',clrMin:'',boMin:'',boMax:'',buMin:'',buMax:'',medMin:'',medMax:''};}
 let filters = newFilters();
 const els = {content:document.getElementById('content'),grid:document.getElementById('grid'),count:document.getElementById('count'),search:document.getElementById('search'),filters:document.getElementById('filters'),filterToggle:document.getElementById('filterToggle'),filterCount:document.getElementById('filterCount'),clearFilters:document.getElementById('clearFilters'),sortSel:document.getElementById('sortSel'),sortDir:document.getElementById('sortDir'),sentinel:document.getElementById('sentinel'),loadpill:document.getElementById('loadpill')};
 
@@ -330,7 +331,8 @@ function buildGroups(rows){
         matchup:row[F.matchup],
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
         bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
-        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup]),gameTime:row[F.gameTime],spread:row[F.spread],total:row[F.total]};
+        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup]),gameTime:row[F.gameTime],spread:row[F.spread],total:row[F.total],
+        lineup:String(row[F.lineup]||'').trim(),pace:num(row[F.pace]),paceRank:num(row[F.paceRank]),neutral:/^y/i.test(String(row[F.neutral]||'')),venue:String(row[F.venue]||'').trim()};
       map.set(key,g);
     }
     const vk=`${row[F.period]}|${row[F.split]}`;
@@ -346,6 +348,9 @@ function buildGroups(rows){
     // player's location TODAY (for the 'loc' cell) from the matchup: "AWAY @ HOME"
     const parts=String(g.matchup||'').split('@').map(x=>abbrTeam(x.trim()));
     g.location = parts.length===2 ? (parts[1]===g.team?'Home':'Away') : null;
+    if(g.neutral) g.location='Away';                 // neutral site: both teams are treated as the road team
+    if(!g.lineup && g.role && g.role!=='All') g.lineup='Projected '+g.role;   // legacy rows
+    if(g.lineup){ g.role=/starter/i.test(g.lineup)?'Starter':/bench/i.test(g.lineup)?'Bench':(g.role||''); }
     g._season=g.variants['Full Season|All']||Object.values(g.variants)[0]||null;
     GMAP.set(g.key,g);
   }
@@ -410,6 +415,8 @@ buildMS(document.querySelector('.ms[data-ms="team"]'),'team');
 buildMS(document.querySelector('.ms[data-ms="prop"]'),'prop');
 buildMS(document.querySelector('.ms[data-ms="line"]'),'line');
 buildMS(document.querySelector('.ms[data-ms="role"]'),'role');
+buildMS(document.querySelector('.ms[data-ms="lineup"]'),'lineup');
+function luCert(g){const m=String(g.lineup||'').match(/^(Confirmed|Expected|Projected)/i);return m?m[1][0].toUpperCase()+m[1].slice(1).toLowerCase():(g.lineup?'Projected':'');}
 document.addEventListener('click',closeAllMS);
 
 function populateFilters(){
@@ -417,7 +424,8 @@ function populateFilters(){
   MS.team.setOptions(uniq(g=>g.team).sort());
   MS.prop.setOptions(orderProps(uniq(g=>g.prop)).map(v=>[v,abbrProp(v)]));
   MS.line.setOptions(uniq(g=>g.line).sort((a,b)=>a-b).map(v=>[String(v),String(v)]));
-  MS.role.setOptions(uniq(g=>g.role).filter(Boolean).sort());
+  MS.role.setOptions(uniq(g=>g.role).filter(x=>x&&x!=='All').sort());
+  MS.lineup.setOptions(uniq(g=>luCert(g)).filter(Boolean).sort((a,b)=>['Confirmed','Expected','Projected'].indexOf(a)-['Confirmed','Expected','Projected'].indexOf(b)));
   document.querySelectorAll('input[data-filter]').forEach(el=>{const k=el.getAttribute('data-filter'); el.value=(filters[k]!=null)?filters[k]:'';});
   els.search.value=filters.search||'';
 }
@@ -452,6 +460,7 @@ function applyFilters(){
     if(filters.prop.has(g.prop))return false;
     if(filters.line.has(String(g.line)))return false;
     if(filters.role.has(g.role))return false;
+    if(filters.lineup.has(luCert(g)))return false;
     if(gMin!=null){const sv=cellVar(g,'Full Season','All');if(!sv||sv.gTotal==null||sv.gTotal<gMin)return false;}
     if(cMin!=null){const c=activeClr(g);if(c==null||c<cMin)return false;}
     if(boMin!=null&&(g.bestOver==null||g.bestOver<boMin))return false;
@@ -465,7 +474,7 @@ function applyFilters(){
   rendered=0;els.grid.innerHTML='';els.grid.hidden=VIEW.length===0;els.count.textContent=VIEW.length.toLocaleString();
   if(VIEW.length===0){els.content.innerHTML='<div class="state"><h3>No matching props</h3><p>Loosen a filter to see more.</p></div>';els.content.hidden=false;}
   else{els.content.hidden=true;fillViewport();}
-  const active=(filters.matchup.size?1:0)+(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.role.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
+  const active=(filters.matchup.size?1:0)+(filters.team.size?1:0)+(filters.prop.size?1:0)+(filters.line.size?1:0)+(filters.role.size?1:0)+(filters.lineup.size?1:0)+['clrMin','boMin','boMax','buMin','buMax','medMin','medMax'].filter(k=>filters[k]!=='').length+(filters.gMin!==''&&filters.gMin!=='0'?1:0);
   els.filterCount.hidden=active===0;els.filterCount.textContent=active;
 }
 
@@ -477,7 +486,9 @@ function clrCell(g,key,label){
   return `<button type="button" class="cell${active}" data-sortkey="${key}" style="--cbg:${c.bg};--cfg:${c.fg}"><div class="cl">${esc(label)}</div><div class="cv">${fmtPct(v.clr)}</div><div class="cg">${v.gCleared??'–'}/${v.gTotal??'–'}</div></button>`;
 }
 function cardHTML(g){
-  const roleTag=g.role&&g.role!=='All'?`<span class="tag lu ${/starter/i.test(g.role)?'conf':'proj'}">${esc(g.role)}</span>`:'';
+  const luLabel=g.lineup||(g.role&&g.role!=='All'?g.role:'');
+  const roleTag=luLabel?`<span class="tag lu ${/^confirmed/i.test(luLabel)?'conf':'proj'}">${esc(luLabel)}</span>`:'';
+  const neutralTag=g.neutral?`<span class="tag" title="${esc(g.venue||'Neutral site')}">Neutral</span>`:'';
   const loc=g.location||'Loc';
   const av=clrVar(g,sortMode.startsWith('clr:')?sortMode:'clr:Full Season|All');
   const rail=clrColors(av?av.clr:null).edge;
@@ -485,7 +496,7 @@ function cardHTML(g){
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${rail}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
-        <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${roleTag} <span>${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</span></div></div>
+        <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${roleTag}${neutralTag} <span>${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</span></div></div>
     </div>
     <div class="bet-line">${esc(abbrProp(g.prop))} <span class="side">Over</span> ${g.line??''}</div>
     <div class="cgrid">
@@ -526,8 +537,10 @@ function detailHTML(g){
   const oppNote=yesNo?"Opp Allowed = total DD/TD the opponent has given up (location-matched)." : "Opp Allowed = opponent's location-matched allowed per game for this stat.";
   const spTxt=(g.spread!==''&&g.spread!=null)?(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':(g.team+' '+(n>0?'+':'')+n.toFixed(1));})():'–';
   const toTxt=(g.total!==''&&g.total!=null)?(function(){const n=parseFloat(g.total);return isNaN(n)?'–':('O/U '+(n%1===0?n.toFixed(1):String(n)));})():'–';
-  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Spread</span><span class="v">${esc(spTxt)}</span><span class="k">Total</span><span class="v">${esc(toTxt)}</span></div></div>`;
-  return `<div class="panel"><div class="panel-h">Clearance${yesNo?'':' & distribution'} — ${esc(g.role||'')} · vs ${esc(g.opp||'—')}</div>
+  const paceTxt=g.pace!=null?(g.pace.toFixed(1)+(g.paceRank!=null?` (#${g.paceRank})`:'')):'–';
+  const venueKV=g.neutral?`<span class="k">Venue</span><span class="v">Neutral site${g.venue?' · '+esc(g.venue):''}</span>`:'';
+  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Spread</span><span class="v">${esc(spTxt)}</span><span class="k">Total</span><span class="v">${esc(toTxt)}</span><span class="k">Opp pace</span><span class="v">${paceTxt}</span>${venueKV}</div></div>`;
+  return `<div class="panel"><div class="panel-h">Clearance${yesNo?'':' & distribution'} — ${esc(g.lineup||g.role||'')} · vs ${esc(g.opp||'—')}${g.neutral?' · neutral site':''}</div>
     <div class="mini-scroll"><table class="mini clr-detail${yesNo?' yn':''}"><thead>${head}</thead><tbody>
       ${rowFor('Season · All','Full Season','All')}
       ${rowFor('Season · '+loc,'Full Season','loc')}
