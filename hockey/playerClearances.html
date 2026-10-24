@@ -248,7 +248,7 @@ const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0
 
 const F = {player:'Player',team:'Team',opponent:'Opponent',position:'Position',prop:'Prop',line:'Line',period:'Time Period',split:'Location',role:'Role',toi:'TOI Avg',
   clearance:'Clearance %',cleared:'Cleared',games:'Games',matchup:'Matchup',gameTime:'Game Time',spread:'Spread',total:'Total',
-  avg:'Avg',median:'Median',high:'High',low:'Low',oppAllowed:'Opp Allowed',oppRank:'Opp Rank',
+  avg:'Avg',median:'Median',high:'High',low:'Low',oppAllowed:'Opp Allowed',oppRank:'Opp Rank',neutral:'Neutral',venue:'Venue',
   medOver:'Median Over',medUnder:'Median Under',bestOver:'Best Over',bestOverBk:'Best Over Books',bestUnder:'Best Under',bestUnderBk:'Best Under Books'};
 
 /* ---------- State ---------- */
@@ -333,7 +333,7 @@ function buildGroups(rows){
         matchup:row[F.matchup],
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
         bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
-        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup]),gameTime:row[F.gameTime],spread:row[F.spread],total:row[F.total]};
+        variants:{},_q:String(player).toLowerCase(),_matchupAb:abbrMatchup(row[F.matchup]),gameTime:row[F.gameTime],spread:row[F.spread],total:row[F.total],neutral:/^y/i.test(String(row[F.neutral]||'')),venue:String(row[F.venue]||'').trim()};
       map.set(key,g);
     }
     const vk=`${row[F.period]}|${row[F.split]}`;
@@ -349,6 +349,7 @@ function buildGroups(rows){
     // player's location TODAY (for the 'loc' cell) from the matchup: "AWAY @ HOME"
     const parts=String(g.matchup||'').split('@').map(x=>abbrTeam(x.trim()));
     g.location = parts.length===2 ? (parts[1]===g.team?'Home':'Away') : null;
+    if(g.neutral) g.location='Away';                 // neutral site: both teams are treated as the road team
     g.isGoalie = g.position==='G' || /saves|shots against|goals against/i.test(g.prop);
     g._season=g.variants['Full Season|All']||Object.values(g.variants)[0]||null;
     GMAP.set(g.key,g);
@@ -485,6 +486,7 @@ function clrCell(g,key,label){
 }
 function cardHTML(g){
   const roleTag=g.role&&g.role!=='All'&&g.role!=='Skater'?`<span class="tag lu ${/starter/i.test(g.role)?'conf':'proj'}">${esc(g.role)}</span>`:'';
+  const neutralTag=g.neutral?`<span class="tag" title="${esc(g.venue||'Neutral site')}">Neutral</span>`:'';
   const posTag=g.position?`<span class="tag">${esc(g.position)}</span>`:'';
   const loc=g.location||'Loc';
   const av=clrVar(g,sortMode.startsWith('clr:')?sortMode:'clr:Full Season|All');
@@ -493,7 +495,7 @@ function cardHTML(g){
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${rail}">
     <div class="c-head">
       <div class="c-main"><div class="c-name">${esc(g.player)}</div>
-        <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${posTag} ${roleTag} <span>${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</span></div></div>
+        <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${posTag} ${roleTag}${neutralTag} <span>${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</span></div></div>
     </div>
     <div class="bet-line">${esc(abbrProp(g.prop))} <span class="side">Over</span> ${g.line??''}</div>
     <div class="cgrid">
@@ -535,8 +537,8 @@ function detailHTML(g){
     :(yesNo?"Opp Allowed = goals the opponent allows per game (location-matched)." : "Opp Allowed = opponent's location-matched allowed per game for this stat.");
   const spTxt=(g.spread!==''&&g.spread!=null)?(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':(g.team+' '+(n>0?'+':'')+n.toFixed(1));})():'–';
   const toTxt=(g.total!==''&&g.total!=null)?(function(){const n=parseFloat(g.total);return isNaN(n)?'–':('O/U '+(n%1===0?n.toFixed(1):String(n)));})():'–';
-  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Spread</span><span class="v">${esc(spTxt)}</span><span class="k">Total</span><span class="v">${esc(toTxt)}</span></div></div>`;
-  return `<div class="panel"><div class="panel-h">Clearance${yesNo?'':' & distribution'} — ${esc(g.position||'')}${g.role&&g.role!=='All'&&g.role!=='Skater'?' · '+esc(g.role):''} · vs ${esc(g.opp||'—')}</div>
+  const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Spread</span><span class="v">${esc(spTxt)}</span><span class="k">Total</span><span class="v">${esc(toTxt)}</span>${g.neutral?`<span class="k">Venue</span><span class="v">Neutral site${g.venue?' · '+esc(g.venue):''}</span>`:''}</div></div>`;
+  return `<div class="panel"><div class="panel-h">Clearance${yesNo?'':' & distribution'}${g.neutral?' (neutral site)':''} — ${esc(g.position||'')}${g.role&&g.role!=='All'&&g.role!=='Skater'?' · '+esc(g.role):''} · vs ${esc(g.opp||'—')}</div>
     <div class="mini-scroll"><table class="mini clr-detail${yesNo?' yn':''}"><thead>${head}</thead><tbody>
       ${rowFor('Season · All','Full Season','All')}
       ${rowFor('Season · '+loc,'Full Season','loc')}
