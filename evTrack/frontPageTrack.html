@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow">
+<title>Bettor Results — EV Track Record</title>
+<link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin>
+<style>
+  /* ============================================================
+     FRONT PAGE — EV TRACK RECORD (compact)
+     Reads EVTrackBlend: the default simulation ($1,000 start, 25%
+     daily budget, ¼-Kelly stakes, every sport and book) rebuilt
+     nightly by the grader from the EVTrackBets ledger. Last 30 days.
+     Same scoped theme as the best-bets rail. No libraries.
+     ============================================================ */
+  .evt-wrap{--brand:#6FD5DC;--brand-dark:#57C6CE;--accent-soft:rgba(111,213,220,.14);--surface:#2d1b45;--surface-2:#33204d;--inset:#1d1230;--card:#1E1830;--ink:#e8e0f0;--muted:#a89bbe;--muted-2:#7a6b8f;--good:#6ee7b7;--good-bg:rgba(52,211,153,.16);--bad:#fca5a5;--bad-bg:rgba(248,113,113,.16);--line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.06);--radius:14px;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.28);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--page-ink:#2A2333;--page-muted:#6A6377;--page-accent:#0E7C86;
+    font-family:var(--font);color:var(--page-ink);max-width:1200px;margin:0 auto;padding:8px 16px 16px;}
+  .evt-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:4px 0 10px;}
+  .evt-title{font-size:20px;font-weight:800;letter-spacing:-.01em;color:var(--page-ink);}
+  .evt-sub{font-size:13px;color:var(--page-muted);margin-top:2px;}
+  .evt-link{font-size:13px;font-weight:700;color:var(--page-accent);text-decoration:none;white-space:nowrap;}
+  .evt-link:hover{text-decoration:underline;}
+  .evt-card{background:var(--card);color:var(--ink);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line);padding:14px;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px;}
+  @media (max-width:760px){.evt-card{grid-template-columns:1fr;}}
+  .evt-chart{position:relative;min-height:170px;background:var(--inset);border-radius:10px;padding:10px 10px 6px;}
+  .evt-chart svg{width:100%;height:170px;display:block;}
+  .evt-legend{display:flex;justify-content:space-between;font-size:11px;color:var(--muted-2);margin-top:4px;}
+  .evt-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start;}
+  .evt-stat{background:var(--surface);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;}
+  .evt-stat .k{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted-2);}
+  .evt-stat .v{font-size:22px;font-weight:800;margin-top:2px;letter-spacing:-.01em;}
+  .evt-stat .s{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .up{color:var(--good);} .down{color:var(--bad);}
+  .evt-foot{grid-column:1/-1;font-size:11.5px;color:var(--muted-2);line-height:1.45;border-top:1px solid var(--line-2);padding-top:8px;}
+  .evt-foot b{color:var(--muted);font-weight:600;}
+  .evt-state{grid-column:1/-1;text-align:center;color:var(--muted);padding:28px 10px;font-size:14px;}
+</style>
+</head>
+<body>
+<div class="evt-wrap" id="evtWrap">
+  <div class="evt-head">
+    <div>
+      <div class="evt-title">EV Bets — Track Record</div>
+      <div class="evt-sub" id="evtSub">Every +EV player prop we showed, graded the next morning. Last 30 days.</div>
+    </div>
+    <a class="evt-link" id="evtMore" href="#" hidden>Full breakdown &rarr;</a>
+  </div>
+  <div class="evt-card" id="evtCard">
+    <div class="evt-state" id="evtState">Loading…</div>
+  </div>
+</div>
+
+<script>
+/* ---------- CONFIG ---------- */
+var SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
+var ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
+var TABLE = "EVTrackBlend";
+var DAYS = 30;
+var TRACK_PAGE_URL = "";        /* set to the dedicated page's URL once it exists; link stays hidden until then */
+var REFRESH_MS = 10 * 60 * 1000;
+
+var els = { card: document.getElementById('evtCard'), state: document.getElementById('evtState'), sub: document.getElementById('evtSub'), more: document.getElementById('evtMore') };
+if (TRACK_PAGE_URL) { els.more.href = TRACK_PAGE_URL; els.more.hidden = false; }
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function num(v){ var n = parseFloat(v); return isNaN(n) ? null : n; }
+function money(v){ var s = Math.abs(v) >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(2); return (v < 0 ? '-$' : '$') + s.replace(/^-/, ''); }
+function signed(v, suf){ return (v > 0 ? '+' : '') + v.toFixed(1) + (suf || ''); }
+function fmtDay(d){ var p = d.split('-'); return (+p[1]) + '/' + (+p[2]); }
+
+function chartSVG(days){
+  var W = 600, H = 170, padL = 44, padR = 10, padT = 12, padB = 22;
+  var vals = days.map(function(d){ return d.end; });
+  var start = days.length ? days[0].start : 1000;
+  var lo = Math.min.apply(null, vals.concat([start])), hi = Math.max.apply(null, vals.concat([start]));
+  var span = Math.max(hi - lo, start * 0.05); lo = lo - span * 0.08; hi = hi + span * 0.08;
+  var x = function(i){ return padL + (days.length > 1 ? i / (days.length - 1) : 0.5) * (W - padL - padR); };
+  var y = function(v){ return padT + (1 - (v - lo) / (hi - lo)) * (H - padT - padB); };
+  var pts = days.map(function(d, i){ return x(i).toFixed(1) + ',' + y(d.end).toFixed(1); });
+  var line = 'M' + x(0).toFixed(1) + ',' + y(start).toFixed(1) + ' L' + pts.join(' L');
+  var area = line + ' L' + x(days.length - 1).toFixed(1) + ',' + (H - padB) + ' L' + x(0).toFixed(1) + ',' + (H - padB) + ' Z';
+  var up = days[days.length - 1].end >= start;
+  var col = up ? '#6ee7b7' : '#fca5a5';
+  var grid = '';
+  for (var g = 0; g < 4; g++) { var v = lo + (hi - lo) * g / 3; var yy = y(v); grid += '<line x1="' + padL + '" y1="' + yy.toFixed(1) + '" x2="' + (W - padR) + '" y2="' + yy.toFixed(1) + '" stroke="rgba(255,255,255,.07)"/>' + '<text x="' + (padL - 6) + '" y="' + (yy + 3.5).toFixed(1) + '" text-anchor="end" font-size="10" fill="#7a6b8f">$' + Math.round(v).toLocaleString() + '</text>'; }
+  var base = '<line x1="' + padL + '" y1="' + y(start).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y(start).toFixed(1) + '" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/>';
+  var last = pts[pts.length - 1].split(',');
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Bankroll over the last ' + days.length + ' days">' + grid + base +
+    '<path d="' + area + '" fill="' + col + '" fill-opacity=".12"/>' +
+    '<path d="' + line + '" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>' +
+    '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="3.5" fill="' + col + '"/></svg>';
+}
+
+function render(rows){
+  var days = rows.map(function(r){ return { date: r['Date'], start: num(r['Bankroll Start']), end: num(r['Bankroll End']), bets: num(r['Bets']) || 0, wins: num(r['Wins']) || 0, losses: num(r['Losses']) || 0, pushes: num(r['Pushes']) || 0, voids: num(r['Voids']) || 0, staked: num(r['Staked']) || 0, profit: num(r['Profit']) || 0 }; })
+    .filter(function(d){ return d.date && d.start != null && d.end != null; }).sort(function(a, b){ return a.date < b.date ? -1 : 1; });
+  // last N days with activity, re-based so the window starts at the bankroll it opened with
+  days = days.slice(-DAYS);
+  if (!days.length) { els.card.innerHTML = '<div class="evt-state">No graded bets yet — the first results post the morning after the first slate.</div>'; return; }
+  var start = days[0].start, end = days[days.length - 1].end;
+  var profit = 0, staked = 0, bets = 0, wins = 0, losses = 0, pushes = 0, voids = 0, best = null, worst = null;
+  days.forEach(function(d){ profit += d.profit; staked += d.staked; bets += d.bets; wins += d.wins; losses += d.losses; pushes += d.pushes; voids += d.voids; if (best === null || d.profit > best.profit) best = d; if (worst === null || d.profit < worst.profit) worst = d; });
+  var roi = staked > 0 ? profit / staked * 100 : 0, growth = start > 0 ? (end - start) / start * 100 : 0;
+  var upCls = profit >= 0 ? 'up' : 'down';
+  els.sub.textContent = 'Every +EV player prop we showed, graded the next morning. ' + fmtDay(days[0].date) + ' – ' + fmtDay(days[days.length - 1].date) + '.';
+  els.card.innerHTML =
+    '<div class="evt-chart">' + chartSVG(days) + '<div class="evt-legend"><span>' + esc(fmtDay(days[0].date)) + ' · ' + money(start) + '</span><span>' + esc(fmtDay(days[days.length - 1].date)) + ' · ' + money(end) + '</span></div></div>' +
+    '<div class="evt-stats">' +
+      '<div class="evt-stat"><div class="k">Profit on $' + Math.round(start).toLocaleString() + '</div><div class="v ' + upCls + '">' + (profit >= 0 ? '+' : '-') + money(Math.abs(profit)).replace('$', '$') + '</div><div class="s">' + signed(growth, '%') + ' bankroll</div></div>' +
+      '<div class="evt-stat"><div class="k">ROI</div><div class="v ' + upCls + '">' + signed(roi, '%') + '</div><div class="s">on ' + money(staked) + ' staked</div></div>' +
+      '<div class="evt-stat"><div class="k">Record</div><div class="v">' + wins + '–' + losses + (pushes ? '–' + pushes : '') + '</div><div class="s">' + bets + ' bets · ' + ((wins + losses) ? Math.round(wins / (wins + losses) * 100) : 0) + '% hit' + (voids ? ' · ' + voids + ' void' : '') + '</div></div>' +
+      '<div class="evt-stat"><div class="k">Best / worst day</div><div class="v"><span class="up">' + (best.profit >= 0 ? '+' : '') + money(best.profit).replace('$-', '-$') + '</span></div><div class="s">' + esc(fmtDay(best.date)) + ' · worst <span class="down">' + money(worst.profit) + '</span> ' + esc(fmtDay(worst.date)) + '</div></div>' +
+    '</div>' +
+    '<div class="evt-foot"><b>How this is scored:</b> every player prop that hit our +EV screen (EV ≥ 1%, odds −300 to +250) is recorded at the first price we showed, one per book per game, and graded against the box score the next morning — wins, losses and voids alike. Stakes are ¼-Kelly off the running bankroll, highest EV first, capped at 25% of the bankroll per day. No reinvesting during the day, no cherry-picking.</div>';
+}
+
+function load(){
+  fetch(SUPABASE_URL + "/rest/v1/" + TABLE + "?select=*&order=" + encodeURIComponent('"Date"') + ".desc", { headers: { apikey: ANON_KEY, Authorization: "Bearer " + ANON_KEY, Accept: "application/json", "Range-Unit": "items", Range: "0-399" } })
+    .then(function(r){ if (!r.ok) throw new Error("Supabase " + r.status); return r.json(); })
+    .then(function(rows){ render(Array.isArray(rows) ? rows : []); })
+    .catch(function(){ if (els.state) els.state.textContent = 'Track record unavailable right now.'; });
+}
+load(); setInterval(load, REFRESH_MS);
+</script>
+</body>
+</html>
