@@ -200,6 +200,7 @@
         <div class="toggle" id="modeToggle">
           <button data-mode="player" class="on" aria-pressed="true">Players</button>
           <button data-mode="game" aria-pressed="false">Game</button>
+          <button data-mode="exchange" aria-pressed="false">Exchanges</button>
         </div>
       </div>
       <div class="bar-top" style="margin-top:8px;">
@@ -313,11 +314,16 @@ const MODES = {
     table: "WBasketGameOdds",
     prefix: "Game",
     propAbbr: {}            // markets (Moneyline/Spread/Total) shown verbatim
+  },
+  exchange: {
+    table: "WBasketExchangeOdds",   // Polymarket US / Kalshi / Novig priced against OUR fair line (exchangeOdds.js)
+    prefix: "Game",
+    propAbbr: {}
   }
 };
 
 function fieldMap(prefix){
-  if (mode === 'game'){
+  if ((mode === 'game' || mode === 'exchange')){
     /* Game Odds columns differ from the player-prop prefix pattern:
        no Name/Team; label="Game Label", line="Game Line", odds="Game Odds". */
     return {
@@ -529,7 +535,7 @@ async function fetchVerified(table, onFirst){
 
 function normalize(rows) {
   const F = fieldMap(MODES[mode].prefix);
-  const isGame = mode === 'game';
+  const isGame = (mode === 'game' || mode === 'exchange');
   const out = [];
   for (const row of rows) {
     const matchup = row[F.matchup];
@@ -548,6 +554,7 @@ function normalize(rows) {
       kelly: (()=>{const n=num(row[F.kelly]);return n==null?null:(isGame?n*100:n);})(),
       link: (link && /^https?:\/\//i.test(link)) ? link : null,
       gameTime: row[F.gameTime],
+      exPrice: row['Exchange Price']||null, betLimit: row['Bet Limit']!=null&&row['Bet Limit']!==''?num(row['Bet Limit']):null,
       /* Precomputed once so filter/sort/render passes don't redo string work */
       _matchupAb: abbrMatchup(matchup),
     };
@@ -641,8 +648,8 @@ function populateFilters(){
 /* Relabels the chrome that differs between player-prop and game modes:
    title, search placeholder, Prop→Market / Label→Side, hides Team. */
 function applyModeUI(){
-  const isGame = mode === 'game';
-  if (els.titleText) els.titleText.textContent = isGame ? 'Game Odds' : 'Prop Odds';
+  const isGame = (mode === 'game' || mode === 'exchange');
+  if (els.titleText) els.titleText.textContent = mode === 'exchange' ? 'Exchange Odds' : (isGame ? 'Game Odds' : 'Prop Odds');
   els.search.placeholder = isGame ? 'Search team…' : 'Search player…';
   els.search.setAttribute('aria-label', isGame ? 'Search team' : 'Search player');
   const q = sel => document.querySelector(sel);
@@ -718,7 +725,7 @@ function cardHTML(r){
   const ev = evPct(r), k = kellyPct(r);
   const c = evColors(ev);
   const betAmt = (k!=null) ? (bankroll * (k/100)) : null;
-  const isGame = mode === 'game';
+  const isGame = (mode === 'game' || mode === 'exchange');
   const head = isGame
     ? `<div class="c-name">${gameSelection(r)}</div>
         <div class="c-sub">${esc(r._matchupAb)}${r.gameTime?' · '+esc(fmtStamp(r.gameTime)):''}</div>`
@@ -735,9 +742,9 @@ function cardHTML(r){
     </div>
     <div class="bet-line">${betLine}</div>
     <div class="odds">
-      <div class="o"><div class="k">Book</div><div class="v">${fmtOdds(r.bookOdds)}</div><div class="b">${esc(r.book||'')}</div></div>
-      <div class="o"><div class="k">Median</div><div class="v">${fmtOdds(r.medianOdds)}</div><div class="b">&nbsp;</div></div>
-      <div class="o best"><div class="k">Best</div><div class="v">${fmtOdds(r.bestOdds)}</div><div class="b">${esc(r.bestBooks||'')}</div></div>
+      ${mode==='exchange'?`<div class="o"><div class="k">${esc(r.book||'Exchange')}</div><div class="v">${fmtOdds(r.bookOdds)}</div><div class="b">${esc(r.exPrice||'')}${r.betLimit!=null?' · $'+Math.round(r.betLimit).toLocaleString()+' avail':''}</div></div>`:`<div class="o"><div class="k">Book</div><div class="v">${fmtOdds(r.bookOdds)}</div><div class="b">${esc(r.book||'')}</div></div>`}
+      <div class="o"><div class="k">${mode==='exchange'?'Books median':'Median'}</div><div class="v">${fmtOdds(r.medianOdds)}</div><div class="b">&nbsp;</div></div>
+      <div class="o best"><div class="k">${mode==='exchange'?'Books best':'Best'}</div><div class="v">${fmtOdds(r.bestOdds)}</div><div class="b">${esc(r.bestBooks||'')}</div></div>
     </div>
     <div class="c-foot">
       <div class="sizing" data-k="${k!=null?k:''}">Bet size ${fmtPct(k)}${betAmt!=null?` · <span class="amt">$${betAmt.toFixed(2)}</span>`:''}</div>
