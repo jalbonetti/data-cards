@@ -123,5 +123,10 @@ function load(){
 }
 load(); setInterval(load, REFRESH_MS);
 </script>
+<script>
+/* auto-height: tell the embedding page how tall we are (the Webflow embed listens for this) */
+(function(){ function post(){ try { parent.postMessage({ evtrack: 'height', id: document.body.getAttribute('data-embed-id') || location.pathname, h: document.documentElement.scrollHeight }, '*'); } catch(e){} }
+  if ('ResizeObserver' in window) new ResizeObserver(post).observe(document.body); window.addEventListener('load', post); setInterval(post, 2000); })();
+</script>
 </body>
 </html>
