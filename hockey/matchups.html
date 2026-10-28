@@ -214,7 +214,10 @@ const GOALIE_STATS = [['GP','__games__'],['SV','SV'],['SA','SA'],['GA','GA'],['S
   const SINGLE_ONLY = new Set(['SV%','GAA','W','L','OTL','QS']);   // one value per split (totals / rates) — blank in Med/High/Low
   const RATE3 = new Set(['SV%']);
   // Defense panel: per-game allowed + rank; SF/GF = the opponent's own shots/goals for (what our goalie faces).
-  const DEF_STATS = [['G','G'],['A','A'],['PTS','PTS'],['SOG','SOG'],['BLK','BLK'],['HIT','HIT'],['PPP','PPP'],['PIM','PIM'],['DK','DK'],['FD','FD'],['SF','SF'],['GF','GF']];
+  const DEF_STATS = [['G','G'],['A','A'],['PTS','PTS'],['SOG','SOG'],['BLK','BLK'],['HIT','HIT'],['PPP','PPP'],['PIM','PIM'],['DK','DK'],['FD','FD']];
+  // Offense block: the opponent's OWN per-game output — what our goalie faces. SVA / GDK / GFD = saves and
+  // DK / FD points the opponent's offense has given opposing goalies.
+  const OFF_STATS = [['SF','SF'],['GF','GF'],['PPGF','PPGF'],['SVA','SVA'],['Goalie DK','GDK'],['Goalie FD','GFD']];
 const fmt1 = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};   // always a trailing decimal; toFixed keeps the leading 0
 const fmtTot = v=>{const n=parseFloat(v);return isNaN(n)?'–':(Number.isInteger(n)?String(n):n.toFixed(1));};   // split totals: counts stay whole, DK/FD points keep a decimal
 
@@ -479,11 +482,13 @@ function playerTable(players,cardLoc,SET){
   return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 function defenseTable(cell){
-  const heads=DEF_STATS.map(([d])=>`<th>${esc(d)}</th>`).join('');
-  // DD/TD are season totals given up; the rest are per-game allowed. Header notes both.
-  const aRow=DEF_STATS.map(([,k])=>`<td>${cell&&cell.data.allowed[k]!=null?fmt1(cell.data.allowed[k]):'–'}</td>`).join('');
-  const rRow=DEF_STATS.map(([,k])=>{const rk=cell&&cell.data.ranks[k];return `<td>${rk!=null?('#'+rk):'–'}</td>`;}).join('');
-  return `<div class="mini-scroll"><table class="mini"><thead><tr><th></th>${heads}</tr></thead><tbody><tr><td>Allowed</td>${aRow}</tr><tr><td>Rank</td>${rRow}</tr></tbody></table></div>`;
+  const block=(SET,lbl)=>{
+    const heads=SET.map(([d])=>`<th>${esc(d)}</th>`).join('');
+    const aRow=SET.map(([,k])=>`<td>${cell&&cell.data.allowed[k]!=null?fmt1(cell.data.allowed[k]):'–'}</td>`).join('');
+    const rRow=SET.map(([,k])=>{const rk=cell&&cell.data.ranks[k];return `<td>${rk!=null?('#'+rk):'–'}</td>`;}).join('');
+    return `<div class="mini-scroll"><table class="mini"><thead><tr><th>${esc(lbl)}</th>${heads}</tr></thead><tbody><tr><td>Per game</td>${aRow}</tr><tr><td>Rank</td>${rRow}</tr></tbody></table></div>`;
+  };
+  return block(DEF_STATS,'Allowed')+`<div style="height:6px"></div>`+block(OFF_STATS,'Offense');
 }
 function teamSpread(c){ if(c.spread==null) return '–'; const n=parseFloat(c.spread); if(isNaN(n)) return '–'; return c.team+' '+(n>0?'+':'')+n.toFixed(1); }
 function cardHTML(c){
@@ -522,7 +527,7 @@ function detailHTML(c){
   const defLoc=locMode==='loc'?((c.neutral||c.isHome)?'Away':'Home'):'All';   // neutral site: both sides are road teams → opponent's Away row
   const defCell=c.defense[perRaw+'|'+defLoc]||c.defense[perRaw+'|All'];
   const defNote=locMode==='loc'?(c.neutral?'away games (neutral site)':(c.isHome?'away games':'home games')):'all games';
-  const defPanel=`<div class="panel"><div class="panel-h">${esc(c.oppFull||c.opp)} defense — allowed / game (rank)</div>${defCell?defenseTable(defCell):'<div class="note-sm">No defensive data for this split.</div>'}<div class="note-sm">${perLbl} · ${defNote} · #1 = allows the most. SF / GF = ${esc(c.opp)}'s own shots / goals for per game (what ${esc(c.team)}'s goalie faces).</div></div>`;
+  const defPanel=`<div class="panel"><div class="panel-h">${esc(c.oppFull||c.opp)} defense &amp; offense — per game (rank)</div>${defCell?defenseTable(defCell):'<div class="note-sm">No defensive data for this split.</div>'}<div class="note-sm">${perLbl} · ${defNote} · #1 = the most. Allowed = what ${esc(c.opp)} gives up to skaters. Offense = ${esc(c.opp)}'s own shots / goals / PP goals for, and the saves and goalie DK / FD points it has given opposing goalies — what ${esc(c.team)}'s goalie faces.</div></div>`;
   const mlTxt=c.ml!=null?((c.ml>0?'+':'')+c.ml):'–';
   const envPanel=`<div class="panel"><div class="panel-h">Environment</div><div class="kv"><span class="k">Puck line</span><span class="v">${esc(teamSpread(c))}</span><span class="k">Moneyline</span><span class="v">${esc(mlTxt)}</span><span class="k">Total</span><span class="v">${c.total!=null?esc('O/U '+fmt1(c.total)):'\u2013'}</span><span class="k">Back-to-back</span><span class="v">${c.b2b?'Yes':'No'}</span>${c.neutral?`<span class="k">Venue</span><span class="v">Neutral site${c.venue?' · '+esc(c.venue):''}</span>`:''}</div></div>`;
   return goaliePanel+skaterPanel+npPanel+defPanel+envPanel;
