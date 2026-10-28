@@ -236,6 +236,8 @@ const els = {content:document.getElementById('content'),grid:document.getElement
 /* ---------- Helpers ---------- */
 const num = v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
 const raw = v=>{if(v==null)return '–';const s=String(v).trim();return s===''?'–':s;};
+const fmtTot = v=>{const n=parseFloat(v);return isNaN(n)?'–':(Number.isInteger(n)?String(n):n.toFixed(1));};   // whole-number stats stay whole (totals, highs, lows); a genuinely fractional one keeps a decimal
+const fmtRow = (k,v)=>(k==='avg'||k==='med')?fmt1(v):fmtTot(v);
 const has = v=>v!=null&&String(v).trim()!==''&&String(v).trim()!=='-';
 const fmt2 = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(2);};
 const fmtAvg3 = v=>{const n=parseFloat(v);if(isNaN(n))return '–';const sign=n<0?'-':'';return sign+(Math.trunc(Math.abs(n)*1000)/1000).toFixed(3);};   // keep the leading 0
@@ -491,12 +493,12 @@ function playerTable(players,cardLoc,group){
   const nCols=cols.length+2;
   const cellCells=(cell,k)=>{
     const gtd=`<td>${k==='tot'?(cell&&cell.games!=null?cell.games:'–'):''}</td>`;
-    return gtd+cols.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?raw(v[k]):'–'}</td>`;}).join('');
+    return gtd+cols.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?fmtRow(k,v[k]):'–'}</td>`;}).join('');   // totals / high / low are game counts (whole); avg / median one decimal
   };
   const nested=(p,cell,grp)=>{
     const gc=GROUP_COLS[grp]||[];
     const h=gc.map(([d])=>`<th>${esc(d)}</th>`).join('');
-    const row=k=>gc.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?raw(v[k]):'–'}</td>`;}).join('');
+    const row=k=>gc.map(([,st])=>{const v=cell&&cell.stats[st];return `<td>${v?fmtRow(k,v[k]):'–'}</td>`;}).join('');
     return `<table class="mini" style="width:100%"><thead><tr><th>${esc(grp)}</th>${h}</tr></thead><tbody>
       <tr><td>Total</td>${row('tot')}</tr><tr><td>Avg</td>${row('avg')}</tr><tr><td>Median</td>${row('med')}</tr>
       <tr><td>High</td>${row('hi')}</tr><tr><td>Low</td>${row('lo')}</tr></tbody></table>`;
