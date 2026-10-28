@@ -260,7 +260,7 @@ const MATCHUP_RE = new RegExp(Object.keys(TEAM_NAME_MAP).sort((a,b)=>b.length-a.
 /* Opposing-defense stat set — what the opponent allows per game (location-matched). */
 const SET_OPP_DEF = [['G','G'],['A','A'],['PTS','PTS'],['SOG','SOG'],['BLK','BLK'],['HIT','HIT'],['PPP','PPP']];
 /* The opponent's OWN offense (shots / goals for) — what a goalie faces. Columns 'Opp SF' / 'Opp SF Rank'. */
-const SET_OPP_OWN = [['SF','SF'],['GF','GF']];
+const SET_OPP_OWN = [['SF','SF'],['GF','GF'],['PPGF','PPGF'],['SVA','SVA']];   // + PP goals for, saves the offense gives opposing goalies
 
 const MODES = { player: { table:"HockeyPlayer"+BOOK, role:"Player", title:"Players" } };
 let mode = 'player';
@@ -681,13 +681,24 @@ function detailHTML(g){
     const rk=pair&&pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:'';
     return `<td>${val}${rk}</td>`;
   }).join('');
-  const ownCells=SET_OPP_OWN.map(([lbl,col])=>{const pair=v&&v.def?v.def[col]:null;return pair&&pair[0]!=null?`${fmtStat(pair[0])}${pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:''}`:'–';}).join(' / ');
-  const oppPanel=`<div class="panel"><div class="panel-h">Opposing defense — ${esc(g.opp||'—')} · ${perLbl}${oppSplitLbl}</div>
+  const ownCells=SET_OPP_OWN.slice(0,2).map(([lbl,col])=>{const pair=v&&v.def?v.def[col]:null;return pair&&pair[0]!=null?`${fmtStat(pair[0])}${pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:''}`:'–';}).join(' / ');
+  const isGoalie=/^G$/i.test(String(g.pos||'').trim());
+  // Goalies face the opponent's OFFENSE, not its defense: pts allowed here = what opposing goalies
+  // have scored against this team (Goalie DK/FD Pts Allowed), plus shots / goals / PP goals for and
+  // the saves the offense gives up. Skaters keep the defense-allowed view.
+  const ownRow=SET_OPP_OWN.map(([lbl,col])=>{const pair=v&&v.def?v.def[col]:null;const val=pair&&pair[0]!=null?fmtStat(pair[0]):'–';const rk=pair&&pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:'';return `<td>${val}${rk}</td>`;}).join('');
+  const OWN_LABELS={SF:'Shots for',GF:'Goals for',PPGF:'PP goals for',SVA:'Saves allowed'};
+  const oppPanel=isGoalie?`<div class="panel"><div class="panel-h">Opposing offense — ${esc(g.opp||'—')} · ${perLbl}${oppSplitLbl}</div>
+    <div class="kv"><span class="k">${esc(BOOK)} pts allowed to goalies</span><span class="v">${dfsLine}</span></div>
+    <div class="mini-scroll"><table class="mini"><thead><tr><th></th>${SET_OPP_OWN.map(([lbl,col])=>`<th>${esc(OWN_LABELS[col]||lbl)}</th>`).join('')}</tr></thead>
+      <tbody><tr><td>Per game</td>${ownRow}</tr></tbody></table></div>
+    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">The opponent's own offense, per game, location-matched. #1 = the most — the friendliest offense for a goalie to face on points allowed and saves, the toughest on shots and goals.</div></div>`
+  :`<div class="panel"><div class="panel-h">Opposing defense — ${esc(g.opp||'—')} · ${perLbl}${oppSplitLbl}</div>
     <div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span>
       <span class="k">Shots for / Goals for</span><span class="v">${ownCells}</span></div>
     <div class="mini-scroll"><table class="mini"><thead><tr><th></th>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
       <tbody><tr><td>Allowed</td>${defCells}</tr></tbody></table></div>
-    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. #1 = allows the most. Shots for / goals for = the opponent's own offense (what a goalie faces).</div></div>`;
+    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. #1 = allows the most. Shots for / goals for = the opponent's own offense.</div></div>`;
   return `
     ${prodPanel}
     ${oppPanel}
@@ -697,7 +708,7 @@ function detailHTML(g){
         <span class="k">Total</span><span class="v">${(function(){const n=parseFloat(g.total);return isNaN(n)?'–':esc('O/U '+n.toFixed(1));})()}</span>${g.neutral?`<span class="k">Venue</span><span class="v">Neutral site${g.venue?' · '+esc(g.venue):''}</span>`:''}</div>
     </div>
     <div class="panel"><div class="panel-h">Playing time</div>
-      <div class="kv"><span class="k">TOI / game</span><span class="v">${raw(g.minutes)}</span>
+      <div class="kv"><span class="k">TOI / game</span><span class="v">${fmtAvg(g.minutes)}</span>
         <span class="k">Games played</span><span class="v">${raw(g.gp)}</span></div>
     </div>`;
 }
