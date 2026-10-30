@@ -66,6 +66,28 @@
   .pager button{height:28px;border:1px solid var(--line);border-radius:7px;background:var(--inset);color:var(--ink);font-family:inherit;font-size:12px;padding:0 10px;cursor:pointer;}
   .pager button:disabled{opacity:.4;cursor:default;}
   a.lnk{color:var(--brand);text-decoration:none;font-weight:700;}
+  /* mobile: panels must not inherit the table's min-content width (grid items default to
+     min-width:auto, which pushed the whole page wider than the phone and killed scrolling);
+     tables scroll sideways inside their panel instead */
+  .panel{min-width:0;}
+  .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tscroll table{min-width:560px;}
+  @media (max-width:640px){
+    .wrap{padding:6px 8px 16px;}
+    .bar{padding:10px;gap:8px;}
+    .title{font-size:16px;flex-basis:100%;}
+    .seg{font-size:11px;gap:4px;}
+    .seg label{font-size:10px;}
+    .ms-btn{min-width:120px;}
+    .field.n{width:72px;}
+    input[type=range]{width:90px;}
+    .panel{padding:10px;}
+    .stat .v{font-size:18px;}
+    .chart svg{height:190px;}
+    table{font-size:11.5px;}
+    th,td{padding:5px 6px;}
+    #search{width:100% !important;}
+  }
 </style>
 </head>
 <body>
@@ -78,7 +100,9 @@
     <div class="seg"><label>Bankroll $</label><input class="field n" id="bankroll" type="number" min="1" step="50" value="1000"></div>
     <div class="seg"><label>Daily budget</label><input type="range" id="budget" min="1" max="25" step="1" value="25"><span id="budgetLbl">25%</span></div>
     <div class="seg"><label>Stakes</label><div class="tg" id="sizingTg"><button data-s="kelly" class="on">¼ Kelly</button><button data-s="flat">Flat 1%</button></div></div>
+    <div class="seg"><label>Rank by</label><div class="tg" id="rankTg"><button data-k="kelly" class="on">Bet size</button><button data-k="ev">EV %</button></div></div>
     <div class="seg"><label>Min EV %</label><input class="field n" id="minEv" type="number" min="0" max="30" step="0.5" value="1"></div>
+    <div class="seg"><label>Max EV %</label><input class="field n" id="maxEv" type="number" min="0" max="100" step="0.5" placeholder="none"></div>
     <div class="seg"><label>Max odds</label><input class="field n" id="maxOdds" type="number" min="-300" max="1000" step="5" value="250"></div>
   </div>
 
@@ -128,7 +152,8 @@
  *            flatUnitPct: 1, sports: Set|null, books: Set|null, from: 'YYYY-MM-DD'|null, to: ... }
  *
  * Day loop (honest, no intraday reinvestment):
- *   eligible = that day's bets after filters, sorted by EV % desc (ties: earlier capture first)
+ *   eligible = that day's bets after filters, sorted by Quarter Kelly % desc (opts.rankBy 'kelly', default)
+ *              or EV % desc (opts.rankBy 'ev'); ties: EV %, then earlier capture first
  *   budget   = bankroll_start * budgetPct/100            (25% max by site rule)
  *   stake    = kelly: min(Quarter Kelly % * bankroll, perBetCap)   flat: flatUnitPct * bankroll
  *              then capped at the remaining budget; stop when the budget is spent
@@ -157,6 +182,8 @@
     var from = opts.from || null, to = opts.to || null;
     var minEv = opts.minEv != null ? +opts.minEv : 1;          // display threshold (the ledger captures from 0)
     var maxOdds = opts.maxOdds != null ? +opts.maxOdds : 250;  // longest price the simulation will take
+    var maxEv = opts.maxEv != null && opts.maxEv !== '' ? +opts.maxEv : Infinity;   // optional ceiling: skip the tail of the ranking
+    var rankBy = opts.rankBy === 'ev' ? 'ev' : 'kelly';   // order bets are placed each day: 'kelly' = biggest recommended stake first (default), 'ev' = highest EV % first
 
     // bucket by game date
     var byDay = {};
@@ -170,7 +197,7 @@
       if (to && d > to) continue;
       if (sports && !sports.has(b['Sport'])) continue;
       if (books && !books.has(b['Book'])) continue;
-      var evv = num(b['EV %']); if (evv === null || evv < minEv) continue;
+      var evv = num(b['EV %']); if (evv === null || evv < minEv || evv > maxEv) continue;
       var od = num(b['Odds']); if (od === null || od > maxOdds) continue;
       (byDay[d] = byDay[d] || []).push(b);
     }
@@ -180,7 +207,11 @@
     var T = { bets: 0, wins: 0, losses: 0, pushes: 0, voids: 0, staked: 0, profit: 0, peak: start, maxDrawdown: 0, days: dates.length, daysUp: 0, daysDown: 0 };
     for (var di = 0; di < dates.length; di++) {
       var date = dates[di], list = byDay[date].slice();
-      list.sort(function (a, b2) { var ea = num(a['EV %']) || 0, eb = num(b2['EV %']) || 0; if (eb !== ea) return eb - ea; return String(a['Captured At'] || '').localeCompare(String(b2['Captured At'] || '')); });
+      list.sort(function (a, b2) {
+        if (rankBy === 'kelly') { var ka = num(a['Quarter Kelly %']) || 0, kb = num(b2['Quarter Kelly %']) || 0; if (kb !== ka) return kb - ka; }
+        var ea = num(a['EV %']) || 0, eb = num(b2['EV %']) || 0; if (eb !== ea) return eb - ea;
+        return String(a['Captured At'] || '').localeCompare(String(b2['Captured At'] || ''));
+      });
       var dayStart = bankroll, budget = bankroll * budgetPct / 100, remaining = budget, cap = bankroll * capPct / 100;
       var day = { date: date, bankrollStart: round2(dayStart), bets: 0, wins: 0, losses: 0, pushes: 0, voids: 0, staked: 0, profit: 0, placed: [] };
       for (var j = 0; j < list.length && remaining > 0.005; j++) {
@@ -217,17 +248,17 @@
     T.growth = start > 0 ? round2((bankroll - start) / start * 100) : 0;
     T.maxDrawdown = round2(T.maxDrawdown); T.peak = round2(T.peak);
     T.winPct = (T.wins + T.losses) > 0 ? round2(T.wins / (T.wins + T.losses) * 100) : 0;
-    return { days: days, totals: T, opts: { startBankroll: start, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, minEv: minEv, maxOdds: maxOdds } };
+    return { days: days, totals: T, opts: { startBankroll: start, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, minEv: minEv, maxOdds: maxOdds, maxEv: maxEv, rankBy: rankBy } };
   }
 
   /** Flat-unit summary that needs no bankroll: +1u record per (sport, book, day). Used for the daily table. */
   function flatUnits(bets, opts) {
-    opts = opts || {}; var minEv = opts.minEv != null ? +opts.minEv : 1, maxOdds = opts.maxOdds != null ? +opts.maxOdds : 250;
+    opts = opts || {}; var minEv = opts.minEv != null ? +opts.minEv : 1, maxOdds = opts.maxOdds != null ? +opts.maxOdds : 250, maxEv = opts.maxEv != null && opts.maxEv !== '' ? +opts.maxEv : Infinity;
     var out = {};
     for (var i = 0; i < bets.length; i++) {
       var b = bets[i], st = String(b['Status'] || '').toLowerCase();
       if (st !== 'win' && st !== 'loss' && st !== 'push' && st !== 'void') continue;
-      var e = num(b['EV %']); if (e === null || e < minEv) continue;
+      var e = num(b['EV %']); if (e === null || e < minEv || e > maxEv) continue;
       var o = num(b['Odds']); if (o === null || o > maxOdds) continue;
       var k = b['Game Date'] + '|' + b['Sport'] + '|' + b['Book'];
       var o = out[k] || (out[k] = { date: b['Game Date'], sport: b['Sport'], book: b['Book'], bets: 0, wins: 0, losses: 0, pushes: 0, voids: 0, units: 0, evSum: 0 });
@@ -250,9 +281,9 @@ var TABLE = "EVTrackBets";
 var E = window.EVTrackEngine;
 var SPORT_ORDER = ['NFL','NCAAF','NBA','NHL','MLB','WNBA'];
 
-var state = { range: 30, sports: new Set(), books: new Set(), bankroll: 1000, budget: 25, sizing: 'kelly', minEv: 1, maxOdds: 250, search: '', placedOnly: true, page: 0 };
+var state = { range: 30, sports: new Set(), books: new Set(), bankroll: 1000, budget: 25, sizing: 'kelly', rankBy: 'kelly', minEv: 1, maxEv: null, maxOdds: 250, search: '', placedOnly: true, page: 0 };
 var RAW = [], SIM = null, PENDING = 0, LOADED_RANGE = 0;
-var els = {}; ['count','content','grid','chart','chartSub','legend','stats','statsSub','breakdown','daily','bets','betsSub','search','placedOnly','prev','next','pageLbl','honest','bankroll','budget','budgetLbl','minEv','maxOdds'].forEach(function(id){ els[id] = document.getElementById(id); });
+var els = {}; ['count','content','grid','chart','chartSub','legend','stats','statsSub','breakdown','daily','bets','betsSub','search','placedOnly','prev','next','pageLbl','honest','bankroll','budget','budgetLbl','minEv','maxEv','maxOdds'].forEach(function(id){ els[id] = document.getElementById(id); });
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function money(v){ var a = Math.abs(v); var s = a >= 1000 ? Math.round(a).toLocaleString() : a.toFixed(2); return (v < 0 ? '-$' : '$') + s; }
@@ -356,14 +387,15 @@ function load(){
 /* ---------- compute + render ---------- */
 function recompute(){
   var sports = state.sports.size ? state.sports : null, books = state.books.size ? state.books : null;
-  SIM = E.simulate(RAW, { startBankroll: state.bankroll, budgetPct: state.budget, sizing: state.sizing, minEv: state.minEv, maxOdds: state.maxOdds, sports: sports, books: books, from: ymdDaysAgo(state.range) });
-  var inRule = function(b){ var e = E.num(b['EV %']), o = E.num(b['Odds']); return e != null && e >= state.minEv && o != null && o <= state.maxOdds; };
+  SIM = E.simulate(RAW, { startBankroll: state.bankroll, budgetPct: state.budget, sizing: state.sizing, rankBy: state.rankBy, minEv: state.minEv, maxEv: state.maxEv, maxOdds: state.maxOdds, sports: sports, books: books, from: ymdDaysAgo(state.range) });
+  var inRule = function(b){ var e = E.num(b['EV %']), o = E.num(b['Odds']); return e != null && e >= state.minEv && (state.maxEv == null || e <= state.maxEv) && o != null && o <= state.maxOdds; };
   var graded = RAW.filter(function(b){ var s = String(b['Status']).toLowerCase(); return s !== 'pending' && inRule(b) && (!sports || sports.has(b['Sport'])) && (!books || books.has(b['Book'])); });
   els.count.textContent = graded.length.toLocaleString();
   if (!SIM.days.length) { els.content.hidden = false; els.content.innerHTML = '<div class="state">No graded bets for this slice yet.</div>'; els.grid.hidden = true; renderHonest(graded); return; }
   els.content.hidden = true; els.grid.hidden = false;
   renderChart(); renderStats(); renderBreakdown(graded); renderDaily(); state.page = 0; renderBets(graded); renderHonest(graded);
 }
+function evRuleText(){ return state.maxEv != null ? state.minEv + '–' + state.maxEv + '%' : '≥ ' + state.minEv + '%'; }
 function renderChart(){
   var days = SIM.days, W = 800, H = 240, padL = 50, padR = 12, padT = 12, padB = 24;
   var start = SIM.totals.startBankroll, vals = days.map(function(d){ return d.bankrollEnd; });
@@ -381,7 +413,7 @@ function renderChart(){
   for (var i = 0; i < days.length; i += step) ticks += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10" fill="#7a6b8f">' + esc(fmtDay(days[i].date)) + '</text>';
   var dots = days.map(function(d, i){ return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(d.bankrollEnd).toFixed(1) + '" r="2.5" fill="' + col + '"><title>' + esc(d.date) + ': ' + d.wins + '–' + d.losses + ', ' + signedMoney(d.profit) + ' → $' + d.bankrollEnd.toLocaleString() + '</title></circle>'; }).join('');
   els.chart.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + grid + '<line x1="' + padL + '" y1="' + y(start).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y(start).toFixed(1) + '" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/><path d="' + area + '" fill="' + col + '" fill-opacity=".12"/><path d="' + line + '" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-linejoin="round"/>' + dots + ticks + '</svg>';
-  els.chartSub.textContent = money(start) + ' start · ' + (state.sizing === 'kelly' ? '¼-Kelly stakes' : 'flat 1% stakes') + ' · ' + state.budget + '% daily budget · EV ≥ ' + state.minEv + '% · odds ≤ ' + (state.maxOdds > 0 ? '+' : '') + state.maxOdds;
+  els.chartSub.textContent = money(start) + ' start · ' + (state.sizing === 'kelly' ? '¼-Kelly stakes' : 'flat 1% stakes') + ' · ' + state.budget + '% daily budget · ' + (state.rankBy === 'ev' ? 'highest EV first' : 'biggest stake first') + ' · EV ' + evRuleText() + ' · odds ≤ ' + (state.maxOdds > 0 ? '+' : '') + state.maxOdds;
   els.legend.innerHTML = '<span>' + esc(fmtDay(days[0].date)) + '</span><span>peak ' + money(SIM.totals.peak) + ' · max drawdown ' + SIM.totals.maxDrawdown.toFixed(1) + '%</span><span>' + esc(fmtDay(days[days.length - 1].date)) + '</span>';
 }
 function renderStats(){
@@ -421,11 +453,22 @@ function renderBreakdown(graded){
     var p = placed[b['Key']]; if (p) { r.placedN++; r.staked += p.stake; r.profit += p.profit; }
   });
   bandRows = bandRows.filter(function(r){ return r.bets > 0; });
+  // Odds bands: the same read by price. The long-odds tail is where a small probability error becomes a
+  // big EV %, so this is the table that says whether an odds cap (or Kelly ranking) is earning its keep.
+  var oddsRows = ODDS_BANDS.map(function(bd){ return { band: bd.label, bets: 0, wins: 0, losses: 0, staked: 0, profit: 0, units: 0, placedN: 0 }; });
+  graded.forEach(function(b){
+    var o = E.num(b['Odds']); if (o == null) return; var oi = -1; for (var i = 0; i < ODDS_BANDS.length; i++) if (o >= ODDS_BANDS[i].lo && o <= ODDS_BANDS[i].hi) { oi = i; break; } if (oi < 0) return;
+    var r = oddsRows[oi], s = String(b['Status']).toLowerCase(); r.bets++;
+    if (s === 'win') { r.wins++; r.units += E.decimalOdds(o) - 1; } else if (s === 'loss') { r.losses++; r.units -= 1; }
+    var p = placed[b['Key']]; if (p) { r.placedN++; r.staked += p.stake; r.profit += p.profit; }
+  });
+  oddsRows = oddsRows.filter(function(r){ return r.bets > 0; });
   var gap = '<tr><td colspan="7" style="height:6px;border:none"></td></tr>';
   var sub = function(t){ return '<tr><td colspan="7" style="text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);border:none;padding-top:8px">' + t + '</td></tr>'; };
   var head = '<thead><tr><th></th><th>Placed / shown</th><th>Record</th><th>Staked</th><th>Profit</th><th>ROI</th><th>Flat units</th></tr></thead>';
-  els.breakdown.innerHTML = '<table>' + head + '<tbody>' + sportsRows.map(tr).join('') + gap + bookRows.map(tr).join('') + gap + sub('By EV band') + bandRows.map(tr).join('') + '</tbody></table>';
+  els.breakdown.innerHTML = '<table>' + head + '<tbody>' + sportsRows.map(tr).join('') + gap + bookRows.map(tr).join('') + gap + sub('By EV band') + bandRows.map(tr).join('') + gap + sub('By odds band') + oddsRows.map(tr).join('') + '</tbody></table>';
 }
+var ODDS_BANDS = [{ label: '−300 to −151', lo: -300, hi: -151 }, { label: '−150 to −105', lo: -150, hi: -105 }, { label: '−104 to +124', lo: -104, hi: 124 }, { label: '+125 to +149', lo: 125, hi: 149 }, { label: '+150 to +199', lo: 150, hi: 199 }, { label: '+200 to +250', lo: 200, hi: 250 }];
 var BANDS = [{ label: 'EV 0–1%', lo: 0, hi: 1 }, { label: 'EV 1–3%', lo: 1, hi: 3 }, { label: 'EV 3–5%', lo: 3, hi: 5 }, { label: 'EV 5–8%', lo: 5, hi: 8 }, { label: 'EV 8–12%', lo: 8, hi: 12 }, { label: 'EV 12%+', lo: 12, hi: Infinity }];
 function renderDaily(){
   var rows = SIM.days.slice().reverse().map(function(d){ var cls = d.profit >= 0 ? 'up' : 'down'; return '<tr><td>' + esc(d.date) + '</td><td>' + d.bets + '</td><td>' + d.wins + '–' + d.losses + (d.pushes ? '–' + d.pushes : '') + '</td><td>' + money(d.staked) + '</td><td class="' + cls + '">' + signedMoney(d.profit) + '</td><td class="' + cls + '">' + pct(d.roi) + '</td><td>' + money(d.bankrollEnd) + '</td></tr>'; });
@@ -442,7 +485,7 @@ function renderBets(graded){
   els.betsSub.textContent = list.length.toLocaleString() + (state.placedOnly ? ' placed' : ' shown');
   els.pageLbl.textContent = 'page ' + (state.page + 1) + ' of ' + pages; els.prev.disabled = state.page === 0; els.next.disabled = state.page >= pages - 1;
   els.prev.onclick = function(){ state.page--; renderBets(graded); }; els.next.onclick = function(){ state.page++; renderBets(graded); };
-  var headRow = '<table><thead><tr><th>Date</th><th>Sport</th><th>Bet</th><th>Book</th><th>Odds</th><th>EV</th><th>Result</th><th>Stat</th><th>Stake</th><th>P/L</th></tr></thead><tbody>';
+  var headRow = '<table><thead><tr><th>Date</th><th>Sport</th><th style="text-align:left">Bet</th><th>Book</th><th>Odds</th><th>EV</th><th>Result</th><th>Stat</th><th>Stake</th><th>P/L</th></tr></thead><tbody>';
   if (!slice.length) { els.bets.innerHTML = headRow + '<tr><td colspan="10" style="text-align:center;color:var(--muted)">No bets match.</td></tr></tbody></table>'; return; }
   var req = ++betsReq;
   var keys = slice.map(function(b){ return b['Key']; });
@@ -456,18 +499,20 @@ function renderBets(graded){
   fetchDetails(keys).then(function(){ if (req === betsReq) paint(); }).catch(function(e){ if (req === betsReq) els.bets.innerHTML = headRow + '<tr><td colspan="10" style="text-align:center;color:var(--muted)">Bet details unavailable right now (' + esc(e.message) + ').</td></tr></tbody></table>'; });
 }
 function renderHonest(graded){
-  var all = RAW.filter(function(b){ var e = E.num(b['EV %']), o = E.num(b['Odds']); return e != null && e >= state.minEv && o != null && o <= state.maxOdds && (!state.sports.size || state.sports.has(b['Sport'])) && (!state.books.size || state.books.has(b['Book'])); });
+  var all = RAW.filter(function(b){ var e = E.num(b['EV %']), o = E.num(b['Odds']); return e != null && e >= state.minEv && (state.maxEv == null || e <= state.maxEv) && o != null && o <= state.maxOdds && (!state.sports.size || state.sports.has(b['Sport'])) && (!state.books.size || state.books.has(b['Book'])); });
   var c = { win: 0, loss: 0, push: 0, void: 0, pending: 0 }; all.forEach(function(b){ var s = String(b['Status']).toLowerCase(); if (c[s] != null) c[s]++; });
-  els.honest.innerHTML = '<b>How this is scored.</b> Every +EV player prop we showed is recorded at the first price in range (odds −300 to +250); this view keeps those with <b>EV ≥ ' + state.minEv + '% and odds ≤ ' + (state.maxOdds > 0 ? '+' : '') + state.maxOdds + '</b>, recorded, one per book per game, and graded against the box score the next morning — wins, losses and voids alike (DNP = void, stake returned). Nothing is removed and nothing is re-priced. The simulation then places bets highest-EV first off the running bankroll — <b>' + (state.sizing === 'kelly' ? '¼-Kelly stakes' : 'flat 1% stakes') + ', capped at ' + state.budget + '% of the bankroll per day and 5% per bet</b>, settled at the end of each day with no reinvesting during it. Ledger for this window: <b>' + c.win + '</b> won · <b>' + c.loss + '</b> lost · <b>' + c.push + '</b> pushed · <b>' + c.void + '</b> void · <b>' + c.pending + '</b> awaiting grading. Past results are not a promise of future ones; bet responsibly.';
+  els.honest.innerHTML = '<b>How this is scored.</b> Every +EV player prop we showed is recorded at the first price in range (odds −300 to +250); this view keeps those with <b>EV ' + evRuleText() + ' and odds ≤ ' + (state.maxOdds > 0 ? '+' : '') + state.maxOdds + '</b>, recorded, one per book per game, and graded against the box score the next morning — wins, losses and voids alike (DNP = void, stake returned). Nothing is removed and nothing is re-priced. The simulation then places bets ' + (state.rankBy === 'ev' ? 'highest-EV first' : 'biggest recommended stake (¼-Kelly %) first') + ' off the running bankroll — <b>' + (state.sizing === 'kelly' ? '¼-Kelly stakes' : 'flat 1% stakes') + ', capped at ' + state.budget + '% of the bankroll per day and 5% per bet</b>, settled at the end of each day with no reinvesting during it. Ledger for this window: <b>' + c.win + '</b> won · <b>' + c.loss + '</b> lost · <b>' + c.push + '</b> pushed · <b>' + c.void + '</b> void · <b>' + c.pending + '</b> awaiting grading. Past results are not a promise of future ones; bet responsibly.';
 }
 
 /* ---------- events ---------- */
 document.getElementById('rangeTg').addEventListener('click', function(e){ var b = e.target.closest('button[data-r]'); if (!b) return; state.range = +b.getAttribute('data-r'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); if (state.range > LOADED_RANGE) load(); else recompute(); });
+document.getElementById('rankTg').addEventListener('click', function(e){ var b = e.target.closest('button[data-k]'); if (!b) return; state.rankBy = b.getAttribute('data-k'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); recompute(); });
 document.getElementById('sizingTg').addEventListener('click', function(e){ var b = e.target.closest('button[data-s]'); if (!b) return; state.sizing = b.getAttribute('data-s'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); recompute(); });
 els.bankroll.addEventListener('input', function(){ var v = parseFloat(this.value); if (v > 0) { state.bankroll = v; recompute(); } });
 els.budget.addEventListener('input', function(){ state.budget = +this.value; els.budgetLbl.textContent = this.value + '%'; recompute(); });
 var st; els.search.addEventListener('input', function(){ state.search = this.value; clearTimeout(st); st = setTimeout(function(){ recompute(); }, 150); });
 els.placedOnly.addEventListener('change', function(){ state.placedOnly = this.checked; recompute(); });
+els.maxEv.addEventListener('input', function(){ var v = parseFloat(this.value); state.maxEv = isNaN(v) ? null : v; recompute(); });
 els.minEv.addEventListener('input', function(){ var v = parseFloat(this.value); if (!isNaN(v) && v >= 0) { state.minEv = v; recompute(); } });
 els.maxOdds.addEventListener('input', function(){ var v = parseFloat(this.value); if (!isNaN(v)) { state.maxOdds = v; recompute(); } });
 load();
