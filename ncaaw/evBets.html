@@ -139,6 +139,8 @@
   .bet-btn { text-decoration: none; background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); color: #fff; font-size: 13px; font-weight: 700; padding: 8px 16px; border-radius: 9px; white-space: nowrap; }
   .bet-btn:active { transform: translateY(1px); }
   .bet-btn.dead { background: var(--line-2); color: var(--muted-2); pointer-events: none; }
+  .bet-btn.dead.lnk { pointer-events: auto; }   /* negative-EV row: the book link still opens, it just isn't a Bet */
+  .sizing .nobet { color: var(--muted-2); font-weight: 700; }
 
   /* ---------- States ---------- */
   .state { text-align: center; padding: 60px 20px; color:var(--page-muted); }
@@ -584,7 +586,7 @@ function orderProps(vals){const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0
 /* ---------- Filters: in-memory per-mode persistence + multi-select (#9/#10) ---------- */
 const MODE_FILTERS={};   /* in-memory only: persist across tab/mode switches within a page load, reset on a real (re)load */
 function saveFilters(){MODE_FILTERS[mode]=filters;}
-function loadFilters(){filters = MODE_FILTERS[mode] || newFilters();}
+function loadFilters(){filters = MODE_FILTERS[mode] || newFilters(); if (!MODE_FILTERS[mode] && mode==='exchange') filters.evMin='0';}   // exchanges open on +EV only; clear the filter to see the whole board
 const MS = {};
 function closeAllMS(){Object.values(MS).forEach(c=>{c.pop.hidden=true;c.btn.setAttribute('aria-expanded','false');});}
 function buildMS(container,key){
@@ -743,8 +745,8 @@ function cardHTML(r){
       <div class="o best"><div class="k">${mode==='exchange'?'Books best':'Best'}</div><div class="v">${fmtOdds(r.bestOdds)}</div><div class="b">${esc(r.bestBooks||'')}</div></div>
     </div>
     <div class="c-foot">
-      <div class="sizing" data-k="${k!=null?k:''}">Bet size ${fmtPct(k)}${betAmt!=null?` · <span class="amt">$${betAmt.toFixed(2)}</span>`:''}</div>
-      ${r.link ? `<a class="bet-btn" href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">Bet →</a>` : `<span class="bet-btn dead">No link</span>`}
+      <div class="sizing" data-k="${k!=null?k:''}">${(k!=null&&k<=0)?'<span class="nobet">No bet</span> · <span class="amt">EV ≤ 0</span>':`Bet size ${fmtPct(k)}${betAmt!=null?` · <span class="amt">$${betAmt.toFixed(2)}</span>`:''}`}</div>
+      ${r.link ? ((k!=null&&k<=0) ? `<a class="bet-btn dead lnk" href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">View →</a>` : `<a class="bet-btn" href="${esc(r.link)}" target="_blank" rel="noopener noreferrer">Bet →</a>`) : `<span class="bet-btn dead">No link</span>`}
     </div>
   </div>`;
 }
@@ -816,6 +818,7 @@ els.bankroll.addEventListener('input', e=>{
   els.grid.querySelectorAll('.sizing').forEach(elm=>{
     const k = parseFloat(elm.dataset.k);
     if (isNaN(k)) return;
+    if (k<=0) return;   // "No bet" rows don't carry a stake
     elm.innerHTML = `Bet size ${fmtPct(k)} · <span class="amt">$${(bankroll*(k/100)).toFixed(2)}</span>`;
   });
 });
