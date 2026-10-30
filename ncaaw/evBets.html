@@ -210,8 +210,8 @@
         <div class="seg">
           <label for="sortField">Sort</label>
           <select id="sortField">
-            <option value="ev">EV %</option>
             <option value="kelly">Bet size</option>
+            <option value="ev">EV %</option>
             <option value="best">Best odds</option>
             <option value="line">Line</option>
             <option value="name">Name</option>
@@ -367,7 +367,7 @@ const CAP_ODDS_FLOOR = -300, CAP_ODDS_CEIL = 250;
 function newFilters(){return { search:'', matchup:new Set(), team:new Set(), prop:new Set(), label:new Set(), book:new Set(), bestBooks:new Set(), evMin:'', bookMin:String(CAP_ODDS_FLOOR), bookMax:String(CAP_ODDS_CEIL), bestMin:'', bestMax:'', medMin:'', medMax:'', cap:true };}
 function syncCapChk(){ document.querySelectorAll('[data-filter-chk]').forEach(el=>{ el.checked = filters[el.getAttribute('data-filter-chk')] !== false; }); }
 let filters = newFilters();
-const sort = { field:'ev', dir:'desc' };
+const sort = { field:'kelly', dir:'desc' };   // default = bet size (¼-Kelly %): EV only matters once it's run through Kelly, so the biggest recommended stakes lead
 
 /* ---------- Helpers ---------- */
 const num = (v) => { const n = parseFloat(v); return isNaN(n) ? null : n; };
