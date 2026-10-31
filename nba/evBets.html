@@ -374,7 +374,7 @@ const CAT=['matchup','team','prop','label','book','bestBooks'], NUM=['evMin','be
 //   check / Clear all -> writes -300 / +250 into min & max
 //   uncheck           -> clears both (no cap; full board)
 //   edit either input -> unchecks the box, leaves the other bound alone
-const CAP_ODDS_FLOOR = -300, CAP_ODDS_CEIL = 250;
+const CAP_ODDS_FLOOR = -300, CAP_ODDS_CEIL = 150;
 function newFilters(){return { search:'', matchup:new Set(), team:new Set(), prop:new Set(), label:new Set(), book:new Set(), bestBooks:new Set(), evMin:'', bookMin:String(CAP_ODDS_FLOOR), bookMax:String(CAP_ODDS_CEIL), bestMin:'', bestMax:'', medMin:'', medMax:'', cap:true };}
 function syncCapChk(){ document.querySelectorAll('[data-filter-chk]').forEach(el=>{ el.checked = filters[el.getAttribute('data-filter-chk')] !== false; }); }
 let filters = newFilters();
