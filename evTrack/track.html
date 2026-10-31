@@ -281,7 +281,7 @@ var TABLE = "EVTrackBets";
 var E = window.EVTrackEngine;
 var SPORT_ORDER = ['NFL','NCAAF','NBA','NHL','MLB','WNBA'];
 
-var state = { range: 30, sports: new Set(), books: new Set(), bankroll: 1000, budget: 25, sizing: 'kelly', rankBy: 'kelly', minEv: 1, maxEv: null, maxOdds: 150, search: '', placedOnly: true, page: 0 };
+var state = { range: 30, sports: new Set(), books: new Set(), bankroll: 1000, budget: 25, sizing: 'kelly', rankBy: 'kelly', minEv: 1, maxEv: null, maxOdds: 250, search: '', placedOnly: true, page: 0 };
 var RAW = [], SIM = null, PENDING = 0, LOADED_RANGE = 0;
 var els = {}; ['count','content','grid','chart','chartSub','legend','stats','statsSub','breakdown','daily','bets','betsSub','search','placedOnly','prev','next','pageLbl','honest','bankroll','budget','budgetLbl','minEv','maxEv','maxOdds'].forEach(function(id){ els[id] = document.getElementById(id); });
 
