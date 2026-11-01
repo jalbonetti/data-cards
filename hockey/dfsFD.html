@@ -258,7 +258,7 @@ const TEAM_LC = Object.fromEntries(Object.entries(TEAM_NAME_MAP).map(([k,v])=>[k
 const MATCHUP_RE = new RegExp(Object.keys(TEAM_NAME_MAP).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'gi');
 
 /* Opposing-defense stat set — what the opponent allows per game (location-matched). */
-const SET_OPP_DEF = [['G','G'],['A','A'],['PTS','PTS'],['SOG','SOG'],['BLK','BLK'],['HIT','HIT'],['PPP','PPP']];
+const SET_OPP_DEF = BOOK==='FD' ? [['G','G'],['A','A'],['SOG','SOG'],['BLK','BLK'],['PPP','PPP']] : [['G','G'],['A','A'],['SOG','SOG'],['BLK','BLK']];   // only stats the site scores (DK: G/A/SOG/BLK; FD adds PPP). Hits, PIM, points are not DFS inputs.
 /* The opponent's OWN offense (shots / goals for) — what a goalie faces. Columns 'Opp SF' / 'Opp SF Rank'. */
 const SET_OPP_OWN = [['SF','SF'],['GF','GF'],['PPGF','PPGF'],['SVA','SVA']];   // + PP goals for, saves the offense gives opposing goalies
 
@@ -509,7 +509,7 @@ function buildGroups(rows){
     let g=map.get(player);
     if(!g){
       g={key:player, player, team:abbrTeam(row[F.team]), opp:abbrTeam(row[F.opponent]), pos:row[F.pos], price:num(row[F.price]),
-        rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
+        rostership:row[F.rostership], projection:row[F.projection], parts:row['Projection Parts']||'', gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
         matchup:row[F.matchup], _matchupAb:abbrMatchup(row[F.matchup]||''), spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], neutral:/^yes$/i.test(String(row[F.neutral]||'').trim()), venue:row[F.venue],
         variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
       g.slateMap=parseSlateRost(row[F.slateRost]); if(!Object.keys(g.slateMap).length&&String(row[F.rostership]||'').includes(':'))g.slateMap=parseSlateRost(row[F.rostership]); g._slates=new Set(Object.keys(g.slateMap));
@@ -702,6 +702,9 @@ function detailHTML(g){
   return `
     ${prodPanel}
     ${oppPanel}
+    ${g.parts?`<div class="panel"><div class="panel-h">How the projection is built <span style="font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)">market props only</span></div>
+      <div style="font-size:12px;line-height:1.55;color:var(--ink);word-break:break-word">${esc(g.parts)}</div>
+      <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Each term is a devigged prop ladder × the site's scoring. A stat with no prop posted counts 0 and is listed as "no prop".</div></div>`:''}
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Puck line</span><span class="v">${(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':esc(g.team+' '+(n>0?'+':'')+n.toFixed(1));})()}</span>
         <span class="k">Moneyline</span><span class="v">${(function(){const n=parseFloat(g.moneyline);return isNaN(n)?'–':esc((n>0?'+':'')+n);})()}</span>
