@@ -508,7 +508,7 @@ function buildGroups(rows){
     let g=map.get(player);
     if(!g){
       g={key:player, player, team:abbrTeam(row[F.team]), opp:abbrTeam(row[F.opponent]), pos:row[F.pos], price:num(row[F.price]),
-        rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
+        rostership:row[F.rostership], projection:row[F.projection], parts:row['Projection Parts']||'', gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
         matchup:row[F.matchup], _matchupAb:abbrMatchup(row[F.matchup]||''), spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], pace:row[F.pace],
         stadium:row[F.stadium], dome:row[F.dome], wx:[row[F.wx1],row[F.wx2],row[F.wx3],row[F.wx4]].filter(w=>w!=null&&String(w).trim()!==''),
         variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
@@ -686,6 +686,9 @@ function detailHTML(g){
   return `
     ${prodPanel}
     ${oppPanel}
+    ${g.parts?`<div class="panel"><div class="panel-h">How the projection is built <span style="font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)">market props only</span></div>
+      <div style="font-size:12px;line-height:1.55;color:var(--ink);word-break:break-word">${esc(g.parts)}</div>
+      <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Each term is a devigged prop ladder × the site's scoring. A stat with no prop posted counts 0 and is listed as "no prop".</div></div>`:''}
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':esc(g.team+' '+(n>0?'+':'')+n.toFixed(1));})()}</span>
         <span class="k">Total</span><span class="v">${(function(){const n=parseFloat(g.total);return isNaN(n)?'–':esc('O/U '+n.toFixed(1));})()}</span>
