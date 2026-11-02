@@ -509,7 +509,7 @@ function buildGroups(rows){
     let g=map.get(player);
     if(!g){
       g={key:player, player, team:abbrTeam(row[F.team]), opp:abbrTeam(row[F.opponent]), pos:row[F.pos], price:num(row[F.price]),
-        rostership:row[F.rostership], projection:row[F.projection], parts:row['Projection Parts']||'', gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
+        rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
         matchup:row[F.matchup], _matchupAb:abbrMatchup(row[F.matchup]||''), spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], neutral:/^yes$/i.test(String(row[F.neutral]||'').trim()), venue:row[F.venue],
         variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
       g.slateMap=parseSlateRost(row[F.slateRost]); if(!Object.keys(g.slateMap).length&&String(row[F.rostership]||'').includes(':'))g.slateMap=parseSlateRost(row[F.rostership]); g._slates=new Set(Object.keys(g.slateMap));
@@ -522,7 +522,7 @@ function buildGroups(rows){
     g.variants[vk]={
       med:num(row[F.projMed]), avg:num(row[F.projAvg]), high:num(row[F.projHigh]), low:num(row[F.projLow]), mode:num(row[F.projMode]),
       ratioMed:num(row[F.ratioMed]), ratioHigh:num(row[F.ratioHigh]),
-      oppDfs:num(row[F.oppDfsAllowed]), oppDfsRank:num(row[F.oppDfsRank]),
+      oppDfs:num(row[F.oppDfsAllowed]), oppDfsRank:num(row[F.oppDfsRank]), mix:String(row['DFS Mix']||''),
       def:Object.fromEntries([...SET_OPP_DEF.map(([,col])=>[col,[num(row[`Opp ${col} Allowed`]),num(row[`Opp ${col} Rank`])]]),
         ...SET_OPP_OWN.map(([,col])=>[col,[num(row[`Opp ${col}`]),num(row[`Opp ${col} Rank`])]])])
     };
@@ -702,9 +702,24 @@ function detailHTML(g){
   return `
     ${prodPanel}
     ${oppPanel}
-    ${g.parts?`<div class="panel"><div class="panel-h">How the projection is built <span style="font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)">market props only</span></div>
-      <div style="font-size:12px;line-height:1.55;color:var(--ink);word-break:break-word">${esc(g.parts)}</div>
-      <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Each term is a devigged prop ladder × the site's scoring. A stat with no prop posted counts 0 and is listed as "no prop".</div></div>`:''}
+    ${(function(){
+      // Where the points come from: share of the player's average DFS points per scored stat (this period/split),
+      // next to what the opponent allows in that stat — so a 40%-from-assists player can be read against an
+      // opponent that allows the most assists. Shares from the season/L-window averages, not the projection.
+      const mixStr=v&&v.mix?v.mix:''; if(!mixStr) return '';
+      const MAP={G:'G',A:'A',SOG:'SOG',BLK:'BLK',PPP:'PPP',SV:'SF',GA:'GF'}, OPPLBL={SF:'shots for',GF:'goals for'};
+      const items=mixStr.split(',').map(x=>{const i=x.lastIndexOf(':');return [x.slice(0,i),parseFloat(x.slice(i+1))];}).filter(x=>x[0]&&!isNaN(x[1]));
+      if(!items.length) return '';
+      const rows=items.map(([lbl,pct])=>{
+        const col=MAP[lbl]; const pair=col&&v.def?v.def[col]:null;
+        const opp=pair&&pair[0]!=null?`${fmtStat(pair[0])}${pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:''}`:'–';
+        const w=Math.max(0,Math.min(100,pct));
+        return `<tr><td class="rl">${esc(lbl)}</td><td><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><div style="width:70px;height:6px;border-radius:3px;background:var(--line-2);overflow:hidden"><div style="width:${w}%;height:100%;background:${pct<0?'var(--bad)':'var(--brand)'}"></div></div><span>${pct<0?'−':''}${Math.abs(pct)}%</span></div></td><td>${opp}${col&&OPPLBL[col]?` <span style="color:var(--muted-2);font-size:10.5px">${OPPLBL[col]}</span>`:''}</td></tr>`;
+      }).join('');
+      return `<div class="panel"><div class="panel-h">Where the points come from <span style="font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)">${perLbl}${splitLbl}</span></div>
+        <div class="mini-scroll"><table class="mini"><thead><tr><th></th><th>Share of ${esc(BOOK)} pts</th><th>Opp allows / game</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = the player's average in each scored stat × its ${esc(BOOK)} value, as a % of the total. Opponent figures are location-matched; #1 = allows the most.</div></div>`;
+    })()}
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Puck line</span><span class="v">${(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':esc(g.team+' '+(n>0?'+':'')+n.toFixed(1));})()}</span>
         <span class="k">Moneyline</span><span class="v">${(function(){const n=parseFloat(g.moneyline);return isNaN(n)?'–':esc((n>0?'+':'')+n);})()}</span>
