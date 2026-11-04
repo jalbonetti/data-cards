@@ -171,6 +171,50 @@
   function decimalOdds(american) { return american > 0 ? 1 + american / 100 : 1 + 100 / Math.abs(american); }
   function round2(x) { return Math.round(x * 100) / 100; }
 
+
+  /** Rank one day's candidates and size them off a bankroll — the SAME rule the nightly blend, the track-record
+   *  page and the user Slip Builder all use (added 2026-11-03 so the slip is provably the tracker's logic).
+   *
+   *  planDay(bets, opts) -> { placed: [{ bet, stake }], budget, cap, remaining }
+   *    bets  objects carrying 'Quarter Kelly %', 'EV %', 'Odds' (+ optional 'Captured At' tiebreak, gameKey)
+   *    opts  { bankroll, budgetPct: 25 (max 25), sizing: 'kelly'|'flat', perBetCapPct: 5, flatUnitPct: 1,
+   *            rankBy: 'kelly'|'ev', maxBets: Infinity, perGameCap: Infinity (uses bet.gameKey), presorted: false }
+   *  Order: Quarter Kelly desc (or EV desc), EV tiebreak, earlier capture first. Stake = Kelly% x bankroll
+   *  (or flat unit), capped per bet and by what is left of the daily budget; stop when the budget is spent. */
+  function planDay(bets, opts) {
+    opts = opts || {};
+    var bankroll = opts.bankroll != null ? +opts.bankroll : 1000;
+    var budgetPct = Math.min(25, Math.max(0, opts.budgetPct != null ? +opts.budgetPct : 25));
+    var sizing = opts.sizing === 'flat' ? 'flat' : 'kelly';
+    var capPct = opts.perBetCapPct != null ? +opts.perBetCapPct : 5;
+    var flatPct = opts.flatUnitPct != null ? +opts.flatUnitPct : 1;
+    var rankBy = opts.rankBy === 'ev' ? 'ev' : 'kelly';
+    var maxBets = opts.maxBets != null && opts.maxBets !== '' && +opts.maxBets > 0 ? +opts.maxBets : Infinity;
+    var perGame = opts.perGameCap != null && opts.perGameCap !== '' && +opts.perGameCap > 0 ? +opts.perGameCap : Infinity;
+    var list = opts.presorted ? bets : bets.slice().sort(function (a, b2) {
+      if (rankBy === 'kelly') { var ka = num(a['Quarter Kelly %']) || 0, kb = num(b2['Quarter Kelly %']) || 0; if (kb !== ka) return kb - ka; }
+      var ea = num(a['EV %']) || 0, eb = num(b2['EV %']) || 0; if (eb !== ea) return eb - ea;
+      return String(a['Captured At'] || '').localeCompare(String(b2['Captured At'] || ''));
+    });
+    var budget = bankroll * budgetPct / 100, remaining = budget, cap = bankroll * capPct / 100;
+    var placed = [], perGameN = {};
+    for (var j = 0; j < list.length && remaining > 0.005 && placed.length < maxBets; j++) {
+      var bet = list[j];
+      if (num(bet['Odds']) === null) continue;
+      var gk = bet.gameKey;
+      if (gk != null && perGame !== Infinity && (perGameN[gk] || 0) >= perGame) continue;
+      var qk = num(bet['Quarter Kelly %']);
+      var stake = sizing === 'flat' ? bankroll * flatPct / 100 : (qk != null && qk > 0 ? bankroll * qk / 100 : 0);
+      if (stake <= 0) continue;
+      stake = Math.min(stake, cap, remaining);
+      if (stake < 0.01) continue;
+      remaining -= stake;
+      if (gk != null) perGameN[gk] = (perGameN[gk] || 0) + 1;
+      placed.push({ bet: bet, stake: stake });
+    }
+    return { placed: placed, budget: budget, cap: cap, remaining: remaining };
+  }
+
   function simulate(bets, opts) {
     opts = opts || {};
     var start = opts.startBankroll != null ? +opts.startBankroll : 1000;
@@ -213,17 +257,12 @@
         var ea = num(a['EV %']) || 0, eb = num(b2['EV %']) || 0; if (eb !== ea) return eb - ea;
         return String(a['Captured At'] || '').localeCompare(String(b2['Captured At'] || ''));
       });
-      var dayStart = bankroll, budget = bankroll * budgetPct / 100, remaining = budget, cap = bankroll * capPct / 100;
+      var dayStart = bankroll;
+      var plan = planDay(list, { bankroll: bankroll, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, rankBy: rankBy, presorted: true });
       var day = { date: date, bankrollStart: round2(dayStart), bets: 0, wins: 0, losses: 0, pushes: 0, voids: 0, staked: 0, profit: 0, placed: [] };
-      for (var j = 0; j < list.length && remaining > 0.005; j++) {
-        var bet = list[j];
-        var qk = num(bet['Quarter Kelly %']);
-        var stake = sizing === 'flat' ? bankroll * flatPct / 100 : (qk != null && qk > 0 ? bankroll * qk / 100 : 0);
-        if (stake <= 0) continue;
-        stake = Math.min(stake, cap, remaining);
-        if (stake < 0.01) continue;
-        remaining -= stake;
-        var odds = num(bet['Odds']); if (odds === null) continue;
+      for (var j = 0; j < plan.placed.length; j++) {
+        var bet = plan.placed[j].bet, stake = plan.placed[j].stake;
+        var odds = num(bet['Odds']);
         var status = String(bet['Status']).toLowerCase();
         var pl = 0;
         if (status === 'win') pl = stake * (decimalOdds(odds) - 1);
@@ -272,7 +311,7 @@
     return Object.keys(out).map(function (k) { var o = out[k]; o.units = round2(o.units); o.avgEv = o.bets ? round2(o.evSum / o.bets) : 0; delete o.evSum; return o; });
   }
 
-  return { simulate: simulate, flatUnits: flatUnits, decimalOdds: decimalOdds, num: num };
+  return { simulate: simulate, planDay: planDay, flatUnits: flatUnits, decimalOdds: decimalOdds, num: num };
 }));
 
 /* ===================== page ===================== */
