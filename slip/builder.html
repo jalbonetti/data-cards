@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow">
+<title>Bettor Results — Slip Builder</title>
+<link rel="preconnect" href="https://hcwolbvmffkmjcxsumwn.supabase.co" crossorigin>
+<style>
+  /* ============================================================
+     SLIP BUILDER — the tracker's daily rule, with the user's settings.
+     Reads the same Supabase EV tables as the EV cards (anon key), keeps the
+     games that are today and not started (or future games if asked), takes the
+     best price per market across the books the user holds, and sizes the slip
+     with planDay() from evTrackEngine.js — the exact function the nightly track
+     record uses. Nothing is stored server-side; settings live in this browser.
+     ============================================================ */
+  .wrap{--brand:#6FD5DC;--brand-dark:#57C6CE;--accent-soft:rgba(111,213,220,.14);--surface:#2d1b45;--surface-2:#33204d;--inset:#1d1230;--card:#1E1830;--ink:#e8e0f0;--muted:#a89bbe;--muted-2:#7a6b8f;--good:#6ee7b7;--good-bg:rgba(52,211,153,.16);--bad:#fca5a5;--bad-bg:rgba(248,113,113,.16);--warn:#fcd34d;--line:rgba(255,255,255,.10);--line-2:rgba(255,255,255,.06);--radius:14px;--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px rgba(0,0,0,.28);--font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-family:var(--font);color:var(--ink);max-width:1200px;margin:0 auto;padding:8px 16px 24px;}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;min-width:0;}
+  .panel-h{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;}
+  .panel-h span{font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted);}
+  .title{font-size:18px;font-weight:800;color:var(--ink);}
+  .sub{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.45;}
+  .top{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:12px;margin-top:12px;}
+  @media (max-width:900px){.top{grid-template-columns:1fr;}}
+  /* sport x kind grid */
+  .sg{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .sg th,.sg td{padding:6px 6px;border-bottom:1px solid var(--line-2);text-align:center;white-space:nowrap;}
+  .sg th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);font-weight:700;}
+  .sg td:first-child,.sg th:first-child{text-align:left;}
+  .sg .n{font-size:11px;color:var(--muted-2);font-weight:600;margin-left:6px;}
+  .sg .n.zero{color:var(--bad);opacity:.8;}
+  .sg tr.off td{opacity:.45;}
+  .chk{width:16px;height:16px;accent-color:var(--brand);vertical-align:middle;cursor:pointer;}
+  .mini{border:none;background:transparent;color:var(--brand);font-weight:700;font-size:11px;cursor:pointer;font-family:inherit;padding:0 4px;}
+  /* books */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{border:1px solid var(--line);background:var(--inset);color:var(--muted);border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .chip.on{background:var(--brand);color:#0b1f22;border-color:var(--brand);}
+  .chip .s{font-weight:600;opacity:.8;font-size:10.5px;margin-left:4px;}
+  /* settings */
+  .set{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 12px;}
+  .seg{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);}
+  .seg label{font-weight:700;letter-spacing:.03em;text-transform:uppercase;font-size:10.5px;color:var(--muted-2);}
+  .seg .hint{font-size:10.5px;color:var(--muted-2);}
+  .field{height:34px;border:1px solid var(--line);border-radius:8px;background:var(--inset);color:var(--ink);font-family:inherit;font-size:13px;padding:0 9px;width:100%;box-sizing:border-box;}
+  .tg{display:inline-flex;background:var(--inset);border:1px solid var(--line);border-radius:9px;padding:2px;}
+  .tg button{border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:12px;font-weight:700;padding:5px 10px;border-radius:7px;cursor:pointer;white-space:nowrap;flex:1;}
+  .tg button.on{background:var(--brand);color:#0b1f22;}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;}
+  .cta{height:40px;border:none;border-radius:10px;background:var(--brand);color:#0b1f22;font-family:inherit;font-size:14px;font-weight:800;padding:0 18px;cursor:pointer;}
+  .cta:disabled{opacity:.5;cursor:default;}
+  .ghost{height:34px;border:1px solid var(--line);border-radius:8px;background:var(--inset);color:var(--ink);font-family:inherit;font-size:12.5px;font-weight:700;padding:0 12px;cursor:pointer;}
+  .note{font-size:11.5px;color:var(--muted-2);line-height:1.5;}
+  .note b{color:var(--muted);font-weight:600;}
+  label.ck{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer;}
+  /* results */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px;}
+  .stat{background:var(--surface);border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;}
+  .stat .k{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted-2);}
+  .stat .v{font-size:20px;font-weight:800;margin-top:2px;}
+  .stat .s{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .up{color:var(--good);} .down{color:var(--bad);}
+  table.slip{width:100%;border-collapse:collapse;font-size:12.5px;min-width:720px;}
+  .slip th,.slip td{padding:7px 8px;text-align:right;border-bottom:1px solid var(--line-2);white-space:nowrap;}
+  .slip th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);font-weight:700;}
+  .slip td:first-child,.slip th:first-child,.slip td.l,.slip th.l{text-align:left;}
+  .slip td.bet{white-space:normal;min-width:220px;}
+  .slip .side{color:var(--brand);font-weight:800;}
+  .slip tr.day td{background:var(--surface);color:var(--muted);font-weight:700;font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-align:left;}
+  .stake{font-weight:800;color:var(--ink);}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--surface-2);color:var(--muted);}
+  a.go{display:inline-block;height:26px;line-height:26px;padding:0 10px;border-radius:7px;background:var(--brand);color:#0b1f22;font-weight:800;font-size:11.5px;text-decoration:none;}
+  a.go.dead{background:var(--surface-2);color:var(--muted-2);pointer-events:none;}
+  .tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .state{text-align:center;color:var(--muted);padding:30px 10px;}
+  .spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (max-width:640px){
+    .wrap{padding:6px 8px 16px;}
+    .panel{padding:10px;}
+    .set{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .stat .v{font-size:17px;}
+    table.slip{font-size:11.5px;}
+    .sg{font-size:12px;} .sg th,.sg td{padding:5px 4px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <div class="title">Slip Builder</div>
+    <div class="sub">Pick your books, sports and bet types, set a bankroll, and get the slip our track record would place right now with your settings — same ranking, same sizing, same daily budget. Prices are what's on the board at the moment you build; links open the book's bet slip where we have one.</div>
+  </div>
+
+  <div class="top">
+    <div class="panel">
+      <div class="panel-h">Sports &amp; bet types <span id="availSub">tick what you can bet · counts load on build</span></div>
+      <div class="tscroll"><table class="sg" id="sportGrid"></table></div>
+      <div class="panel-h" style="margin-top:14px">Books <span>best price per market across the books you tick</span></div>
+      <div class="chips" id="books"></div>
+      <div class="row" style="margin-top:10px">
+        <label class="ck"><input type="checkbox" class="chk" id="exchange"> Include exchange markets <span class="tag">Kalshi · Polymarket · Novig</span></label>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h">Your settings <span>our defaults are pre-filled</span></div>
+      <div class="set">
+        <div class="seg"><label>Bankroll $</label><input class="field" id="bankroll" type="number" min="1" step="50" value="1000"></div>
+        <div class="seg"><label>Daily budget %</label><input class="field" id="budget" type="number" min="1" max="25" step="1" value="25"><span class="hint">max 25% of bankroll per day</span></div>
+        <div class="seg"><label>Per-bet cap %</label><input class="field" id="cap" type="number" min="0.5" max="25" step="0.5" value="5"></div>
+        <div class="seg"><label>Stakes</label><div class="tg" id="sizingTg"><button data-s="kelly" class="on">¼ Kelly</button><button data-s="flat">Flat 1%</button></div></div>
+        <div class="seg"><label>Rank by</label><div class="tg" id="rankTg"><button data-k="kelly" class="on">Bet size</button><button data-k="ev">EV %</button></div></div>
+        <div class="seg"><label>Min EV %</label><input class="field" id="minEv" type="number" min="0" max="30" step="0.5" value="1"></div>
+        <div class="seg"><label>Max EV %</label><input class="field" id="maxEv" type="number" min="0" max="100" step="0.5" placeholder="none"></div>
+        <div class="seg"><label>Odds floor</label><input class="field" id="minOdds" type="number" min="-1000" max="100" step="5" value="-300"></div>
+        <div class="seg"><label>Odds cap</label><input class="field" id="maxOdds" type="number" min="-300" max="1000" step="5" value="125"></div>
+        <div class="seg"><label>Max bets</label><input class="field" id="maxBets" type="number" min="1" max="100" step="1" placeholder="no limit"></div>
+        <div class="seg"><label>Bets per game</label><input class="field" id="perGame" type="number" min="1" max="20" step="1" value="3"></div>
+      </div>
+      <div class="row">
+        <label class="ck"><input type="checkbox" class="chk" id="todayOnly" checked> Only today's games</label>
+        <span class="note" id="todayNote">Untick to include games on later dates (mostly NFL / NCAAF, which post days ahead). <b>Nothing is saved between builds</b> — if you build again tomorrow, those same future games will show up again.</span>
+      </div>
+      <div class="row">
+        <button class="cta" id="build">Build my slip</button>
+        <button class="ghost" id="reset">Reset to defaults</button>
+        <span class="note" id="stamp"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:12px" id="out" hidden>
+    <div class="panel-h">Your slip <span id="outSub"></span></div>
+    <div class="stats" id="stats"></div>
+    <div class="tscroll" id="slip"></div>
+    <div class="row">
+      <button class="ghost" id="copy">Copy slip</button>
+      <span class="note" id="skipped"></span>
+    </div>
+  </div>
+  <div id="state"></div>
+
+  <div class="note" style="margin-top:12px">
+    <b>How this is built.</b> Every +EV market on the board for the games you ticked, at the best price among your books, with both sides of a market never both taken and one line per player-prop. Then the tracker's rule: ranked by recommended stake (¼-Kelly) or EV %, stake = Kelly % × bankroll, capped per bet and by the daily budget, stop when the budget is spent. Settings are remembered in this browser only. Odds move — check the price at the book before you bet. This is information, not advice; what you can legally bet depends on where you are.
+  </div>
+</div>
+
+<script>
+/* ===================== evTrackEngine.js (inlined; keep in sync with the Cloud copy) ===================== */
+/**
+ * evTrackEngine.js — the bankroll simulation used by BOTH the Cloud grader (nightly default
+ * blend) and the browser pages (custom slices). Plain ES5-compatible JS, no dependencies, so
+ * one file serves Node (module.exports) and a <script> tag (window.EVTrackEngine).
+ *
+ * simulate(bets, opts) -> { days: [...], totals: {...} }
+ *
+ *   bets   graded ledger rows (objects with the EVTrackBets column names). Pending rows are
+ *          ignored; void/push rows are staked (they would have been placed) but return the stake.
+ *   opts   { startBankroll: 1000, budgetPct: 25, sizing: 'kelly'|'flat', perBetCapPct: 5,
+ *            flatUnitPct: 1, sports: Set|null, books: Set|null, from: 'YYYY-MM-DD'|null, to: ... }
+ *
+ * Day loop (honest, no intraday reinvestment):
+ *   eligible = that day's bets after filters, sorted by Quarter Kelly % desc (opts.rankBy 'kelly', default)
+ *              or EV % desc (opts.rankBy 'ev'); ties: EV %, then earlier capture first
+ *   budget   = bankroll_start * budgetPct/100            (25% max by site rule)
+ *   stake    = kelly: min(Quarter Kelly % * bankroll, perBetCap)   flat: flatUnitPct * bankroll
+ *              then capped at the remaining budget; stop when the budget is spent
+ *   settle   win -> +stake*(dec-1), loss -> -stake, push/void -> 0
+ *   bankroll_end = bankroll_start + day profit; next day sizes off bankroll_end (dips shrink stakes)
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.EVTrackEngine = factory();
+}(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  function num(v) { if (v === null || v === undefined || v === '') return null; var x = parseFloat(String(v).replace('%', '').replace('+', '')); return isNaN(x) ? null : x; }
+  function decimalOdds(american) { return american > 0 ? 1 + american / 100 : 1 + 100 / Math.abs(american); }
+  function round2(x) { return Math.round(x * 100) / 100; }
+
+
+  /** Rank one day's candidates and size them off a bankroll — the SAME rule the nightly blend, the track-record
+   *  page and the user Slip Builder all use (added 2026-11-03 so the slip is provably the tracker's logic).
+   *
+   *  planDay(bets, opts) -> { placed: [{ bet, stake }], budget, cap, remaining }
+   *    bets  objects carrying 'Quarter Kelly %', 'EV %', 'Odds' (+ optional 'Captured At' tiebreak, gameKey)
+   *    opts  { bankroll, budgetPct: 25 (max 25), sizing: 'kelly'|'flat', perBetCapPct: 5, flatUnitPct: 1,
+   *            rankBy: 'kelly'|'ev', maxBets: Infinity, perGameCap: Infinity (uses bet.gameKey), presorted: false }
+   *  Order: Quarter Kelly desc (or EV desc), EV tiebreak, earlier capture first. Stake = Kelly% x bankroll
+   *  (or flat unit), capped per bet and by what is left of the daily budget; stop when the budget is spent. */
+  function planDay(bets, opts) {
+    opts = opts || {};
+    var bankroll = opts.bankroll != null ? +opts.bankroll : 1000;
+    var budgetPct = Math.min(25, Math.max(0, opts.budgetPct != null ? +opts.budgetPct : 25));
+    var sizing = opts.sizing === 'flat' ? 'flat' : 'kelly';
+    var capPct = opts.perBetCapPct != null ? +opts.perBetCapPct : 5;
+    var flatPct = opts.flatUnitPct != null ? +opts.flatUnitPct : 1;
+    var rankBy = opts.rankBy === 'ev' ? 'ev' : 'kelly';
+    var maxBets = opts.maxBets != null && opts.maxBets !== '' && +opts.maxBets > 0 ? +opts.maxBets : Infinity;
+    var perGame = opts.perGameCap != null && opts.perGameCap !== '' && +opts.perGameCap > 0 ? +opts.perGameCap : Infinity;
+    var list = opts.presorted ? bets : bets.slice().sort(function (a, b2) {
+      if (rankBy === 'kelly') { var ka = num(a['Quarter Kelly %']) || 0, kb = num(b2['Quarter Kelly %']) || 0; if (kb !== ka) return kb - ka; }
+      var ea = num(a['EV %']) || 0, eb = num(b2['EV %']) || 0; if (eb !== ea) return eb - ea;
+      return String(a['Captured At'] || '').localeCompare(String(b2['Captured At'] || ''));
+    });
+    var budget = bankroll * budgetPct / 100, remaining = budget, cap = bankroll * capPct / 100;
+    var placed = [], perGameN = {};
+    for (var j = 0; j < list.length && remaining > 0.005 && placed.length < maxBets; j++) {
+      var bet = list[j];
+      if (num(bet['Odds']) === null) continue;
+      var gk = bet.gameKey;
+      if (gk != null && perGame !== Infinity && (perGameN[gk] || 0) >= perGame) continue;
+      var qk = num(bet['Quarter Kelly %']);
+      var stake = sizing === 'flat' ? bankroll * flatPct / 100 : (qk != null && qk > 0 ? bankroll * qk / 100 : 0);
+      if (stake <= 0) continue;
+      stake = Math.min(stake, cap, remaining);
+      if (stake < 0.01) continue;
+      remaining -= stake;
+      if (gk != null) perGameN[gk] = (perGameN[gk] || 0) + 1;
+      placed.push({ bet: bet, stake: stake });
+    }
+    return { placed: placed, budget: budget, cap: cap, remaining: remaining };
+  }
+
+  function simulate(bets, opts) {
+    opts = opts || {};
+    var start = opts.startBankroll != null ? +opts.startBankroll : 1000;
+    var budgetPct = Math.min(25, Math.max(0, opts.budgetPct != null ? +opts.budgetPct : 25));
+    var sizing = opts.sizing === 'flat' ? 'flat' : 'kelly';
+    var capPct = opts.perBetCapPct != null ? +opts.perBetCapPct : 5;
+    var flatPct = opts.flatUnitPct != null ? +opts.flatUnitPct : 1;
+    var sports = opts.sports && opts.sports.size ? opts.sports : null;
+    var books = opts.books && opts.books.size ? opts.books : null;
+    var from = opts.from || null, to = opts.to || null;
+    var minEv = opts.minEv != null ? +opts.minEv : 1;          // display threshold (the ledger captures from 0)
+    var maxOdds = opts.maxOdds != null ? +opts.maxOdds : 250;  // longest price the simulation will take
+    var maxEv = opts.maxEv != null && opts.maxEv !== '' ? +opts.maxEv : Infinity;   // optional ceiling: skip the tail of the ranking
+    var rankBy = opts.rankBy === 'ev' ? 'ev' : 'kelly';   // order bets are placed each day: 'kelly' = biggest recommended stake first (default), 'ev' = highest EV % first
+
+    // bucket by game date
+    var byDay = {};
+    for (var i = 0; i < bets.length; i++) {
+      var b = bets[i];
+      var st = String(b['Status'] || '').toLowerCase();
+      if (st !== 'win' && st !== 'loss' && st !== 'push' && st !== 'void') continue;   // pending never counts
+      var d = String(b['Game Date'] || '');
+      if (!d) continue;
+      if (from && d < from) continue;
+      if (to && d > to) continue;
+      if (sports && !sports.has(b['Sport'])) continue;
+      if (books && !books.has(b['Book'])) continue;
+      var evv = num(b['EV %']); if (evv === null || evv < minEv || evv > maxEv) continue;
+      var od = num(b['Odds']); if (od === null || od > maxOdds) continue;
+      (byDay[d] = byDay[d] || []).push(b);
+    }
+    var dates = Object.keys(byDay).sort();
+
+    var bankroll = start, days = [];
+    var T = { bets: 0, wins: 0, losses: 0, pushes: 0, voids: 0, staked: 0, profit: 0, peak: start, maxDrawdown: 0, days: dates.length, daysUp: 0, daysDown: 0 };
+    for (var di = 0; di < dates.length; di++) {
+      var date = dates[di], list = byDay[date].slice();
+      list.sort(function (a, b2) {
+        if (rankBy === 'kelly') { var ka = num(a['Quarter Kelly %']) || 0, kb = num(b2['Quarter Kelly %']) || 0; if (kb !== ka) return kb - ka; }
+        var ea = num(a['EV %']) || 0, eb = num(b2['EV %']) || 0; if (eb !== ea) return eb - ea;
+        return String(a['Captured At'] || '').localeCompare(String(b2['Captured At'] || ''));
+      });
+      var dayStart = bankroll;
+      var plan = planDay(list, { bankroll: bankroll, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, rankBy: rankBy, presorted: true });
+      var day = { date: date, bankrollStart: round2(dayStart), bets: 0, wins: 0, losses: 0, pushes: 0, voids: 0, staked: 0, profit: 0, placed: [] };
+      for (var j = 0; j < plan.placed.length; j++) {
+        var bet = plan.placed[j].bet, stake = plan.placed[j].stake;
+        var odds = num(bet['Odds']);
+        var status = String(bet['Status']).toLowerCase();
+        var pl = 0;
+        if (status === 'win') pl = stake * (decimalOdds(odds) - 1);
+        else if (status === 'loss') pl = -stake;
+        day.bets++; day.staked += stake; day.profit += pl;
+        if (status === 'win') day.wins++; else if (status === 'loss') day.losses++; else if (status === 'push') day.pushes++; else day.voids++;
+        day.placed.push({ key: bet['Key'], stake: round2(stake), profit: round2(pl) });
+      }
+      bankroll = dayStart + day.profit;
+      day.staked = round2(day.staked); day.profit = round2(day.profit); day.bankrollEnd = round2(bankroll);
+      day.roi = day.staked > 0 ? round2(day.profit / day.staked * 100) : 0;
+      days.push(day);
+      T.bets += day.bets; T.wins += day.wins; T.losses += day.losses; T.pushes += day.pushes; T.voids += day.voids;
+      T.staked += day.staked; T.profit += day.profit;
+      if (day.profit > 0) T.daysUp++; else if (day.profit < 0) T.daysDown++;
+      if (bankroll > T.peak) T.peak = bankroll;
+      var dd = T.peak > 0 ? (T.peak - bankroll) / T.peak * 100 : 0;
+      if (dd > T.maxDrawdown) T.maxDrawdown = dd;
+    }
+    T.staked = round2(T.staked); T.profit = round2(T.profit);
+    T.startBankroll = start; T.endBankroll = round2(bankroll);
+    T.roi = T.staked > 0 ? round2(T.profit / T.staked * 100) : 0;
+    T.growth = start > 0 ? round2((bankroll - start) / start * 100) : 0;
+    T.maxDrawdown = round2(T.maxDrawdown); T.peak = round2(T.peak);
+    T.winPct = (T.wins + T.losses) > 0 ? round2(T.wins / (T.wins + T.losses) * 100) : 0;
+    return { days: days, totals: T, opts: { startBankroll: start, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, minEv: minEv, maxOdds: maxOdds, maxEv: maxEv, rankBy: rankBy } };
+  }
+
+  /** Flat-unit summary that needs no bankroll: +1u record per (sport, book, day). Used for the daily table. */
+  function flatUnits(bets, opts) {
+    opts = opts || {}; var minEv = opts.minEv != null ? +opts.minEv : 1, maxOdds = opts.maxOdds != null ? +opts.maxOdds : 250, maxEv = opts.maxEv != null && opts.maxEv !== '' ? +opts.maxEv : Infinity;
+    var out = {};
+    for (var i = 0; i < bets.length; i++) {
+      var b = bets[i], st = String(b['Status'] || '').toLowerCase();
+      if (st !== 'win' && st !== 'loss' && st !== 'push' && st !== 'void') continue;
+      var e = num(b['EV %']); if (e === null || e < minEv || e > maxEv) continue;
+      var o = num(b['Odds']); if (o === null || o > maxOdds) continue;
+      var k = b['Game Date'] + '|' + b['Sport'] + '|' + b['Book'];
+      var o = out[k] || (out[k] = { date: b['Game Date'], sport: b['Sport'], book: b['Book'], bets: 0, wins: 0, losses: 0, pushes: 0, voids: 0, units: 0, evSum: 0 });
+      o.bets++; o.evSum += num(b['EV %']) || 0;
+      var odds = num(b['Odds']);
+      if (st === 'win') { o.wins++; o.units += odds !== null ? decimalOdds(odds) - 1 : 0; }
+      else if (st === 'loss') { o.losses++; o.units -= 1; }
+      else if (st === 'push') o.pushes++; else o.voids++;
+    }
+    return Object.keys(out).map(function (k) { var o = out[k]; o.units = round2(o.units); o.avgEv = o.bets ? round2(o.evSum / o.bets) : 0; delete o.evSum; return o; });
+  }
+
+  return { simulate: simulate, planDay: planDay, flatUnits: flatUnits, decimalOdds: decimalOdds, num: num };
+}));
+
+/* ===================== page ===================== */
+var SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
+var ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
+var PAGE_SIZE = 1000, MAX_PARALLEL = 6, CACHE_TTL = 3 * 60 * 1000;
+var STORE_KEY = 'slipBuilder.v1';
+
+/* Sports: same tables the EV cards and the front page read. inSeason = months (1-12) the chain runs; out of
+   season the row is hidden and nothing is fetched. prefixes = player-prop table prefixes (MLB has two). */
+var SPORTS = [
+  { key: 'NBA',   label: 'NBA',            months: [10,11,12,1,2,3,4,5,6],  prop: [['BasketPlayerPropOdds','Player']],  game: 'BasketGameOdds',   ex: 'BasketExchangeOdds' },
+  { key: 'NHL',   label: 'NHL',            months: [10,11,12,1,2,3,4,5,6],  prop: [['HockeyPlayerPropOdds','Player']],  game: 'HockeyGameOdds',   ex: 'HockeyExchangeOdds' },
+  { key: 'NFL',   label: 'NFL',            months: [8,9,10,11,12,1,2],      prop: [['FootballPlayerPropOdds','Player']], game: 'FootballGameOdds', ex: 'FootballExchangeOdds' },
+  { key: 'NCAAF', label: 'College football', months: [8,9,10,11,12,1],      prop: [['CFBallPlayerPropOdds','Player']],  game: 'CFBallGameOdds',   ex: 'CFBallExchangeOdds' },
+  { key: 'NCAAM', label: "Men's college hoops", months: [11,12,1,2,3,4],    prop: [['CBBallPlayerPropOdds','Player']],  game: 'CBBallGameOdds',   ex: 'CBBallExchangeOdds' },
+  { key: 'NCAAW', label: "Women's college hoops", months: [11,12,1,2,3,4],  prop: [],                                   game: 'CBBallWGameOdds',  ex: 'CBBallWExchangeOdds' },
+  { key: 'MLB',   label: 'MLB',            months: [3,4,5,6,7,8,9,10],      prop: [['BaseballBatterPropOdds','Batter'],['BaseballPitcherPropOdds','Pitcher']], game: 'BaseballGameOdds', ex: 'BaseballExchangeOdds' },
+  { key: 'WNBA',  label: 'WNBA',           months: [5,6,7,8,9,10],          prop: [['WBasketPlayerPropOdds','Player']], game: 'WBasketGameOdds',  ex: 'WBasketExchangeOdds' },
+];
+/* Books the pivots price. Order = tiebreak when the same price is on several (same as the front page). */
+var BOOKS = ['DraftKings', 'FanDuel', 'BetMGM', 'BetRivers', 'Caesars', 'Fliff', 'Pinnacle', 'Fanatics'];
+var DEFAULT_BOOKS = ['DraftKings', 'FanDuel', 'BetMGM', 'BetRivers', 'Caesars'];
+var NO_LINK_BOOKS = ['Fanatics'];
+var TEAM_ABBR = { NBA: {
+  'Atlanta Hawks':'ATL','Boston Celtics':'BOS','Brooklyn Nets':'BKN','Charlotte Hornets':'CHA','Chicago Bulls':'CHI','Cleveland Cavaliers':'CLE','Dallas Mavericks':'DAL','Denver Nuggets':'DEN','Detroit Pistons':'DET','Golden State Warriors':'GSW','Houston Rockets':'HOU','Indiana Pacers':'IND','Los Angeles Clippers':'LAC','LA Clippers':'LAC','Los Angeles Lakers':'LAL','LA Lakers':'LAL','Memphis Grizzlies':'MEM','Miami Heat':'MIA','Milwaukee Bucks':'MIL','Minnesota Timberwolves':'MIN','New Orleans Pelicans':'NOP','New York Knicks':'NYK','Oklahoma City Thunder':'OKC','Orlando Magic':'ORL','Philadelphia 76ers':'PHI','Phoenix Suns':'PHX','Portland Trail Blazers':'POR','Sacramento Kings':'SAC','San Antonio Spurs':'SAS','Toronto Raptors':'TOR','Utah Jazz':'UTA','Washington Wizards':'WAS' } };
+
+var E = EVTrackEngine;
+var num = E.num;
+var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+var fmtOdds = function (n) { return n == null ? '–' : (n > 0 ? '+' + n : '' + n); };
+var money = function (n) { return '$' + (Math.round(n * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+
+/* ---- ET clock (DST-aware), same rule as the Cloud builders ---- */
+function etOffsetHours(y, mo, d) { var m1 = new Date(Date.UTC(y, 2, 1)), n1 = new Date(Date.UTC(y, 10, 1)); var ds = 1 + ((7 - m1.getUTCDay()) % 7) + 7, de = 1 + ((7 - n1.getUTCDay()) % 7); var a = (mo > 2) || (mo === 2 && d >= ds), b = (mo < 10) || (mo === 10 && d < de); return (a && b) ? 4 : 5; }
+function stampToMs(stamp) { var m = String(stamp || '').match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*E[DS]?T\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i); if (!m) return null; var h = parseInt(m[1], 10) % 12; if (m[3].toUpperCase() === 'PM') h += 12; var y = +m[6], mo = +m[4] - 1, d = +m[5]; return Date.UTC(y, mo, d, h + etOffsetHours(y, mo, d), +m[2]); }
+function stampDate(stamp) { var m = String(stamp || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? (+m[3]) + '-' + String(+m[1]).padStart(2, '0') + '-' + String(+m[2]).padStart(2, '0') : ''; }
+function todayET() { var now = new Date(); var p = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(now); var g = function (t) { return +p.find(function (x) { return x.type === t; }).value; }; return { y: g('year'), m: g('month'), d: g('day'), iso: g('year') + '-' + String(g('month')).padStart(2, '0') + '-' + String(g('day')).padStart(2, '0') }; }
+function fmtStamp(s) { var m = String(s || '').match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i); return m ? (parseInt(m[1], 10) + ':' + m[2] + ' ' + m[3].toUpperCase()) : ''; }
+function etClock() { return new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) + ' ET'; }
+function fmtDay(iso) { var p = iso.split('-'); var d = new Date(+p[0], +p[1] - 1, +p[2]); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' ' + (+p[1]) + '/' + (+p[2]); }
+function abbrMatchup(sport, s) { var map = TEAM_ABBR[sport]; if (!map) return s; return String(s || '').split('@').map(function (t) { t = t.trim(); return map[t] || t; }).join(' @ '); }
+
+/* ---- state ---- */
+var state = loadState();
+function defaults() {
+  var sel = {}; SPORTS.forEach(function (s) { sel[s.key] = { prop: true, game: true }; });
+  return { sel: sel, books: DEFAULT_BOOKS.slice(), exchange: false, bankroll: 1000, budget: 25, cap: 5, sizing: 'kelly', rankBy: 'kelly', minEv: 1, maxEv: '', minOdds: -300, maxOdds: 125, maxBets: '', perGame: 3, todayOnly: true };
+}
+function loadState() { try { var s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && s.sel) { var d = defaults(); Object.keys(d).forEach(function (k) { if (s[k] === undefined) s[k] = d[k]; }); SPORTS.forEach(function (sp) { if (!s.sel[sp.key]) s.sel[sp.key] = { prop: true, game: true }; }); return s; } } catch (e) {} return defaults(); }
+function saveState() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+
+var els = {};
+['sportGrid', 'books', 'exchange', 'bankroll', 'budget', 'cap', 'sizingTg', 'rankTg', 'minEv', 'maxEv', 'minOdds', 'maxOdds', 'maxBets', 'perGame', 'todayOnly', 'build', 'reset', 'stamp', 'out', 'outSub', 'stats', 'slip', 'copy', 'skipped', 'state', 'availSub'].forEach(function (id) { els[id] = document.getElementById(id); });
+
+var counts = {};   // sport|kind -> { games, rows } from the last build
+function inSeason(sp) { return sp.months.indexOf(todayET().m) >= 0; }
+function renderGrid() {
+  var h = '<thead><tr><th>Sport</th><th>Player props</th><th>Game lines</th><th></th></tr></thead><tbody>';
+  SPORTS.filter(inSeason).forEach(function (sp) {
+    var s = state.sel[sp.key];
+    var cnt = function (kind) { var c = counts[sp.key + '|' + kind]; if (!c) return ''; return '<span class="n' + (c.games ? '' : ' zero') + '">' + (c.games ? c.games + (c.games === 1 ? ' game' : ' games') : 'none') + '</span>'; };
+    var off = !s.prop && !s.game;
+    h += '<tr data-sport="' + sp.key + '"' + (off ? ' class="off"' : '') + '><td>' + esc(sp.label) + '</td>' +
+      '<td>' + (sp.prop.length ? '<input type="checkbox" class="chk" data-kind="prop"' + (s.prop ? ' checked' : '') + '>' + cnt('prop') : '<span class="n">—</span>') + '</td>' +
+      '<td><input type="checkbox" class="chk" data-kind="game"' + (s.game ? ' checked' : '') + '>' + cnt('game') + '</td>' +
+      '<td><button class="mini" data-all="1">all</button><button class="mini" data-all="0">none</button></td></tr>';
+  });
+  h += '</tbody>';
+  els.sportGrid.innerHTML = h;
+}
+els.sportGrid.addEventListener('change', function (e) { var tr = e.target.closest('tr'); if (!tr || !e.target.dataset.kind) return; state.sel[tr.dataset.sport][e.target.dataset.kind] = e.target.checked; saveState(); renderGrid(); });
+els.sportGrid.addEventListener('click', function (e) { var b = e.target.closest('button[data-all]'); if (!b) return; var tr = b.closest('tr'); var sp = SPORTS.find(function (x) { return x.key === tr.dataset.sport; }); var on = b.dataset.all === '1'; state.sel[sp.key] = { prop: on && sp.prop.length > 0, game: on }; saveState(); renderGrid(); });
+
+function renderBooks() {
+  els.books.innerHTML = BOOKS.map(function (b) { var on = state.books.indexOf(b) >= 0; return '<button class="chip' + (on ? ' on' : '') + '" data-book="' + b + '">' + b + (NO_LINK_BOOKS.indexOf(b) >= 0 ? '<span class="s">no links</span>' : '') + '</button>'; }).join('');
+}
+els.books.addEventListener('click', function (e) { var c = e.target.closest('.chip'); if (!c) return; var b = c.dataset.book, i = state.books.indexOf(b); if (i >= 0) state.books.splice(i, 1); else state.books.push(b); saveState(); renderBooks(); });
+
+function renderSettings() {
+  els.exchange.checked = !!state.exchange;
+  ['bankroll', 'budget', 'cap', 'minEv', 'maxEv', 'minOdds', 'maxOdds', 'maxBets', 'perGame'].forEach(function (k) { els[k].value = state[k] === '' || state[k] == null ? '' : state[k]; });
+  els.todayOnly.checked = !!state.todayOnly;
+  els.sizingTg.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.s === state.sizing); });
+  els.rankTg.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === state.rankBy); });
+}
+['bankroll', 'budget', 'cap', 'minEv', 'maxEv', 'minOdds', 'maxOdds', 'maxBets', 'perGame'].forEach(function (k) { els[k].addEventListener('change', function () { var v = els[k].value; state[k] = v === '' ? '' : +v; if (k === 'budget' && state[k] > 25) { state[k] = 25; els[k].value = 25; } saveState(); }); });
+els.exchange.addEventListener('change', function () { state.exchange = els.exchange.checked; saveState(); });
+els.todayOnly.addEventListener('change', function () { state.todayOnly = els.todayOnly.checked; saveState(); });
+els.sizingTg.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; state.sizing = b.dataset.s; saveState(); renderSettings(); });
+els.rankTg.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; state.rankBy = b.dataset.k; saveState(); renderSettings(); });
+els.reset.addEventListener('click', function () { state = defaults(); saveState(); counts = {}; renderGrid(); renderBooks(); renderSettings(); });
+
+/* ---- data ---- */
+var cache = {};   // table|filter -> { t, rows }
+function fieldsFor(kind, prefix) {
+  if (kind === 'prop') return { name: prefix + ' Name', matchup: prefix + ' Matchup', prop: prefix + ' Prop Type', label: prefix + ' Over/Under', line: prefix + ' Prop Line', book: prefix + ' Book', odds: prefix + ' Prop Odds', ev: 'EV %', kelly: 'Quarter Kelly %', link: 'Link', gameTime: 'Game Time' };
+  return { name: null, matchup: 'Game Matchup', prop: 'Game Prop Type', label: 'Game Label', line: 'Game Line', book: 'Game Book', odds: 'Game Odds', ev: 'EV %', kelly: 'Quarter Kelly %', link: 'Link', gameTime: 'Game Time' };
+}
+async function fetchPage(url, offset, extra, limit) {
+  var lim = limit || PAGE_SIZE;
+  var res = await fetch(url, { headers: Object.assign({ apikey: ANON_KEY, Authorization: 'Bearer ' + ANON_KEY, Accept: 'application/json', 'Range-Unit': 'items', Range: offset + '-' + (offset + lim - 1) }, extra || {}) });
+  if (!res.ok) { var e = new Error('Supabase ' + res.status); e.status = res.status; throw e; }
+  return { rows: await res.json(), contentRange: res.headers.get('content-range') };
+}
+/* Lean column list; today-only builds also filter server-side on the Game Time stamp's date (text LIKE), which
+   keeps multi-day football boards and yesterday's stale rows off the wire entirely. */
+async function fetchTable(table, F, dateFilter) {
+  var key = table + '|' + (dateFilter || '');
+  var c = cache[key]; if (c && Date.now() - c.t < CACHE_TTL) return c.rows;
+  var cols = Object.keys(F).map(function (k) { return F[k]; }).filter(Boolean).map(function (c) { return '"' + c + '"'; }).join(',');
+  var base = SUPABASE_URL + '/rest/v1/' + table + '?select=' + encodeURIComponent(cols) + (dateFilter ? '&' + encodeURIComponent('Game Time') + '=like.' + encodeURIComponent('*' + dateFilter) : '');
+  var first;
+  try { first = await fetchPage(base, 0, { Prefer: 'count=exact' }); }
+  catch (err) { if (err.status === 400 || err.status === 404) { base = SUPABASE_URL + '/rest/v1/' + table + '?select=*' + (dateFilter ? '&' + encodeURIComponent('Game Time') + '=like.' + encodeURIComponent('*' + dateFilter) : ''); try { first = await fetchPage(base, 0, { Prefer: 'count=exact' }); } catch (e2) { return []; } } else return []; }
+  var out = first.rows, ps = first.rows.length || PAGE_SIZE;
+  var m = /\/(\d+)$/.exec(first.contentRange || ''), total = m ? parseInt(m[1], 10) : null;
+  if (!(ps === 0 || (total != null && out.length >= total) || (total == null && first.rows.length < PAGE_SIZE))) {
+    if (total != null) {
+      var offsets = []; for (var o = ps; o < total; o += ps) offsets.push(o);
+      var results = new Array(offsets.length), i = 0;
+      await Promise.all(Array.from({ length: Math.min(MAX_PARALLEL, offsets.length) }, async function () { while (i < offsets.length) { var idx = i++; results[idx] = (await fetchPage(base, offsets[idx], undefined, ps)).rows; } }));
+      out = out.concat.apply(out, results);
+    } else { var off = ps, more = true; while (more) { var r = await fetchPage(base, off, undefined, ps); out = out.concat(r.rows); more = r.rows.length === ps; off += ps; } }
+  }
+  cache[key] = { t: Date.now(), rows: out };
+  return out;
+}
+
+/* ---- candidates ---- */
+function rowsToCandidates(rows, sport, kind, F, nowMs, todayIso, todayOnly) {
+  var out = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var gt = r[F.gameTime], ms = stampToMs(gt);
+    if (ms === null || ms <= nowMs) continue;                 // started, stale or unparseable
+    var date = stampDate(gt);
+    if (todayOnly && date !== todayIso) continue;
+    var odds = num(r[F.odds]); if (odds === null) continue;
+    var ev = num(r[F.ev]); if (ev === null) continue;
+    var qk = num(r[F.kelly]);
+    var book = String(r[F.book] || '').trim(); if (!book) continue;
+    var matchup = String(r[F.matchup] || '').trim(); if (!matchup) continue;
+    var prop = String(r[F.prop] || '').trim(), label = String(r[F.label] || '').trim();
+    var line = r[F.line]; var hasLine = line !== null && line !== undefined && line !== '';
+    var name = F.name ? String(r[F.name] || '').trim().replace(/\s*\([A-Z]+\)\s*$/, '') : '';
+    if (F.name && !name) continue;
+    var link = String(r[F.link] || '').trim(); if (!/^https?:\/\//i.test(link)) link = '';
+    var gameKey = sport + '|' + matchup + '|' + date;
+    var subject = kind === 'prop' ? name : '';
+    var baseKey = gameKey + '|' + kind + '|' + subject + '|' + prop;                  // one line per player-prop / per game market
+    var sideKey = baseKey + '|' + (hasLine ? Math.abs(num(line) != null ? num(line) : 0) : '') ;   // both sides of one line share this (spread signs differ)
+    var marketKey = baseKey + '|' + label + '|' + (hasLine ? line : '');          // exact market: best price across books
+    out.push({ 'Quarter Kelly %': qk, 'EV %': ev, 'Odds': odds, sport: sport, kind: kind, matchup: matchup, date: date, gameTime: gt, ms: ms, name: name, prop: prop, label: label, line: hasLine ? line : '', book: book, link: link, gameKey: gameKey, baseKey: baseKey, sideKey: sideKey, marketKey: marketKey });
+  }
+  return out;
+}
+function betText(c) {
+  var mkt = String(c.prop).toLowerCase();
+  if (c.kind === 'prop') return esc(c.name) + ' <span class="side">' + esc(c.label) + (c.line !== '' ? ' ' + esc(c.line) : '') + '</span> ' + esc(c.prop);
+  var lab = abbrMatchup(c.sport, c.label);
+  if (/total/i.test(mkt)) return '<span class="side">' + esc(lab) + ' ' + esc(c.line) + '</span> Total';
+  if (/spread/i.test(mkt)) { var n = num(c.line); return '<span class="side">' + esc(lab) + ' ' + (n != null && n > 0 ? '+' : '') + esc(c.line) + '</span> Spread'; }
+  return '<span class="side">' + esc(lab) + '</span> ' + esc(c.prop || 'Moneyline');
+}
+function betPlain(c) { return betText(c).replace(/<[^>]+>/g, ''); }
+
+/* ---- build ---- */
+var building = false;
+els.build.addEventListener('click', build);
+async function build() {
+  if (building) return; building = true; els.build.disabled = true;
+  els.out.hidden = true; els.state.innerHTML = '<div class="state"><div class="spinner"></div>Reading the board…</div>';
+  try {
+    var t = todayET(), nowMs = Date.now();
+    var dateFilter = state.todayOnly ? (t.m + '/' + t.d + '/' + t.y) : '';
+    var jobs = [];
+    SPORTS.filter(inSeason).forEach(function (sp) {
+      var s = state.sel[sp.key];
+      if (s.prop) sp.prop.forEach(function (pt) { jobs.push({ sport: sp.key, kind: 'prop', table: pt[0], F: fieldsFor('prop', pt[1]) }); });
+      if (s.game) jobs.push({ sport: sp.key, kind: 'game', table: sp.game, F: fieldsFor('game') });
+      if (s.game && state.exchange && sp.ex) jobs.push({ sport: sp.key, kind: 'exchange', table: sp.ex, F: fieldsFor('game') });
+    });
+    if (!jobs.length) { els.state.innerHTML = '<div class="state">Tick at least one sport.</div>'; return; }
+    var results = await Promise.all(jobs.map(async function (j) { var rows = await fetchTable(j.table, j.F, dateFilter); return { job: j, cands: rowsToCandidates(rows, j.sport, j.kind, j.F, nowMs, t.iso, state.todayOnly) }; }));
+
+    // availability counts per sport|kind (distinct games with any not-started row — before book/EV filters)
+    counts = {};
+    results.forEach(function (r) { var k = r.job.sport + '|' + (r.job.kind === 'exchange' ? 'game' : r.job.kind); var c = counts[k] || (counts[k] = { games: 0, set: {} }); r.cands.forEach(function (x) { if (!c.set[x.gameKey]) { c.set[x.gameKey] = 1; c.games++; } }); });
+    Object.keys(counts).forEach(function (k) { delete counts[k].set; });
+    renderGrid();
+
+    var all = [].concat.apply([], results.map(function (r) { return r.cands; }));
+    var skipped = { book: 0, odds: 0, ev: 0, dupPrice: 0, dupSide: 0, dupLine: 0 };
+    var minEv = state.minEv === '' ? 0 : +state.minEv, maxEv = state.maxEv === '' ? Infinity : +state.maxEv;
+    var minOdds = state.minOdds === '' ? -Infinity : +state.minOdds, maxOdds = state.maxOdds === '' ? Infinity : +state.maxOdds;
+    var bookOn = function (c) { if (c.kind === 'exchange') return true; return state.books.some(function (b) { return c.book.toLowerCase().indexOf(b.toLowerCase()) >= 0; }); };
+    var bookRank = function (c) { for (var i = 0; i < BOOKS.length; i++) if (c.book.toLowerCase().indexOf(BOOKS[i].toLowerCase()) >= 0) return i; return BOOKS.length; };
+    var pool = [];
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i];
+      if (!bookOn(c)) { skipped.book++; continue; }
+      if (c.Odds < minOdds || c.Odds > maxOdds) { skipped.odds++; continue; }
+      if (c['EV %'] < minEv || c['EV %'] > maxEv) { skipped.ev++; continue; }
+      pool.push(c);
+    }
+    var score = function (c) { return state.rankBy === 'ev' ? c['EV %'] : (c['Quarter Kelly %'] || 0); };
+    var better = function (a, b) { return (score(a) - score(b)) || (a['EV %'] - b['EV %']) || (bookRank(b) - bookRank(a)); };   // >0 => a better
+    // 1) best price per exact market across the user's books
+    var byMarket = {};
+    pool.forEach(function (c) { var k = c.marketKey, cur = byMarket[k]; if (!cur) byMarket[k] = c; else { skipped.dupPrice++; if (c.Odds > cur.Odds || (c.Odds === cur.Odds && better(c, cur) > 0)) byMarket[k] = c; } });
+    // 2) never both sides of a line
+    var bySide = {};
+    Object.keys(byMarket).forEach(function (k) { var c = byMarket[k], cur = bySide[c.sideKey]; if (!cur) bySide[c.sideKey] = c; else { skipped.dupSide++; if (better(c, cur) > 0) bySide[c.sideKey] = c; } });
+    // 3) one line per player-prop (per game market for lines)
+    var byBase = {};
+    Object.keys(bySide).forEach(function (k) { var c = bySide[k], cur = byBase[c.baseKey]; if (!cur) byBase[c.baseKey] = c; else { skipped.dupLine++; if (better(c, cur) > 0) byBase[c.baseKey] = c; } });
+    var cands = Object.keys(byBase).map(function (k) { return byBase[k]; });
+
+    var plan = E.planDay(cands, { bankroll: +state.bankroll || 1000, budgetPct: +state.budget || 25, sizing: state.sizing, perBetCapPct: +state.cap || 5, flatUnitPct: 1, rankBy: state.rankBy, maxBets: state.maxBets, perGameCap: state.perGame });
+    renderSlip(plan, cands, skipped, all.length, t);
+  } catch (err) {
+    els.state.innerHTML = '<div class="state">Couldn\'t read the board (' + esc(err.message) + '). Try again in a moment.</div>';
+  } finally { building = false; els.build.disabled = false; }
+}
+
+var lastPlain = '';
+function renderSlip(plan, cands, skipped, total, t) {
+  var placed = plan.placed;
+  var staked = 0, expected = 0;
+  placed.forEach(function (p) { staked += p.stake; expected += p.stake * p.bet['EV %'] / 100; });
+  var bankroll = +state.bankroll || 1000;
+  els.outSub.textContent = placed.length + (placed.length === 1 ? ' bet' : ' bets') + ' · ' + cands.length + ' eligible markets · built ' + etClock();
+  els.stats.innerHTML =
+    '<div class="stat"><div class="k">Total stake</div><div class="v">' + money(staked) + '</div><div class="s">' + (bankroll ? Math.round(staked / bankroll * 1000) / 10 : 0) + '% of bankroll · budget ' + money(plan.budget) + '</div></div>' +
+    '<div class="stat"><div class="k">Expected profit</div><div class="v ' + (expected >= 0 ? 'up' : 'down') + '">' + (expected >= 0 ? '+' : '-') + money(Math.abs(expected)) + '</div><div class="s">Σ stake × EV — the long-run average, not tonight</div></div>' +
+    '<div class="stat"><div class="k">Bets</div><div class="v">' + placed.length + '</div><div class="s">' + (plan.remaining < 0.01 ? 'daily budget fully used' : money(plan.remaining) + ' of budget unused') + '</div></div>' +
+    '<div class="stat"><div class="k">Avg EV · avg odds</div><div class="v">' + (placed.length ? (Math.round(placed.reduce(function (s, p) { return s + p.bet['EV %']; }, 0) / placed.length * 10) / 10) + '%' : '–') + '</div><div class="s">' + (placed.length ? fmtOdds(Math.round(placed.reduce(function (s, p) { return s + p.bet.Odds; }, 0) / placed.length)) : '–') + '</div></div>';
+  if (!placed.length) {
+    els.slip.innerHTML = '<div class="state">Nothing qualifies right now' + (cands.length ? ' at these settings' : ' — no un-started games on the board for what you ticked') + '. ' + (state.todayOnly ? 'Try more books or sports, or untick "Only today\'s games".' : 'Try more books or sports, or a lower Min EV.') + '</div>';
+    els.skipped.textContent = ''; lastPlain = '';
+  } else {
+    var multiDay = placed.some(function (p) { return p.bet.date !== t.iso; });
+    var rows = '', lastDate = null, lines = [];
+    var ordered = placed.slice().sort(function (a, b) { return a.bet.date < b.bet.date ? -1 : a.bet.date > b.bet.date ? 1 : 0; });   // group by date, keep rank order within a date
+    ordered.forEach(function (p, i) {
+      var c = p.bet;
+      if (multiDay && c.date !== lastDate) { lastDate = c.date; rows += '<tr class="day"><td colspan="9">' + esc(fmtDay(c.date)) + (c.date === t.iso ? ' · today' : '') + '</td></tr>'; lines.push('— ' + fmtDay(c.date) + ' —'); }
+      var stake = Math.round(p.stake * 100) / 100;
+      rows += '<tr><td class="l">' + (i + 1) + '</td><td class="l">' + esc(fmtStamp(c.gameTime)) + '<div style="color:var(--muted-2);font-size:11px">' + esc(c.sport) + ' · ' + esc(abbrMatchup(c.sport, c.matchup)) + '</div></td>' +
+        '<td class="l bet">' + betText(c) + (c.kind === 'exchange' ? ' <span class="tag">exchange</span>' : '') + '</td>' +
+        '<td class="l">' + esc(c.book) + '</td><td>' + fmtOdds(c.Odds) + '</td><td>' + (Math.round(c['EV %'] * 10) / 10) + '%</td><td>' + (c['Quarter Kelly %'] != null ? (Math.round(c['Quarter Kelly %'] * 100) / 100) + '%' : '–') + '</td>' +
+        '<td class="stake">' + money(stake) + '</td><td>' + (c.link ? '<a class="go" href="' + esc(c.link) + '" target="_blank" rel="noopener">Bet →</a>' : '<a class="go dead">no link</a>') + '</td></tr>';
+      lines.push(betPlain(c) + ' — ' + c.book + ' ' + fmtOdds(c.Odds) + ' — ' + money(stake) + (c.link ? ' — ' + c.link : ''));
+    });
+    els.slip.innerHTML = '<table class="slip"><thead><tr><th class="l">#</th><th class="l">Game</th><th class="l">Bet</th><th class="l">Book</th><th>Odds</th><th>EV</th><th>¼ Kelly</th><th>Stake</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+    lastPlain = 'Slip — ' + fmtDay(t.iso) + ' — bankroll ' + money(bankroll) + '\n' + lines.join('\n') + '\nTotal ' + money(staked);
+    var sk = [];
+    if (skipped.book) sk.push(skipped.book + ' on books you didn\'t tick');
+    if (skipped.odds) sk.push(skipped.odds + ' outside your odds range');
+    if (skipped.ev) sk.push(skipped.ev + ' outside your EV range');
+    var dups = skipped.dupPrice + skipped.dupSide + skipped.dupLine; if (dups) sk.push(dups + ' duplicate prices / sides / alt lines');
+    var unplaced = cands.length - placed.length; if (unplaced > 0) sk.push(unplaced + ' eligible but ' + (plan.remaining < 0.01 ? 'the budget ran out' : 'capped by your limits'));
+    els.skipped.textContent = total + ' rows read · skipped: ' + (sk.length ? sk.join(' · ') : 'none');
+  }
+  els.state.innerHTML = ''; els.out.hidden = false;
+  els.stamp.textContent = 'Prices as of ' + etClock() + ' — rebuild for the latest board.';
+}
+els.copy.addEventListener('click', function () { if (!lastPlain) return; try { navigator.clipboard.writeText(lastPlain); els.copy.textContent = 'Copied'; setTimeout(function () { els.copy.textContent = 'Copy slip'; }, 1500); } catch (e) {} });
+
+renderGrid(); renderBooks(); renderSettings();
+
+/* embed height for the Webflow iframe */
+(function(){ function post(){ try { parent.postMessage({ evtrack: 'height', id: 'slipBuilder', h: document.documentElement.scrollHeight }, '*'); } catch(e){} }
+  if ('ResizeObserver' in window) new ResizeObserver(post).observe(document.body); window.addEventListener('load', post); setInterval(post, 2000); })();
+</script>
+</body>
+</html>
