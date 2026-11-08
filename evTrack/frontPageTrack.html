@@ -42,7 +42,6 @@
   <div class="evt-head">
     <div>
       <div class="evt-title">EV Bets — Track Record</div>
-      <div class="evt-sub" id="evtSub">Every +EV player prop we showed, graded the next morning. Last 30 days.</div>
     </div>
     <a class="evt-link" id="evtMore" href="#" hidden>Full breakdown &rarr;</a>
   </div>
@@ -112,7 +111,7 @@ function render(rows){
       '<div class="evt-stat"><div class="k">Record</div><div class="v">' + wins + '–' + losses + (pushes ? '–' + pushes : '') + '</div><div class="s">' + bets + ' bets · ' + ((wins + losses) ? Math.round(wins / (wins + losses) * 100) : 0) + '% hit' + (voids ? ' · ' + voids + ' void' : '') + '</div></div>' +
       '<div class="evt-stat"><div class="k">Best / worst day</div><div class="v"><span class="up">' + (best.profit >= 0 ? '+' : '') + money(best.profit).replace('$-', '-$') + '</span></div><div class="s">' + esc(fmtDay(best.date)) + ' · worst <span class="down">' + money(worst.profit) + '</span> ' + esc(fmtDay(worst.date)) + '</div></div>' +
     '</div>' +
-    '<div class="evt-foot">Every bet logged at the first price shown and graded against the box score — wins, losses and voids alike. Full methodology and every bet on the tracker page. Past results are not a promise of future ones.</div>';
+    '<div class="evt-foot">Every bet logged at the first price shown and graded against the box score. Full methodology and every bet on the tracker page. Past results are not a promise of future ones.</div>';
 }
 
 function load(){
