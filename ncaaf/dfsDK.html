@@ -649,7 +649,7 @@ function detailHTML(g){
       }).join('');
       return `<div class="panel"><div class="panel-h">Opponent — ${esc(g.opp||'—')} <span style="font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)">${perLbl}${oppSplitLbl}</span></div>${kv}${items.length?`
         <div class="mini-scroll"><table class="mini"><thead><tr><th></th><th>Share of ${esc(BOOK)} pts</th><th>Opp allows / game</th></tr></thead><tbody>${rows}</tbody></table></div>
-        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = the player's average in each scored stat × its ${esc(BOOK)} value, as a % of the total. Opponent figures are location-matched; #1 = most favorable for the player — allows the most of a scoring stat; for INT, forces the fewest.</div>`:`<div style="color:var(--muted-2);font-size:11px;margin-top:6px">Stat-by-stat breakdown appears once today's build runs.</div>`}</div>`;
+        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = each stat's % of the player's ${esc(BOOK)} scoring · #1 = best matchup for the player (INT: fewest forced).</div>`:`<div style="color:var(--muted-2);font-size:11px;margin-top:6px">Stat-by-stat breakdown appears once today's build runs.</div>`}</div>`;
     })()}
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':esc(g.team+' '+(n>0?'+':'')+n.toFixed(1));})()}</span>
