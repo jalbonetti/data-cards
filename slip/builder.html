@@ -91,38 +91,36 @@
 <div class="wrap">
   <div class="panel">
     <div class="title">Slip Builder</div>
-    <div class="sub">Pick your books, sports and bet types, set a bankroll, and get the slip our track record would place right now with your settings — same ranking, same sizing, same daily budget. Prices are what's on the board at the moment you build; links open the book's bet slip where we have one.</div>
   </div>
 
   <div class="top">
     <div class="panel">
-      <div class="panel-h">Sports &amp; bet types <span id="availSub">tick what you can bet · counts load on build</span></div>
+      <div class="panel-h">Sports &amp; bet types</div>
       <div class="tscroll"><table class="sg" id="sportGrid"></table></div>
-      <div class="panel-h" style="margin-top:14px">Books <span>best price per market across the books you tick</span></div>
+      <div class="panel-h" style="margin-top:14px">Books</div>
       <div class="chips" id="books"></div>
       <div class="row" style="margin-top:10px">
         <label class="ck"><input type="checkbox" class="chk" id="exchange"> Include exchange markets <span class="tag">Kalshi · Polymarket · Novig</span></label>
       </div>
     </div>
     <div class="panel">
-      <div class="panel-h">Your settings <span>our defaults are pre-filled</span></div>
+      <div class="panel-h">Your settings</div>
       <div class="set">
         <div class="seg"><label>Bankroll $</label><input class="field" id="bankroll" type="number" min="1" step="50" value="1000"></div>
-        <div class="seg"><label>Daily budget %</label><input class="field" id="budget" type="number" min="1" max="25" step="1" value="25"><span class="hint">max 25% of bankroll per day</span></div>
+        <div class="seg"><label>Daily budget %</label><input class="field" id="budget" type="number" min="1" max="25" step="1" value="25"></div>
         <div class="seg"><label>Per-bet cap %</label><input class="field" id="cap" type="number" min="0.5" max="25" step="0.5" value="5"></div>
         <div class="seg"><label>Stakes</label><div class="tg" id="sizingTg"><button data-s="kelly" class="on">¼ Kelly</button><button data-s="flat">Flat 1%</button></div></div>
         <div class="seg"><label>Rank by</label><div class="tg" id="rankTg"><button data-k="kelly" class="on">Bet size</button><button data-k="ev">EV %</button></div></div>
-        <div class="seg"><label>Min EV %</label><input class="field" id="minEv" type="number" min="0" max="30" step="0.5" value="3"><span class="hint">below 3% the board is break-even at flat stakes</span></div>
+        <div class="seg"><label>Min EV %</label><input class="field" id="minEv" type="number" min="0" max="30" step="0.5" value="3"></div>
         <div class="seg"><label>Max EV %</label><input class="field" id="maxEv" type="number" min="0" max="100" step="0.5" placeholder="none"></div>
         <div class="seg"><label>Odds floor</label><input class="field" id="minOdds" type="number" min="-1000" max="100" step="5" value="-300"></div>
         <div class="seg"><label>Odds cap</label><input class="field" id="maxOdds" type="number" min="-300" max="1000" step="5" value="-100"></div>
         <div class="seg"><label>Max bets</label><input class="field" id="maxBets" type="number" min="1" max="100" step="1" placeholder="no limit"></div>
         <div class="seg"><label>Bets per game</label><input class="field" id="perGame" type="number" min="1" max="20" step="1" value="3"></div>
-        <div class="seg"><label>Bets per player</label><input class="field" id="perPlayer" type="number" min="1" max="10" step="1" placeholder="no limit"><span class="hint">the tracker sets none; 1 = calmer slip</span></div>
+        <div class="seg"><label>Bets per player</label><input class="field" id="perPlayer" type="number" min="1" max="10" step="1" placeholder="no limit"></div>
       </div>
       <div class="row">
         <label class="ck"><input type="checkbox" class="chk" id="todayOnly" checked> Only today's games</label>
-        <span class="note" id="todayNote">Untick to include games on later dates (mostly NFL / NCAAF, which post days ahead). <b>Nothing is saved between builds</b> — if you build again tomorrow, those same future games will show up again.</span>
       </div>
       <div class="row">
         <button class="cta" id="build">Build my slip</button>
@@ -146,10 +144,6 @@
     </div>
   </div>
   <div id="state"></div>
-
-  <div class="note" style="margin-top:12px">
-    <b>How this is built.</b> Every +EV market on the board for the games you ticked, at the best price among your books, with both sides of a market never both taken and one line per player-prop (same as the tracker, which likewise sets no per-player limit unless you do). Then the tracker's rule: ranked by recommended stake (¼-Kelly) or EV %, stake = Kelly % × bankroll, capped per bet and by the daily budget, stop when the budget is spent. Settings are remembered in this browser only. Odds move — check the price at the book before you bet. This is information, not advice; what you can legally bet depends on where you are.
-  </div>
 </div>
 
 <script>
