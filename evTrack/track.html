@@ -120,7 +120,7 @@
       <div class="stats" id="stats"></div>
     </div>
     <div class="panel" style="grid-column:1/-1">
-      <div class="panel-h">By sport &amp; book <span>simulated profit with your settings · flat units = +1u record on every bet shown</span></div>
+      <div class="panel-h">By sport &amp; book</div>
       <div class="tscroll" id="breakdown"></div>
     </div>
     <div class="panel" style="grid-column:1/-1">
@@ -571,9 +571,7 @@ function renderBets(graded){
   fetchDetails(keys).then(function(){ if (req === betsReq) paint(); }).catch(function(e){ if (req === betsReq) els.bets.innerHTML = headRow + '<tr><td colspan="10" style="text-align:center;color:var(--muted)">Bet details unavailable right now (' + esc(e.message) + ').</td></tr></tbody></table>'; });
 }
 function renderHonest(graded){
-  var all = RAW.filter(function(b){ var e = E.num(b['EV %']), o = E.num(b['Odds']); return e != null && e >= state.minEv && (state.maxEv == null || e <= state.maxEv) && o != null && o <= state.maxOdds && (!state.sports.size || state.sports.has(b['Sport'])) && (!state.books.size || state.books.has(b['Book'])); });
-  var c = { win: 0, loss: 0, push: 0, void: 0, pending: 0 }; all.forEach(function(b){ var s = String(b['Status']).toLowerCase(); if (c[s] != null) c[s]++; });
-  els.honest.innerHTML = '<b>How this is scored.</b> Every +EV player prop we showed is recorded at the first price in range (odds −300 to +250); this view keeps those with <b>EV ' + evRuleText() + ' and odds ≤ ' + (state.maxOdds > 0 ? '+' : '') + state.maxOdds + '</b>, recorded, one per book per game, and graded against the box score the next morning — wins, losses and voids alike (DNP = void, stake returned). Nothing is removed and nothing is re-priced. The simulation then places bets ' + (state.rankBy === 'ev' ? 'highest-EV first' : 'biggest recommended stake (¼-Kelly %) first') + ' off the running bankroll — <b>' + (state.sizing === 'kelly' ? '¼-Kelly stakes' : 'flat 1% stakes') + ', capped at ' + state.budget + '% of the bankroll per day and 5% per bet</b>, settled at the end of each day with no reinvesting during it. Ledger for this window: <b>' + c.win + '</b> won · <b>' + c.loss + '</b> lost · <b>' + c.push + '</b> pushed · <b>' + c.void + '</b> void · <b>' + c.pending + '</b> awaiting grading. Past results are not a promise of future ones; bet responsibly.';
+  els.honest.innerHTML = 'Past results are not a promise of future ones; bet responsibly.';
 }
 
 /* ---------- events ---------- */
