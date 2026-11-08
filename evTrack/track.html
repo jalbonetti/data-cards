@@ -104,7 +104,7 @@
     <div class="seg"><label>Rank by</label><div class="tg" id="rankTg"><button data-k="kelly" class="on">Bet size</button><button data-k="ev">EV %</button></div></div>
     <div class="seg"><label>Min EV %</label><input class="field n" id="minEv" type="number" min="0" max="30" step="0.5" value="1"></div>
     <div class="seg"><label>Max EV %</label><input class="field n" id="maxEv" type="number" min="0" max="100" step="0.5" placeholder="none"></div>
-    <div class="seg"><label>Max odds</label><input class="field n" id="maxOdds" type="number" min="-300" max="1000" step="5" value="125"></div>
+    <div class="seg"><label>Max odds</label><input class="field n" id="maxOdds" type="number" min="-300" max="1000" step="5" value="-100"></div>
   </div>
 
   <div id="content"><div class="state"><div class="spinner"></div>Loading the ledger…</div></div>
@@ -326,7 +326,7 @@ var TABLE = "EVTrackBets";
 var E = window.EVTrackEngine;
 var SPORT_ORDER = ['NFL','NCAAF','NBA','NHL','MLB','WNBA'];
 
-var state = { range: 30, sports: new Set(), books: new Set(), bankroll: 1000, budget: 25, sizing: 'kelly', rankBy: 'kelly', minEv: 1, maxEv: null, maxOdds: 125, search: '', placedOnly: true, page: 0 };
+var state = { range: 30, sports: new Set(), books: new Set(), bankroll: 1000, budget: 25, sizing: 'kelly', rankBy: 'kelly', minEv: 1, maxEv: null, maxOdds: -100, search: '', placedOnly: true, page: 0 };
 var RAW = [], SIM = null, PENDING = 0, LOADED_RANGE = 0;
 var els = {}; ['count','content','grid','chart','chartSub','legend','stats','statsSub','breakdown','daily','bets','betsSub','search','placedOnly','prev','next','pageLbl','honest','bankroll','budget','budgetLbl','minEv','maxEv','maxOdds'].forEach(function(id){ els[id] = document.getElementById(id); });
 
