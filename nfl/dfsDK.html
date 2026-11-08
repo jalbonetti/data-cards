@@ -258,7 +258,7 @@ const TEAM_LC = Object.fromEntries(Object.entries(TEAM_NAME_MAP).map(([k,v])=>[k
 const MATCHUP_RE = new RegExp(Object.keys(TEAM_NAME_MAP).sort((a,b)=>b.length-a.length).map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|'),'gi');
 
 /* Opposing-defense stat set — what the opponent allows per game (location-matched). */
-const SET_OPP_DEF = [['Pass Yds','Pass Yards'],['Pass TD','Pass Touchdowns'],['INT','Pass Intercepts'],['Rush Yds','Rush Yards'],['Rec','Receptions'],['Rec Yds','Reception Yards'],['TDs','Touchdowns']];
+const SET_OPP_DEF = [['Pass Yds','Pass Yards'],['Pass TD','Pass Touchdowns'],['INT','Pass Intercepts'],['Rush Yds','Rush Yards'],['Rec','Receptions'],['Rec Yds','Reception Yards'],['TDs','Touchdowns'],['Rush TD','Rush Touchdowns'],['Rec TD','Reception Touchdowns']];
 
 const MODES = { player: { table:"FootballPlayer"+BOOK, role:"Player", title:"Players" } };
 let mode = 'player';
@@ -690,7 +690,7 @@ function detailHTML(g){
       // next to what the opponent allows in that stat — so a 40%-from-assists player can be read against an
       // opponent that allows the most assists. Shares from the season/L-window averages, not the projection.
       const mixStr=v&&v.mix?v.mix:'';
-      const MAP={'Pass Yds':'Pass Yards','Pass TD':'Pass Touchdowns','INT':'Pass Intercepts','Rush Yds':'Rush Yards','Rec':'Receptions','Rec Yds':'Reception Yards','TDs':'Touchdowns'}, OPPLBL={};
+      const MAP={'Pass Yds':'Pass Yards','Pass TD':'Pass Touchdowns','INT':'Pass Intercepts','Rush Yds':'Rush Yards','Rec':'Receptions','Rec Yds':'Reception Yards','TDs':'Touchdowns','Rush TD':'Rush Touchdowns','Rec TD':'Reception Touchdowns'}, OPPLBL={};
       const items=mixStr.split(',').map(x=>{const i=x.lastIndexOf(':');return [x.slice(0,i),parseFloat(x.slice(i+1))];}).filter(x=>x[0]&&!isNaN(x[1]));
       const kv=`<div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span></div>`;
       const rows=items.map(([lbl,pct])=>{
