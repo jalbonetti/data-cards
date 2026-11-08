@@ -112,7 +112,7 @@ function render(rows){
       '<div class="evt-stat"><div class="k">Record</div><div class="v">' + wins + '–' + losses + (pushes ? '–' + pushes : '') + '</div><div class="s">' + bets + ' bets · ' + ((wins + losses) ? Math.round(wins / (wins + losses) * 100) : 0) + '% hit' + (voids ? ' · ' + voids + ' void' : '') + '</div></div>' +
       '<div class="evt-stat"><div class="k">Best / worst day</div><div class="v"><span class="up">' + (best.profit >= 0 ? '+' : '') + money(best.profit).replace('$-', '-$') + '</span></div><div class="s">' + esc(fmtDay(best.date)) + ' · worst <span class="down">' + money(worst.profit) + '</span> ' + esc(fmtDay(worst.date)) + '</div></div>' +
     '</div>' +
-    '<div class="evt-foot"><b>How this is scored:</b> every player prop that hit our +EV screen (EV ≥ 1%, odds −300 to +125) is recorded at the first price we showed, one per book per game, and graded against the box score the next morning — wins, losses and voids alike. Stakes are ¼-Kelly off the running bankroll, biggest recommended stake first, capped at 5% per bet and 25% of the bankroll per day. No reinvesting during the day, no cherry-picking.</div>';
+    '<div class="evt-foot"><b>How this is scored:</b> every player prop that hit our +EV screen (EV ≥ 1%, odds −300 to −100) is recorded at the first price we showed, one per book per game, and graded against the box score the next morning — wins, losses and voids alike. Stakes are ¼-Kelly off the running bankroll, biggest recommended stake first, capped at 5% per bet and 25% of the bankroll per day. No reinvesting during the day, no cherry-picking.</div>';
 }
 
 function load(){
