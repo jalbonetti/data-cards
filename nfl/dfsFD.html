@@ -682,7 +682,7 @@ function detailHTML(g){
     <div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span></div>
     <div class="mini-scroll"><table class="mini"><thead><tr><th></th>${SET_OPP_DEF.map(([lbl])=>`<th>${esc(lbl)}</th>`).join('')}</tr></thead>
       <tbody><tr><td>Allowed</td>${defCells}</tr></tbody></table></div>
-    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. #1 = allows the most.</div></div>`;
+    <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Allowed per game, location-matched. #1 = allows the most (INT: #1 = forces the fewest).</div></div>`;
   return `
     ${prodPanel}
     ${(function(){
@@ -690,7 +690,7 @@ function detailHTML(g){
       // next to what the opponent allows in that stat — so a 40%-from-assists player can be read against an
       // opponent that allows the most assists. Shares from the season/L-window averages, not the projection.
       const mixStr=v&&v.mix?v.mix:'';
-      const MAP={'Pass Yds':'Pass Yards','Pass TD':'Pass Touchdowns','INT':'Pass Intercepts','Rush Yds':'Rush Yards','Rec':'Receptions','Rec Yds':'Reception Yards','TDs':'Touchdowns','Rush TD':'Rush Touchdowns','Rec TD':'Reception Touchdowns'}, OPPLBL={};
+      const MAP={'Pass Yds':'Pass Yards','Pass TD':'Pass Touchdowns','INT':'Pass Intercepts','Rush Yds':'Rush Yards','Rec':'Receptions','Rec Yds':'Reception Yards','TDs':'Touchdowns','Rush TD':'Rush Touchdowns','Rec TD':'Reception Touchdowns'}, OPPLBL={'Pass Intercepts':'forced'};
       const items=mixStr.split(',').map(x=>{const i=x.lastIndexOf(':');return [x.slice(0,i),parseFloat(x.slice(i+1))];}).filter(x=>x[0]&&!isNaN(x[1]));
       const kv=`<div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span></div>`;
       const rows=items.map(([lbl,pct])=>{
@@ -701,7 +701,7 @@ function detailHTML(g){
       }).join('');
       return `<div class="panel"><div class="panel-h">Opponent — ${esc(g.opp||'—')} <span style="font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)">${perLbl}${oppSplitLbl}</span></div>${kv}${items.length?`
         <div class="mini-scroll"><table class="mini"><thead><tr><th></th><th>Share of ${esc(BOOK)} pts</th><th>Opp allows / game${(()=>{const P=String(g.pos||'').toUpperCase();return ['QB','RB','FB','WR','TE'].includes(P)?' · vs '+(P==='FB'?'RB':P)+'s':'';})()}</th></tr></thead><tbody>${rows}</tbody></table></div>
-        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = the player's average in each scored stat × its ${esc(BOOK)} value, as a % of the total. Opponent figures are location-matched and, where the defense splits exist, position-matched; #1 = allows the most.</div>`:`<div style="color:var(--muted-2);font-size:11px;margin-top:6px">Stat-by-stat breakdown appears once today's build runs.</div>`}</div>`;
+        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = the player's average in each scored stat × its ${esc(BOOK)} value, as a % of the total. Opponent figures are location-matched and, where the defense splits exist, position-matched; #1 = most favorable for the player — allows the most of a scoring stat; for INT, forces the fewest.</div>`:`<div style="color:var(--muted-2);font-size:11px;margin-top:6px">Stat-by-stat breakdown appears once today's build runs.</div>`}</div>`;
     })()}
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':esc(g.team+' '+(n>0?'+':'')+n.toFixed(1));})()}</span>
