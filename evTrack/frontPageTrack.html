@@ -57,7 +57,7 @@ var SUPABASE_URL = "https://hcwolbvmffkmjcxsumwn.supabase.co";
 var ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjd29sYnZtZmZrbWpjeHN1bXduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAzNDQzMTIsImV4cCI6MjA1NTkyMDMxMn0.tM4RwXZpZM6ZHuFFMhWcKYLT3E4NA6Ig90CHw7QtJf0";
 var TABLE = "EVTrackBlend";
 var DAYS = 30;
-var TRACK_PAGE_URL = "";        /* set to the dedicated page's URL once it exists; link stays hidden until then */
+var TRACK_PAGE_URL = "https://www.bettorresults.com/profit-tracker";        /* set to the dedicated page's URL once it exists; link stays hidden until then */
 var REFRESH_MS = 10 * 60 * 1000;
 
 var els = { card: document.getElementById('evtCard'), state: document.getElementById('evtState'), sub: document.getElementById('evtSub'), more: document.getElementById('evtMore') };
@@ -112,7 +112,7 @@ function render(rows){
       '<div class="evt-stat"><div class="k">Record</div><div class="v">' + wins + '–' + losses + (pushes ? '–' + pushes : '') + '</div><div class="s">' + bets + ' bets · ' + ((wins + losses) ? Math.round(wins / (wins + losses) * 100) : 0) + '% hit' + (voids ? ' · ' + voids + ' void' : '') + '</div></div>' +
       '<div class="evt-stat"><div class="k">Best / worst day</div><div class="v"><span class="up">' + (best.profit >= 0 ? '+' : '') + money(best.profit).replace('$-', '-$') + '</span></div><div class="s">' + esc(fmtDay(best.date)) + ' · worst <span class="down">' + money(worst.profit) + '</span> ' + esc(fmtDay(worst.date)) + '</div></div>' +
     '</div>' +
-    '<div class="evt-foot"><b>How this is scored:</b> every player prop that hit our +EV screen (EV ≥ 3%, odds −300 to −100) is recorded at the first price we showed, one per book per game, and graded against the box score the next morning — wins, losses and voids alike. Stakes are ¼-Kelly off the running bankroll, biggest recommended stake first, capped at 5% per bet and 25% of the bankroll per day. No reinvesting during the day, no cherry-picking.</div>';
+    '<div class="evt-foot">Every bet logged at the first price shown and graded against the box score — wins, losses and voids alike. Full methodology and every bet on the tracker page. Past results are not a promise of future ones.</div>';
 }
 
 function load(){
