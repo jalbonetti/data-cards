@@ -112,7 +112,7 @@
         <div class="seg"><label>Per-bet cap %</label><input class="field" id="cap" type="number" min="0.5" max="25" step="0.5" value="5"></div>
         <div class="seg"><label>Stakes</label><div class="tg" id="sizingTg"><button data-s="kelly" class="on">¼ Kelly</button><button data-s="flat">Flat 1%</button></div></div>
         <div class="seg"><label>Rank by</label><div class="tg" id="rankTg"><button data-k="kelly" class="on">Bet size</button><button data-k="ev">EV %</button></div></div>
-        <div class="seg"><label>Min EV %</label><input class="field" id="minEv" type="number" min="0" max="30" step="0.5" value="1"></div>
+        <div class="seg"><label>Min EV %</label><input class="field" id="minEv" type="number" min="0" max="30" step="0.5" value="3"><span class="hint">below 3% the board is break-even at flat stakes</span></div>
         <div class="seg"><label>Max EV %</label><input class="field" id="maxEv" type="number" min="0" max="100" step="0.5" placeholder="none"></div>
         <div class="seg"><label>Odds floor</label><input class="field" id="minOdds" type="number" min="-1000" max="100" step="5" value="-300"></div>
         <div class="seg"><label>Odds cap</label><input class="field" id="maxOdds" type="number" min="-300" max="1000" step="5" value="-100"></div>
@@ -378,9 +378,9 @@ function abbrMatchup(sport, s) { var map = TEAM_ABBR[sport]; if (!map) return s;
 var state = loadState();
 function defaults() {
   var sel = {}; SPORTS.forEach(function (s) { sel[s.key] = { prop: true, game: true }; });
-  return { sel: sel, books: DEFAULT_BOOKS.slice(), exchange: false, bankroll: 1000, budget: 25, cap: 5, sizing: 'kelly', rankBy: 'kelly', minEv: 1, maxEv: '', minOdds: -300, maxOdds: -100, maxBets: '', perGame: 3, perPlayer: '', todayOnly: true };
+  return { sel: sel, books: DEFAULT_BOOKS.slice(), exchange: false, bankroll: 1000, budget: 25, cap: 5, sizing: 'kelly', rankBy: 'kelly', minEv: 3, maxEv: '', minOdds: -300, maxOdds: -100, maxBets: '', perGame: 3, perPlayer: '', todayOnly: true };
 }
-function loadState() { try { var s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && s.sel) { var d = defaults(); Object.keys(d).forEach(function (k) { if (s[k] === undefined) s[k] = d[k]; }); if (s.maxOdds === 125 && !s.capV2) { s.maxOdds = -100; s.capV2 = true; } SPORTS.forEach(function (sp) { if (!s.sel[sp.key]) s.sel[sp.key] = { prop: true, game: true }; }); return s; } } catch (e) {} return defaults(); }
+function loadState() { try { var s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && s.sel) { var d = defaults(); Object.keys(d).forEach(function (k) { if (s[k] === undefined) s[k] = d[k]; }); if (s.maxOdds === 125 && !s.capV2) { s.maxOdds = -100; s.capV2 = true; } if (s.minEv === 1 && !s.minEvV2) { s.minEv = 3; s.minEvV2 = true; } SPORTS.forEach(function (sp) { if (!s.sel[sp.key]) s.sel[sp.key] = { prop: true, game: true }; }); return s; } } catch (e) {} return defaults(); }
 function saveState() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
 
 var els = {};
@@ -484,7 +484,7 @@ function rowsToCandidates(rows, sport, kind, F, nowMs, todayIso, todayOnly) {
     var baseKey = gameKey + '|' + kind + '|' + subject + '|' + prop;                  // one line per player-prop / per game market
     var sideKey = baseKey + '|' + (hasLine ? Math.abs(num(line) != null ? num(line) : 0) : '') ;   // both sides of one line share this (spread signs differ)
     var marketKey = baseKey + '|' + label + '|' + (hasLine ? line : '');          // exact market: best price across books
-    out.push({ 'Quarter Kelly %': qk, 'EV %': ev, 'Odds': odds, sport: sport, kind: kind, matchup: matchup, date: date, gameTime: gt, ms: ms, name: name, prop: prop, label: label, line: hasLine ? line : '', book: book, link: link, gameKey: gameKey, playerKey: kind === 'prop' ? gameKey + '|' + name : null || '', baseKey: baseKey, sideKey: sideKey, marketKey: marketKey });
+    out.push({ 'Quarter Kelly %': qk, 'EV %': ev, 'Odds': odds, sport: sport, kind: kind, matchup: matchup, date: date, gameTime: gt, ms: ms, name: name, prop: prop, label: label, line: hasLine ? line : '', book: book, link: link, gameKey: gameKey, playerKey: kind === 'prop' ? gameKey + '|' + name : null, baseKey: baseKey, sideKey: sideKey, marketKey: marketKey });
   }
   return out;
 }
