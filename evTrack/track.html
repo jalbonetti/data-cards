@@ -366,7 +366,7 @@ buildMS(document.getElementById('msBooks'), 'books', 'books');
    Date and Book are parsed back out of the Key), gets the row count up front
    and fetches the pages in parallel. Full rows are fetched on demand, 50 at a
    time by Key, only for the ledger page being looked at. */
-var SLIM = ['Key', 'Odds', 'EV %', 'Quarter Kelly %', 'Status', 'Captured At'];
+var SLIM = ['Key', 'Odds', 'EV %', 'Quarter Kelly %', 'Status', 'Captured At', 'Source'];   // Source (2026-11-08) = fair-odds path: Pinnacle / Median / Estimated
 var PAGE = 1000, PARALLEL = 6;
 function enc(v){ return encodeURIComponent(v); }
 function col(c){ return enc('"' + c + '"'); }
@@ -382,10 +382,14 @@ function sbGet(params, range, prefer){
 }
 function expandSlim(r){
   var p = String(r['Key'] || '').split('|');
-  return { 'Key': r['Key'], 'Sport': (p[0] || '').split('-')[0], 'Game Date': p[1] || '', 'Book': p[2] || '', '_player': p[3] || '',
-           'Odds': r['Odds'], 'EV %': r['EV %'], 'Quarter Kelly %': r['Quarter Kelly %'], 'Status': r['Status'], 'Captured At': r['Captured At'] };
+  return { 'Key': r['Key'], 'Sport': (p[0] || '').split('-')[0], 'Game Date': p[1] || '', 'Book': p[2] || '', '_player': p[3] || '', 'Side': p[5] || '',
+           'Odds': r['Odds'], 'EV %': r['EV %'], 'Quarter Kelly %': r['Quarter Kelly %'], 'Status': r['Status'], 'Captured At': r['Captured At'], 'Source': r['Source'] || '' };
 }
 function fetchRange(days, onProgress){
+  // If the ledger doesn't have the Source column yet (SQL not run), PostgREST answers 400 — drop it and retry.
+  return fetchRange_(days, onProgress).catch(function(err){ if (/400/.test(String(err && err.message)) && SLIM.indexOf('Source') >= 0) { SLIM = SLIM.filter(function(c){ return c !== 'Source'; }); return fetchRange_(days, onProgress); } throw err; });
+}
+function fetchRange_(days, onProgress){
   var from = ymdDaysAgo(days);
   var q = "select=" + enc(SLIM.map(function(c){ return '"' + c + '"'; }).join(',')) + "&" + col('Game Date') + "=gte." + from + "&order=" + col('Game Date') + ".asc," + col('Key') + ".asc";
   return sbGet(q, [0, PAGE - 1], "count=exact").then(function(first){
@@ -520,10 +524,28 @@ function renderBreakdown(graded){
     var p = placed[b['Key']]; if (p) { r.placedN++; r.staked += p.stake; r.profit += p.profit; }
   });
   timeRows = timeRows.filter(function(r){ return r.bets > 0; });
+  // Side and fair-odds source (2026-11-08). Unders dominate the EV boards: books shade overs for public demand, so
+  // the under is structurally the cheaper side — but multiplicative devig also leaves the cheap side a little too
+  // much probability on the Median path (recreational-book consensus, ~6-8% hold), less so on Pinnacle (~2%).
+  // If Median-sourced bets are flat where Pinnacle-sourced ones win, that's the devig talking, not the market.
+  var catRows = function(labelOf, order){
+    var m = {};
+    graded.forEach(function(b){
+      var lbl = labelOf(b); if (!lbl) return; var o = E.num(b['Odds']); if (o == null) return;
+      var r = m[lbl] || (m[lbl] = { band: lbl, bets: 0, wins: 0, losses: 0, staked: 0, profit: 0, units: 0, placedN: 0 });
+      var s = String(b['Status']).toLowerCase(); r.bets++;
+      if (s === 'win') { r.wins++; r.units += E.decimalOdds(o) - 1; } else if (s === 'loss') { r.losses++; r.units -= 1; }
+      var p = placed[b['Key']]; if (p) { r.placedN++; r.staked += p.stake; r.profit += p.profit; }
+    });
+    return Object.keys(m).map(function(k){ return m[k]; }).sort(function(a, b){ var ia = order.indexOf(a.band), ib = order.indexOf(b.band); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || b.bets - a.bets; });
+  };
+  var sideRows = catRows(function(b){ return b['Side'] || ''; }, ['Over', 'Under', 'Yes', 'No']);
+  var srcRows = catRows(function(b){ var v = String(b['Source'] || '').trim(); return v || 'Not recorded (before 11/8)'; }, ['Pinnacle', 'Median', 'Estimated']);
+  var srcSideRows = catRows(function(b){ var v = String(b['Source'] || '').trim(), sd = b['Side'] || ''; return v && sd ? v + ' · ' + sd : ''; }, ['Pinnacle · Over', 'Pinnacle · Under', 'Median · Over', 'Median · Under', 'Estimated · Over', 'Estimated · Under']);
   var gap = '<tr><td colspan="7" style="height:6px;border:none"></td></tr>';
   var sub = function(t){ return '<tr><td colspan="7" style="text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);border:none;padding-top:8px">' + t + '</td></tr>'; };
   var head = '<thead><tr><th></th><th>Placed / shown</th><th>Record</th><th>Staked</th><th>Profit</th><th>ROI</th><th>Flat units</th></tr></thead>';
-  els.breakdown.innerHTML = '<table>' + head + '<tbody>' + sportsRows.map(tr).join('') + gap + bookRows.map(tr).join('') + gap + sub('By EV band') + bandRows.map(tr).join('') + gap + sub('By odds band') + oddsRows.map(tr).join('') + gap + sub('By time first seen (ET)') + timeRows.map(tr).join('') + '</tbody></table>';
+  els.breakdown.innerHTML = '<table>' + head + '<tbody>' + sportsRows.map(tr).join('') + gap + bookRows.map(tr).join('') + gap + sub('By EV band') + bandRows.map(tr).join('') + gap + sub('By odds band') + oddsRows.map(tr).join('') + gap + sub('By time first seen (ET)') + timeRows.map(tr).join('') + gap + sub('By side') + sideRows.map(tr).join('') + gap + sub('By fair-odds source') + srcRows.map(tr).join('') + (srcSideRows.length ? gap + sub('Source × side') + srcSideRows.map(tr).join('') : '') + '</tbody></table>';
 }
 var TIME_BANDS = [{ label: 'Before 10 AM', lo: 0, hi: 10 }, { label: '10 AM – 1 PM', lo: 10, hi: 13 }, { label: '1 – 4 PM', lo: 13, hi: 16 }, { label: '4 – 7 PM', lo: 16, hi: 19 }, { label: 'After 7 PM', lo: 19, hi: 24 }];
 function etHour(iso){ if (!iso) return null; var d = new Date(iso); if (isNaN(d.getTime())) return null; var h = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }).formatToParts(d).find(function(x){ return x.type === 'hour'; }); return h ? (parseInt(h.value, 10) % 24) : null; }
