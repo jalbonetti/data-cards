@@ -102,9 +102,10 @@
     <div class="seg"><label>Daily budget</label><input type="range" id="budget" min="1" max="25" step="1" value="25"><span id="budgetLbl">25%</span></div>
     <div class="seg"><label>Stakes</label><div class="tg" id="sizingTg"><button data-s="kelly" class="on">¼ Kelly</button><button data-s="flat">Flat 1%</button></div></div>
     <div class="seg"><label>Rank by</label><div class="tg" id="rankTg"><button data-k="kelly" class="on">Bet size</button><button data-k="ev">EV %</button></div></div>
+    <div class="seg"><label>Picks</label><div class="tg" id="modeTg" title="End of day: the best of everything seen that day, chosen after the fact. As seen: each half-hour capture locks the best of what it can see, budget paced to the slate — what a bettor could actually have done."><button data-m="eod" class="on">End of day</button><button data-m="live">As seen</button></div></div>
     <div class="seg"><label>Min EV %</label><input class="field n" id="minEv" type="number" min="0" max="30" step="0.5" value="3"></div>
     <div class="seg"><label>Max EV %</label><input class="field n" id="maxEv" type="number" min="0" max="100" step="0.5" placeholder="none"></div>
-    <div class="seg"><label>Max odds</label><input class="field n" id="maxOdds" type="number" min="-300" max="1000" step="5" value="-100"></div>
+    <div class="seg"><label>Max odds</label><input class="field n" id="maxOdds" type="text" inputmode="text" value="-100" oninput="this.value=this.value.replace(/[^-0-9]/g,'').replace(/(?!^)-/g,'')"></div>
   </div>
 
   <div id="content"><div class="state"><div class="spinner"></div>Loading the ledger…</div></div>
@@ -198,7 +199,7 @@
       var ea = num(a['EV %']) || 0, eb = num(b2['EV %']) || 0; if (eb !== ea) return eb - ea;
       return String(a['Captured At'] || '').localeCompare(String(b2['Captured At'] || ''));
     });
-    var budget = bankroll * budgetPct / 100, remaining = budget, cap = bankroll * capPct / 100;
+    var budget = opts.budgetAbs != null ? +opts.budgetAbs : bankroll * budgetPct / 100, remaining = budget, cap = bankroll * capPct / 100;
     var placed = [], perGameN = {}, perPlayerN = {};
     for (var j = 0; j < list.length && remaining > 0.005 && placed.length < maxBets; j++) {
       var bet = list[j];
@@ -220,6 +221,58 @@
     return { placed: placed, budget: budget, cap: cap, remaining: remaining };
   }
 
+  /* ---- 'live' selection (2026-11-09): lock picks as they are seen, pace the budget to the slate ----
+   *  The end-of-day planner ranks EVERYTHING captured for a date and fills the budget from the top — a pick made
+   *  with knowledge of the whole day's board. A bettor can't do that: a 7 AM price is gone by 7 PM, and cashing out
+   *  costs the vig. planDayLive replays the day in capture order (the :07/:37 runs). Each run sees only the bets
+   *  first seen in that run, places the best of them by the same ranking and sizing, and what it skips is gone.
+   *  The daily budget is released in proportion to the slate: by time t the bettor may have spent
+   *    budget x (games starting within the next `lookaheadHours`) / (games today),
+   *  never less than one game's share, so an early-clustered slate is bet early and a night slate is waited for.
+   *  A bet is placeable only before its own game starts. Unspent budget at the end of the day stays unspent. */
+  var ET_OFF_ = function (y, mo, d) { var m1 = new Date(Date.UTC(y, 2, 1)), n1 = new Date(Date.UTC(y, 10, 1)); var ds = 1 + ((7 - m1.getUTCDay()) % 7) + 7, de = 1 + ((7 - n1.getUTCDay()) % 7); var a = (mo > 2) || (mo === 2 && d >= ds), b = (mo < 10) || (mo === 10 && d < de); return (a && b) ? 4 : 5; };
+  function stampMs(stamp) {   // "7:30 PM ET 11/8/2026" (ledger Game Time) -> epoch ms; ISO strings pass through
+    if (stamp == null || stamp === '') return null;
+    var str = String(stamp);
+    var m = str.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*E[DS]?T\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    if (m) { var h = parseInt(m[1], 10) % 12; if (m[3].toUpperCase() === 'PM') h += 12; var y = +m[6], mo = +m[4] - 1, d = +m[5]; return Date.UTC(y, mo, d, h + ET_OFF_(y, mo, d), +m[2]); }
+    var t = Date.parse(str); return isNaN(t) ? null : t;
+  }
+  function planDayLive(bets, opts) {
+    opts = opts || {};
+    var bankroll = opts.bankroll != null ? +opts.bankroll : 1000;
+    var budgetPct = Math.min(25, Math.max(0, opts.budgetPct != null ? +opts.budgetPct : 25));
+    var budget = bankroll * budgetPct / 100;
+    var lookahead = (opts.lookaheadHours != null ? +opts.lookaheadHours : 5) * 3600000;
+    // the slate: distinct game starts for the day (knowable from the schedule in the morning)
+    var starts = {}, runs = {}, order = [];
+    for (var i = 0; i < bets.length; i++) {
+      var b = bets[i], gms = stampMs(b['Game Time']), cms = stampMs(b['Captured At']);
+      if (gms == null || cms == null) continue;
+      starts[String(b['Matchup'] || '') + '|' + gms] = gms;   // a game = matchup + start; without Matchup (slim rows) distinct starts stand in
+      var rk = String(b['Captured At']);
+      if (!runs[rk]) { runs[rk] = { at: cms, bets: [] }; order.push(rk); }
+      runs[rk].bets.push(b);
+    }
+    var slate = Object.keys(starts).map(function (k) { return starts[k]; }).sort(function (a, b2) { return a - b2; });
+    var G = slate.length || 1;
+    order.sort(function (a, b2) { return runs[a].at - runs[b2].at; });
+    var spent = 0, placed = [], runLog = [];
+    for (var r = 0; r < order.length; r++) {
+      var run = runs[order[r]], t = run.at;
+      var within = 0; for (var g = 0; g < slate.length; g++) if (slate[g] <= t + lookahead) within++;
+      var frac = Math.max(within, 1) / G;                       // at least the next game's share is always open
+      var allowed = Math.min(budget, budget * frac);
+      var room = allowed - spent;
+      if (room < 0.01) { runLog.push({ at: run.at, cap: allowed, placed: 0 }); continue; }
+      var cands = run.bets.filter(function (x) { var gm = stampMs(x['Game Time']); return gm != null && gm > t; });   // only games that haven't started
+      var plan = planDay(cands, { bankroll: bankroll, budgetAbs: room, sizing: opts.sizing, perBetCapPct: opts.perBetCapPct, flatUnitPct: opts.flatUnitPct, rankBy: opts.rankBy, maxBets: opts.maxBets, perGameCap: opts.perGameCap, perPlayerCap: opts.perPlayerCap });
+      for (var j = 0; j < plan.placed.length; j++) { placed.push(plan.placed[j]); spent += plan.placed[j].stake; }
+      runLog.push({ at: run.at, cap: allowed, placed: plan.placed.length });
+    }
+    return { placed: placed, budget: budget, cap: bankroll * (opts.perBetCapPct != null ? +opts.perBetCapPct : 5) / 100, remaining: budget - spent, runs: runLog, games: G };
+  }
+
   function simulate(bets, opts) {
     opts = opts || {};
     var start = opts.startBankroll != null ? +opts.startBankroll : 1000;
@@ -234,6 +287,8 @@
     var maxOdds = opts.maxOdds != null ? +opts.maxOdds : 250;  // longest price the simulation will take
     var maxEv = opts.maxEv != null && opts.maxEv !== '' ? +opts.maxEv : Infinity;   // optional ceiling: skip the tail of the ranking
     var rankBy = opts.rankBy === 'ev' ? 'ev' : 'kelly';   // order bets are placed each day: 'kelly' = biggest recommended stake first (default), 'ev' = highest EV % first
+    var mode = opts.mode === 'live' ? 'live' : 'eod';     // 'eod' = best of the whole day's board (original); 'live' = picks locked as seen, budget paced to the slate
+    var lookaheadHours = opts.lookaheadHours != null ? +opts.lookaheadHours : 5;
 
     // bucket by game date
     var byDay = {};
@@ -263,7 +318,9 @@
         return String(a['Captured At'] || '').localeCompare(String(b2['Captured At'] || ''));
       });
       var dayStart = bankroll;
-      var plan = planDay(list, { bankroll: bankroll, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, rankBy: rankBy, presorted: true });
+      var plan = mode === 'live'
+        ? planDayLive(byDay[date], { bankroll: bankroll, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, rankBy: rankBy, lookaheadHours: lookaheadHours })
+        : planDay(list, { bankroll: bankroll, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, rankBy: rankBy, presorted: true });
       var day = { date: date, bankrollStart: round2(dayStart), bets: 0, wins: 0, losses: 0, pushes: 0, voids: 0, staked: 0, profit: 0, placed: [] };
       for (var j = 0; j < plan.placed.length; j++) {
         var bet = plan.placed[j].bet, stake = plan.placed[j].stake;
@@ -279,6 +336,7 @@
       bankroll = dayStart + day.profit;
       day.staked = round2(day.staked); day.profit = round2(day.profit); day.bankrollEnd = round2(bankroll);
       day.roi = day.staked > 0 ? round2(day.profit / day.staked * 100) : 0;
+      if (mode === 'live') { day.unspent = round2(plan.remaining); day.games = plan.games; }
       days.push(day);
       T.bets += day.bets; T.wins += day.wins; T.losses += day.losses; T.pushes += day.pushes; T.voids += day.voids;
       T.staked += day.staked; T.profit += day.profit;
@@ -293,7 +351,7 @@
     T.growth = start > 0 ? round2((bankroll - start) / start * 100) : 0;
     T.maxDrawdown = round2(T.maxDrawdown); T.peak = round2(T.peak);
     T.winPct = (T.wins + T.losses) > 0 ? round2(T.wins / (T.wins + T.losses) * 100) : 0;
-    return { days: days, totals: T, opts: { startBankroll: start, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, minEv: minEv, maxOdds: maxOdds, maxEv: maxEv, rankBy: rankBy } };
+    return { days: days, totals: T, opts: { startBankroll: start, budgetPct: budgetPct, sizing: sizing, perBetCapPct: capPct, flatUnitPct: flatPct, minEv: minEv, maxOdds: maxOdds, maxEv: maxEv, rankBy: rankBy, mode: mode, lookaheadHours: lookaheadHours } };
   }
 
   /** Flat-unit summary that needs no bankroll: +1u record per (sport, book, day). Used for the daily table. */
@@ -316,7 +374,7 @@
     return Object.keys(out).map(function (k) { var o = out[k]; o.units = round2(o.units); o.avgEv = o.bets ? round2(o.evSum / o.bets) : 0; delete o.evSum; return o; });
   }
 
-  return { simulate: simulate, planDay: planDay, flatUnits: flatUnits, decimalOdds: decimalOdds, num: num };
+  return { simulate: simulate, planDay: planDay, planDayLive: planDayLive, stampMs: stampMs, flatUnits: flatUnits, decimalOdds: decimalOdds, num: num };
 }));
 
 /* ===================== page ===================== */
@@ -326,7 +384,7 @@ var TABLE = "EVTrackBets";
 var E = window.EVTrackEngine;
 var SPORT_ORDER = ['NFL','NCAAF','NBA','NHL','MLB','WNBA'];
 
-var state = { range: 30, sports: new Set(), books: new Set(), bankroll: 1000, budget: 25, sizing: 'kelly', rankBy: 'kelly', minEv: 3, maxEv: null, maxOdds: -100, search: '', placedOnly: true, page: 0 };
+var state = { range: 30, sports: new Set(), books: new Set(), bankroll: 1000, budget: 25, sizing: 'kelly', rankBy: 'kelly', mode: 'eod', minEv: 3, maxEv: null, maxOdds: -100, search: '', placedOnly: true, page: 0 };
 var RAW = [], SIM = null, PENDING = 0, LOADED_RANGE = 0;
 var els = {}; ['count','content','grid','chart','chartSub','legend','stats','statsSub','breakdown','daily','bets','betsSub','search','placedOnly','prev','next','pageLbl','honest','bankroll','budget','budgetLbl','minEv','maxEv','maxOdds'].forEach(function(id){ els[id] = document.getElementById(id); });
 
@@ -366,7 +424,7 @@ buildMS(document.getElementById('msBooks'), 'books', 'books');
    Date and Book are parsed back out of the Key), gets the row count up front
    and fetches the pages in parallel. Full rows are fetched on demand, 50 at a
    time by Key, only for the ledger page being looked at. */
-var SLIM = ['Key', 'Odds', 'EV %', 'Quarter Kelly %', 'Status', 'Captured At'];
+var SLIM = ['Key', 'Odds', 'EV %', 'Quarter Kelly %', 'Status', 'Captured At', 'Game Time', 'Matchup'];   // Game Time + Matchup (2026-11-09): the 'as seen' planner paces the budget to the slate
 var PAGE = 1000, PARALLEL = 6;
 function enc(v){ return encodeURIComponent(v); }
 function col(c){ return enc('"' + c + '"'); }
@@ -383,7 +441,7 @@ function sbGet(params, range, prefer){
 function expandSlim(r){
   var p = String(r['Key'] || '').split('|');
   return { 'Key': r['Key'], 'Sport': (p[0] || '').split('-')[0], 'Game Date': p[1] || '', 'Book': p[2] || '', '_player': p[3] || '', 'Side': p[5] || '',
-           'Odds': r['Odds'], 'EV %': r['EV %'], 'Quarter Kelly %': r['Quarter Kelly %'], 'Status': r['Status'], 'Captured At': r['Captured At'] };
+           'Odds': r['Odds'], 'EV %': r['EV %'], 'Quarter Kelly %': r['Quarter Kelly %'], 'Status': r['Status'], 'Captured At': r['Captured At'], 'Game Time': r['Game Time'] || '', 'Matchup': r['Matchup'] || '' };
 }
 function fetchRange(days, onProgress){
   var from = ymdDaysAgo(days);
@@ -432,10 +490,13 @@ function load(){
 /* ---------- compute + render ---------- */
 function recompute(){
   var sports = state.sports.size ? state.sports : null, books = state.books.size ? state.books : null;
-  SIM = E.simulate(RAW, { startBankroll: state.bankroll, budgetPct: state.budget, sizing: state.sizing, rankBy: state.rankBy, minEv: state.minEv, maxEv: state.maxEv, maxOdds: state.maxOdds, sports: sports, books: books, from: ymdDaysAgo(state.range) });
+  SIM = E.simulate(RAW, { startBankroll: state.bankroll, budgetPct: state.budget, sizing: state.sizing, rankBy: state.rankBy, mode: state.mode, minEv: state.minEv, maxEv: state.maxEv, maxOdds: state.maxOdds, sports: sports, books: books, from: ymdDaysAgo(state.range) });
   var inRule = function(b){ var e = E.num(b['EV %']), o = E.num(b['Odds']); return e != null && e >= state.minEv && (state.maxEv == null || e <= state.maxEv) && o != null && o <= state.maxOdds; };
-  var graded = RAW.filter(function(b){ var s = String(b['Status']).toLowerCase(); return s !== 'pending' && inRule(b) && (!sports || sports.has(b['Sport'])) && (!books || books.has(b['Book'])); });
-  els.count.textContent = graded.length.toLocaleString();
+  var fromYmd = ymdDaysAgo(state.range);
+  var graded = RAW.filter(function(b){ var s = String(b['Status']).toLowerCase(); return s !== 'pending' && inRule(b) && (!sports || sports.has(b['Sport'])) && (!books || books.has(b['Book'])) && String(b['Game Date'] || '') >= fromYmd; });
+  var decided = graded.filter(function(b){ var s = String(b['Status']).toLowerCase(); return s === 'win' || s === 'loss'; }).length;
+  els.count.textContent = decided.toLocaleString() + ' graded';   // same window + rule as everything below; wins + losses (voids excluded, same as the W-L columns)
+  els.count.title = graded.length.toLocaleString() + ' bets in the window and rule, ' + (graded.length - decided).toLocaleString() + ' voided';
   if (!SIM.days.length) { els.content.hidden = false; els.content.innerHTML = '<div class="state">No graded bets for this slice yet.</div>'; els.grid.hidden = true; renderHonest(graded); return; }
   els.content.hidden = true; els.grid.hidden = false;
   renderChart(); renderStats(); renderBreakdown(graded); renderDaily(); state.page = 0; renderBets(graded); renderHonest(graded);
@@ -458,12 +519,12 @@ function renderChart(){
   for (var i = 0; i < days.length; i += step) ticks += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10" fill="#7a6b8f">' + esc(fmtDay(days[i].date)) + '</text>';
   var dots = days.map(function(d, i){ return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(d.bankrollEnd).toFixed(1) + '" r="2.5" fill="' + col + '"><title>' + esc(d.date) + ': ' + d.wins + '–' + d.losses + ', ' + signedMoney(d.profit) + ' → $' + d.bankrollEnd.toLocaleString() + '</title></circle>'; }).join('');
   els.chart.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' + grid + '<line x1="' + padL + '" y1="' + y(start).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + y(start).toFixed(1) + '" stroke="rgba(255,255,255,.18)" stroke-dasharray="3 4"/><path d="' + area + '" fill="' + col + '" fill-opacity=".12"/><path d="' + line + '" fill="none" stroke="' + col + '" stroke-width="2.2" stroke-linejoin="round"/>' + dots + ticks + '</svg>';
-  els.chartSub.textContent = money(start) + ' start · ' + (state.sizing === 'kelly' ? '¼-Kelly stakes' : 'flat 1% stakes') + ' · ' + state.budget + '% daily budget · ' + (state.rankBy === 'ev' ? 'highest EV first' : 'biggest stake first') + ' · EV ' + evRuleText() + ' · odds ≤ ' + (state.maxOdds > 0 ? '+' : '') + state.maxOdds;
+  els.chartSub.textContent = money(start) + ' start · ' + (state.sizing === 'kelly' ? '¼-Kelly stakes' : 'flat 1% stakes') + ' · ' + state.budget + '% daily budget · ' + (state.rankBy === 'ev' ? 'highest EV first' : 'biggest stake first') + (state.mode === 'live' ? ' · picks locked as seen, budget paced to the slate' : ' · best of the day') + ' · EV ' + evRuleText() + ' · odds ≤ ' + (state.maxOdds > 0 ? '+' : '') + state.maxOdds;
   els.legend.innerHTML = '<span>' + esc(fmtDay(days[0].date)) + '</span><span>peak ' + money(SIM.totals.peak) + ' · max drawdown ' + SIM.totals.maxDrawdown.toFixed(1) + '%</span><span>' + esc(fmtDay(days[days.length - 1].date)) + '</span>';
 }
 function renderStats(){
   var T = SIM.totals, cls = T.profit >= 0 ? 'up' : 'down';
-  els.statsSub.textContent = T.days + (T.days === 1 ? ' betting day' : ' betting days');
+  els.statsSub.textContent = T.days + (T.days === 1 ? ' betting day' : ' betting days') + (state.mode === 'live' ? ' · ' + money(SIM.days.reduce(function(a, d){ return a + (d.unspent || 0); }, 0)) + ' of budget left unspent' : '');
   els.stats.innerHTML =
     '<div class="stat"><div class="k">Profit</div><div class="v ' + cls + '">' + signedMoney(T.profit) + '</div><div class="s">' + pct(T.growth) + ' bankroll · ends ' + money(T.endBankroll) + '</div></div>' +
     '<div class="stat"><div class="k">ROI</div><div class="v ' + cls + '">' + pct(T.roi) + '</div><div class="s">on ' + money(T.staked) + ' staked</div></div>' +
@@ -577,6 +638,7 @@ function renderHonest(graded){
 /* ---------- events ---------- */
 document.getElementById('rangeTg').addEventListener('click', function(e){ var b = e.target.closest('button[data-r]'); if (!b) return; state.range = +b.getAttribute('data-r'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); if (state.range > LOADED_RANGE) load(); else recompute(); });
 document.getElementById('rankTg').addEventListener('click', function(e){ var b = e.target.closest('button[data-k]'); if (!b) return; state.rankBy = b.getAttribute('data-k'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); recompute(); });
+document.getElementById('modeTg').addEventListener('click', function(e){ var b = e.target.closest('button[data-m]'); if (!b) return; state.mode = b.getAttribute('data-m'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); recompute(); });
 document.getElementById('sizingTg').addEventListener('click', function(e){ var b = e.target.closest('button[data-s]'); if (!b) return; state.sizing = b.getAttribute('data-s'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); recompute(); });
 els.bankroll.addEventListener('input', function(){ var v = parseFloat(this.value); if (v > 0) { state.bankroll = v; recompute(); } });
 els.budget.addEventListener('input', function(){ state.budget = +this.value; els.budgetLbl.textContent = this.value + '%'; recompute(); });
