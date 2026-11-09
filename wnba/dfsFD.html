@@ -621,21 +621,19 @@ function detailHTML(g){
       const mixStr=v&&v.mix?v.mix:'';
       const MAP={PTS:'PTS',REB:'REB',AST:'AST','3PM':'FG3M',STL:'STL',BLK:'BLK',TOV:'TOV',DD:'DD',TD:'TD'};
       const items=mixStr.split(',').map(x=>{const i=x.lastIndexOf(':');return [x.slice(0,i),parseFloat(x.slice(i+1))];}).filter(x=>x[0]&&!isNaN(x[1]));
-      // Renormalize to ABSOLUTE weight (2026-11-08): the builder's mix is each stat's % of the NET total, so with a
-      // negative stat (GA / TOV / INT) the positives already sum to 100 and the negative hangs off the side. Dividing
-      // by the sum of |shares| makes everything add to 100 in magnitude — SV 43 / W 18 / GA −39 — and the negative's
-      // bar shows its true size instead of collapsing to zero.
-      const absSum=items.reduce((a,x)=>a+Math.abs(x[1]),0); if(absSum>0) items.forEach(x=>{x[1]=Math.round(x[1]/absSum*100);});
       const kv=`<div class="kv"><span class="k">${esc(BOOK)} pts allowed</span><span class="v">${dfsLine}</span><span class="k">Pace</span><span class="v">${raw(g.pace)}</span></div>`;
+      items.sort((a,b)=>(a[1]<0)-(b[1]<0));   // earned stats first, deductions last
+      let divided=false;
       const rows=items.map(([lbl,pct])=>{
+        const div=(pct<0&&!divided)?(divided=true,`<tr><td colspan="3" style="padding:8px 6px 3px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted-2);border-bottom:none">Deductions · % of points earned</td></tr>`):'';
         const col=MAP[lbl]; const pair=col&&v.def?v.def[col]:null;
         const opp=pair&&pair[0]!=null?`${fmtAvg(pair[0])}${pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:''}${col==='TOV'?' <span style="color:var(--muted-2);font-size:10.5px">forced</span>':''}`:'–';
         const w=Math.min(100,Math.abs(pct));
-        return `<tr><td class="rl">${esc(lbl)}</td><td><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><div style="width:70px;height:6px;border-radius:3px;background:var(--line-2);overflow:hidden"><div style="width:${w}%;height:100%;background:${pct<0?'var(--bad)':'var(--brand)'}"></div></div><span>${pct<0?'−':''}${Math.abs(pct)}%</span></div></td><td>${opp}</td></tr>`;
+        return div+`<tr><td class="rl">${esc(lbl)}</td><td><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><div style="width:70px;height:6px;border-radius:3px;background:var(--line-2);overflow:hidden"><div style="width:${w}%;height:100%;background:${pct<0?'var(--bad,#fca5a5)':'var(--brand)'}"></div></div><span${pct<0?' style="color:var(--bad,#fca5a5)"':''}>${pct<0?'−':''}${Math.abs(pct)}%</span></div></td><td>${opp}</td></tr>`;
       }).join('');
       return `<div class="panel"><div class="panel-h">Opponent — ${esc(g.opp||'—')} <span style="font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)">${perLbl}${oppSplitLbl}</span></div>${kv}${items.length?`
-        <div class="mini-scroll"><table class="mini"><thead><tr><th></th><th>Share of ${esc(BOOK)} pts</th><th>Opp allows / game</th></tr></thead><tbody>${rows}</tbody></table></div>
-        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = each stat's weight in the player's ${esc(BOOK)} scoring (a negative stat subtracts; weights add to 100) · #1 = best matchup for the player (TOV: fewest forced).</div>`:`<div style="color:var(--muted-2);font-size:11px;margin-top:6px">Stat-by-stat breakdown appears once today's build runs.</div>`}</div>`;
+        <div class="mini-scroll"><table class="mini"><thead><tr><th></th><th>Share of pts earned</th><th>Opp allows / game</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = each scoring stat's % of the points the player earns; a deduction is the % of those earned points it gives back · #1 = best matchup for the player (TOV: fewest forced).</div>`:`<div style="color:var(--muted-2);font-size:11px;margin-top:6px">Stat-by-stat breakdown appears once today's build runs.</div>`}</div>`;
     })()}
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Spread</span><span class="v">${g.spread!=null&&g.spread!==''?esc(g.team+' '+(parseFloat(g.spread)>0?'+':'')+g.spread):'–'}</span>
