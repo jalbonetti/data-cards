@@ -277,7 +277,7 @@ function fieldMap(){
     ratioMed:'Player Median Ratio', ratioHigh:'Player High Ratio', rostership:`${BOOK} Rostership`, slateRost:`${BOOK} Slate Rost`,
     projection:`${BOOK} Projection`, gp:'Player Games Played', minutes:'TOI',
     matchup:'Matchup', spread:'Matchup Spread', total:'Matchup Total', moneyline:'Matchup Moneyline',
-    lineup:'Lineup Status', neutral:'Neutral', venue:'Venue',
+    lineup:'Lineup Status',injury:'Injury', neutral:'Neutral', venue:'Venue',
     oppDfsAllowed:`Opp ${BOOK} Pts Allowed`, oppDfsRank:`Opp ${BOOK} Pts Rank`, gameTime:'Game Time'
   };
 }
@@ -394,6 +394,13 @@ const fmtRost = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||
 const fmtRostPct = v=>{if(v==null)return '–';const s=String(v).trim();if(s===''||s==='-')return '–';const n=parseFloat(s.replace('%',''));if(isNaN(n))return '–';if(n<=0)return '0%';if(n<1)return '<1%';return Math.round(n)+'%';};   // #6: whole %, sub-1% => <1%
 const fmtType = (t,v)=> t==='rate'?fmtAvg3(v) : t==='era'?fmt2(v) : t==='ip'?fmtIP(v) : raw(v);
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Injury designation pill (2026-11-09): Q / D / P / GTD / DTD from the builder's Injury column; a tag still inside the
+// name ("Name (Q)") is lifted out as a fallback. Players stay on the slate until they are declared Out.
+const INJ_CSS = `<style>.inj{display:inline-block;margin-left:6px;padding:0 6px;border-radius:5px;font-size:10.5px;font-weight:800;letter-spacing:.4px;line-height:16px;vertical-align:2px;border:1px solid transparent}.inj-q,.inj-gtd,.inj-dtd{color:#fcd34d;background:rgba(252,211,77,.14);border-color:rgba(252,211,77,.35)}.inj-d{color:#fca5a5;background:rgba(248,113,113,.14);border-color:rgba(248,113,113,.35)}.inj-p{color:#a7f3d0;background:rgba(110,231,183,.12);border-color:rgba(110,231,183,.3)}</style>`;
+if(!document.getElementById('injcss')){const d=document.createElement('div');d.id='injcss';d.innerHTML=INJ_CSS;document.head.appendChild(d.firstChild);}
+const INJ_TITLE={Q:'Questionable',D:'Doubtful',P:'Probable',GTD:'Game-time decision',DTD:'Day-to-day'};
+function injPill(t){t=String(t||'').trim().toUpperCase();if(!t||t==='OUT'||t==='OFS')return '';return `<span class="inj inj-${t.toLowerCase()}" title="${esc(INJ_TITLE[t]||t)}">${esc(t)}</span>`;}
+function splitInj(name,col){const n=String(name||'').trim();const m=n.match(/^(.*?)\s*\(([A-Za-z]{1,4})\)\s*$/);const tag=String(col||'').trim()||(m?m[2]:'');return {name:m?m[1]:n,inj:tag.toUpperCase()};}
 const CODE_ALIAS={MON:'MTL',NJ:'NJD',TB:'TBL',LA:'LAK',SJ:'SJS',WAS:'WSH',CLS:'CBJ',VEG:'VGK',WIN:'WPG',NAS:'NSH',CAL:'CGY',UTAH:'UTA',ARI:'UTA',PHX:'UTA'};
 const canonTeam=c=>{const u=String(c||'').trim().toUpperCase();return CODE_ALIAS[u]||u;};
 const abbrTeam=v=>{if(!v)return '';const s=String(v).trim();return TEAM_NAME_MAP[s]||canonTeam(s);};
@@ -509,7 +516,7 @@ function buildGroups(rows){
     let g=map.get(player);
     if(!g){
       g={key:player, player, team:abbrTeam(row[F.team]), opp:abbrTeam(row[F.opponent]), pos:row[F.pos], price:num(row[F.price]),
-        rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],
+        rostership:row[F.rostership], projection:row[F.projection], gp:row[F.gp], minutes:row[F.minutes], lineup:row[F.lineup],injury:splitInj(row[F.player],row[F.injury]).inj,
         matchup:row[F.matchup], _matchupAb:abbrMatchup(row[F.matchup]||''), spread:row[F.spread], total:row[F.total], moneyline:row[F.moneyline], neutral:/^yes$/i.test(String(row[F.neutral]||'').trim()), venue:row[F.venue],
         variants:{}, _q:String(player).toLowerCase(), gameTime:row[F.gameTime], _matchupAb:abbrMatchup(row[F.matchup]||`${row[F.team]} @ ${row[F.opponent]}`)};
       g.slateMap=parseSlateRost(row[F.slateRost]); if(!Object.keys(g.slateMap).length&&String(row[F.rostership]||'').includes(':'))g.slateMap=parseSlateRost(row[F.rostership]); g._slates=new Set(Object.keys(g.slateMap));
@@ -645,7 +652,7 @@ function cardHTML(g){
   return `
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${c.edge}">
     <div class="c-head">
-      <div class="c-main"><div class="c-name">${esc(g.player)}</div>
+      <div class="c-main"><div class="c-name">${esc(g.player)}${injPill(g.injury)}</div>
         <div class="c-sub"><span class="tag">${esc(abbrTeam(g.team))}</span> ${hand} ${luTag} <span class="tag">${esc(g.pos||'–')}</span> <span class="tag">${fmtPrice(g.price)}</span></div>
         <div class="c-matchup">${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</div></div>
     </div>
@@ -709,18 +716,15 @@ function detailHTML(g){
       const MAP={G:'G',A:'A',SOG:'SOG',BLK:'BLK',PPP:'PPP',SV:'SF',GA:'GF'}, OPPLBL={SF:'shots for',GF:'goals for'};   // GF rank arrives flipped from the builder: #1 = fewest goals scored (best for the goalie)
       const items=mixStr.split(',').map(x=>{const i=x.lastIndexOf(':');return [x.slice(0,i),parseFloat(x.slice(i+1))];}).filter(x=>x[0]&&!isNaN(x[1]));
       const kv=`<div class="kv"><span class="k">${esc(BOOK)} pts allowed${isGoalie?' to goalies':''}</span><span class="v">${dfsLine}</span></div>`;
-      items.sort((a,b)=>(a[1]<0)-(b[1]<0));   // earned stats first, deductions last
-      let divided=false;
       const rows=items.map(([lbl,pct])=>{
-        const div=(pct<0&&!divided)?(divided=true,`<tr><td colspan="3" style="padding:8px 6px 3px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted-2);border-bottom:none">Deductions · % of points earned</td></tr>`):'';
         const col=MAP[lbl]; const pair=col&&v.def?v.def[col]:null;
         const opp=pair&&pair[0]!=null?`${fmtStat(pair[0])}${pair[1]!=null?` <span style="color:var(--muted-2)">(#${pair[1]})</span>`:''}`:'–';
-        const w=Math.min(100,Math.abs(pct));
-        return div+`<tr><td class="rl">${esc(lbl)}</td><td><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><div style="width:70px;height:6px;border-radius:3px;background:var(--line-2);overflow:hidden"><div style="width:${w}%;height:100%;background:${pct<0?'var(--bad,#fca5a5)':'var(--brand)'}"></div></div><span${pct<0?' style="color:var(--bad,#fca5a5)"':''}>${pct<0?'−':''}${Math.abs(pct)}%</span></div></td><td>${opp}${col&&OPPLBL[col]?` <span style="color:var(--muted-2);font-size:10.5px">${OPPLBL[col]}</span>`:''}</td></tr>`;
+        const w=Math.max(0,Math.min(100,pct));
+        return `<tr><td class="rl">${esc(lbl)}</td><td><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><div style="width:70px;height:6px;border-radius:3px;background:var(--line-2);overflow:hidden"><div style="width:${w}%;height:100%;background:${pct<0?'var(--bad)':'var(--brand)'}"></div></div><span>${pct<0?'−':''}${Math.abs(pct)}%</span></div></td><td>${opp}${col&&OPPLBL[col]?` <span style="color:var(--muted-2);font-size:10.5px">${OPPLBL[col]}</span>`:''}</td></tr>`;
       }).join('');
       return `<div class="panel"><div class="panel-h">Opponent — ${esc(g.opp||'—')} <span style="font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)">${perLbl}${oppSplitLbl}</span></div>${kv}${items.length?`
-        <div class="mini-scroll"><table class="mini"><thead><tr><th></th><th>Share of pts earned</th><th>Opp allows / game</th></tr></thead><tbody>${rows}</tbody></table></div>
-        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = each scoring stat's % of the points the player earns; a deduction is the % of those earned points it gives back · #1 = best matchup for the player (goalie goals against: fewest).</div>`:`<div style="color:var(--muted-2);font-size:11px;margin-top:6px">Stat-by-stat breakdown appears once today's build runs.</div>`}</div>`;
+        <div class="mini-scroll"><table class="mini"><thead><tr><th></th><th>Share of ${esc(BOOK)} pts</th><th>Opp allows / game</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div style="color:var(--muted-2);font-size:11px;margin-top:6px">Share = each stat's % of the player's ${esc(BOOK)} scoring · #1 = best matchup for the player (goalie goals against: fewest).</div>`:`<div style="color:var(--muted-2);font-size:11px;margin-top:6px">Stat-by-stat breakdown appears once today's build runs.</div>`}</div>`;
     })()}
     <div class="panel"><div class="panel-h">Game environment</div>
       <div class="kv"><span class="k">Puck line</span><span class="v">${(function(){const n=parseFloat(g.spread);return isNaN(n)?'–':esc(g.team+' '+(n>0?'+':'')+n.toFixed(1));})()}</span>
