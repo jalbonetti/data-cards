@@ -190,20 +190,20 @@
         <div class="fg"><label>Min clearance %</label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
         <div class="fg"><label>Best over odds</label>
           <div class="fg-range">
-            <input type="number" data-filter="boMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="boMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="boMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="boMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
         <div class="fg"><label>Best under odds</label>
           <div class="fg-range">
-            <input type="number" data-filter="buMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="buMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="buMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="buMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
         <div class="fg"><label>Median odds (over)</label>
           <div class="fg-range">
-            <input type="number" data-filter="medMin" inputmode="numeric" placeholder="Min" />
-            <input type="number" data-filter="medMax" inputmode="numeric" placeholder="Max" />
+            <input type="text" data-filter="medMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="text" data-filter="medMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
           </div>
         </div>
       </div>
