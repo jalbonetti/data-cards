@@ -199,20 +199,20 @@
         <div class="fg"><label>Min clearance %</label><input type="number" data-filter="clrMin" inputmode="decimal" placeholder="e.g. 50" /></div>
         <div class="fg"><label>Best over odds</label>
           <div class="fg-range">
-            <input type="text" data-filter="boMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
-            <input type="text" data-filter="boMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="number" data-filter="boMin" inputmode="numeric" placeholder="Min" />
+            <input type="number" data-filter="boMax" inputmode="numeric" placeholder="Max" />
           </div>
         </div>
         <div class="fg"><label>Best under odds</label>
           <div class="fg-range">
-            <input type="text" data-filter="buMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
-            <input type="text" data-filter="buMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="number" data-filter="buMin" inputmode="numeric" placeholder="Min" />
+            <input type="number" data-filter="buMax" inputmode="numeric" placeholder="Max" />
           </div>
         </div>
         <div class="fg"><label>Median odds (over)</label>
           <div class="fg-range">
-            <input type="text" data-filter="medMin" inputmode="text" placeholder="Min" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
-            <input type="text" data-filter="medMax" inputmode="text" placeholder="Max" oninput="this.value=this.value.replace(/[^-0-9.]/g,'').replace(/(?!^)-/g,'')" />
+            <input type="number" data-filter="medMin" inputmode="numeric" placeholder="Min" />
+            <input type="number" data-filter="medMax" inputmode="numeric" placeholder="Max" />
           </div>
         </div>
       </div>
@@ -245,7 +245,7 @@ const PROP_ABBR = {'Points':'PTS','Rebounds':'REB','Assists':'AST','3-Pointers':
 const PROP_ORDER = ['Points','Rebounds','Assists','3-Pointers','Pts + Rebs','Pts + Asts','Rebs + Asts','Pts + Rebs + Asts','Double Double','Triple Double'];
 const orderProps = vals=>{const idx=p=>{const i=PROP_ORDER.indexOf(p);return i<0?999:i;};return vals.slice().sort((a,b)=>{const d=idx(a)-idx(b);return d!==0?d:String(a).localeCompare(String(b));});};
 
-const F = {player:'Player',team:'Team',opponent:'Opponent',prop:'Prop',line:'Line',period:'Time Period',split:'Location',role:'Role',
+const F = {player:'Player',injury:'Injury',team:'Team',opponent:'Opponent',prop:'Prop',line:'Line',period:'Time Period',split:'Location',role:'Role',
   clearance:'Clearance %',cleared:'Cleared',games:'Games',matchup:'Matchup',gameTime:'Game Time',spread:'Spread',total:'Total',
   avg:'Avg',median:'Median',high:'High',low:'Low',oppAllowed:'Opp Allowed',oppRank:'Opp Rank',lineup:'Lineup Status',pace:'Opp Pace',paceRank:'Opp Pace Rank',neutral:'Neutral',venue:'Venue',
   medOver:'Median Over',medUnder:'Median Under',bestOver:'Best Over',bestOverBk:'Best Over Books',bestUnder:'Best Under',bestUnderBk:'Best Under Books'};
@@ -270,6 +270,13 @@ const raw = v=>{if(v==null)return '–';const s=String(v).trim();return s===''?'
 const fmtAvg = v=>{const n=parseFloat(v);return isNaN(n)?'–':n.toFixed(1);};
 const fmtRate = v=>{if(v==null)return '–';const s=String(v).trim();if(s==='')return '–';return s.replace(/^(-?)0\.(?=\d)/,'$1.');};
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Injury designation pill (2026-11-09): Q / D / P / GTD / DTD from the builder's Injury column; a tag still inside the
+// name ("Name (Q)") is lifted out as a fallback. Players stay on the slate until they are declared Out.
+const INJ_CSS = `<style>.inj{display:inline-block;margin-left:6px;padding:0 6px;border-radius:5px;font-size:10.5px;font-weight:800;letter-spacing:.4px;line-height:16px;vertical-align:2px;border:1px solid transparent}.inj-q,.inj-gtd,.inj-dtd{color:#fcd34d;background:rgba(252,211,77,.14);border-color:rgba(252,211,77,.35)}.inj-d{color:#fca5a5;background:rgba(248,113,113,.14);border-color:rgba(248,113,113,.35)}.inj-p{color:#a7f3d0;background:rgba(110,231,183,.12);border-color:rgba(110,231,183,.3)}</style>`;
+if(!document.getElementById('injcss')){const d=document.createElement('div');d.id='injcss';d.innerHTML=INJ_CSS;document.head.appendChild(d.firstChild);}
+const INJ_TITLE={Q:'Questionable',D:'Doubtful',P:'Probable',GTD:'Game-time decision',DTD:'Day-to-day'};
+function injPill(t){t=String(t||'').trim().toUpperCase();if(!t||t==='OUT'||t==='OFS')return '';return `<span class="inj inj-${t.toLowerCase()}" title="${esc(INJ_TITLE[t]||t)}">${esc(t)}</span>`;}
+function splitInj(name,col){const n=String(name||'').trim();const m=n.match(/^(.*?)\s*\(([A-Za-z]{1,4})\)\s*$/);const tag=String(col||'').trim()||(m?m[2]:'');return {name:m?m[1]:n,inj:tag.toUpperCase()};}
 const CODE_ALIAS={BRK:'BKN',GS:'GSW',NY:'NYK',NO:'NOP',PHO:'PHX',SA:'SAS',UTAH:'UTA',WSH:'WAS',CHO:'CHA'};
 const canonTeam=c=>{const u=String(c||'').trim().toUpperCase();return CODE_ALIAS[u]||u;};
 const abbrTeam=v=>{if(!v)return '';const s=String(v).trim();return TEAM_NAME_MAP[s]||canonTeam(s);};
@@ -323,11 +330,11 @@ async function fetchVerified(cb){
 function buildGroups(rows){
   const map=new Map();
   for(const row of rows){
-    const player=row[F.player];if(!player)continue;
+    const _pi=splitInj(row[F.player],row[F.injury]);const player=_pi.name;if(!player)continue;
     const prop=row[F.prop],line=row[F.line],key=`${player}|${prop}|${line}`;
     let g=map.get(key);
     if(!g){
-      g={key,player,team:abbrTeam(row[F.team]),opp:abbrTeam(row[F.opponent]),role:row[F.role]||'',prop,line:num(line),
+      g={key,player,injury:_pi.inj,team:abbrTeam(row[F.team]),opp:abbrTeam(row[F.opponent]),role:row[F.role]||'',prop,line:num(line),
         matchup:row[F.matchup],
         medOver:oddsInt(row[F.medOver]),medUnder:oddsInt(row[F.medUnder]),
         bestOver:oddsInt(row[F.bestOver]),bestOverBk:row[F.bestOverBk],bestUnder:oddsInt(row[F.bestUnder]),bestUnderBk:row[F.bestUnderBk],
@@ -495,7 +502,7 @@ function cardHTML(g){
   return `
   <div class="card" data-key="${esc(g.key)}" style="--edge-c:${rail}">
     <div class="c-head">
-      <div class="c-main"><div class="c-name">${esc(g.player)}</div>
+      <div class="c-main"><div class="c-name">${esc(g.player)}${injPill(g.injury)}</div>
         <div class="c-sub"><span class="tag">${esc(g.team)}</span> ${roleTag}${neutralTag} <span>${esc(g._matchupAb)}${g.gameTime?' · '+esc(fmtStamp(g.gameTime)):''}</span></div></div>
     </div>
     <div class="bet-line">${esc(abbrProp(g.prop))} <span class="side">Over</span> ${g.line??''}</div>
