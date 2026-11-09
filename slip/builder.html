@@ -578,7 +578,7 @@ function renderTable() {
     if (viewSort === 'book' && viewBook === 'all' && c.book !== lastBook) { lastBook = c.book; rows += '<tr class="day"><td colspan="9">' + esc(c.book) + '</td></tr>'; lines.push('— ' + c.book + ' —'); }
     rows += '<tr><td class="l">' + x.rank + '</td><td class="l">' + esc(fmtStamp(c.gameTime)) + (multiDay && viewSort === 'time' ? ' <span style="color:var(--muted-2)">' + esc(fmtDay(c.date)) + '</span>' : '') + '<div style="color:var(--muted-2);font-size:11px">' + esc(c.sport) + ' · ' + esc(abbrMatchup(c.sport, c.matchup)) + '</div></td>' +
       '<td class="l bet">' + betText(c) + (c.kind === 'exchange' ? ' <span class="tag">exchange</span>' : '') + '</td>' +
-      '<td class="l">' + esc(c.book) + '</td><td>' + fmtOdds(c.Odds) + '</td><td>' + (Math.round(c['EV %'] * 10) / 10) + '%</td><td>' + (c['Quarter Kelly %'] != null ? (Math.round(c['Quarter Kelly %'] * 100) / 100) + '%' : '–') + '</td>' +
+      '<td class="l">' + esc(c.book) + '</td><td>' + fmtOdds(c.Odds) + '</td><td>' + (+c['EV %']).toFixed(1) + '%</td><td>' + (c['Quarter Kelly %'] != null ? (+c['Quarter Kelly %']).toFixed(2) + '%' : '–') + '</td>' +
       '<td class="stake">' + money(stake) + '</td><td>' + (c.link ? '<a class="go" href="' + esc(c.link) + '" target="_blank" rel="noopener">Bet →</a>' : '<a class="go dead">no link</a>') + '</td></tr>';
     lines.push(betPlain(c) + ' — ' + c.book + ' ' + fmtOdds(c.Odds) + ' — ' + money(stake) + (c.link ? ' — ' + c.link : ''));
     shown++; shownStake += stake;
@@ -601,7 +601,7 @@ function renderSlip(plan, cands, skipped, total, t) {
     '<div class="stat"><div class="k">Total stake</div><div class="v">' + money(staked) + '</div><div class="s">' + (bankroll ? Math.round(staked / bankroll * 1000) / 10 : 0) + '% of bankroll · budget ' + money(plan.budget) + '</div></div>' +
     '<div class="stat"><div class="k">Expected profit</div><div class="v ' + (expected >= 0 ? 'up' : 'down') + '">' + (expected >= 0 ? '+' : '-') + money(Math.abs(expected)) + '</div><div class="s">Σ stake × EV — the long-run average, not tonight</div></div>' +
     '<div class="stat"><div class="k">Bets</div><div class="v">' + placed.length + '</div><div class="s">' + (plan.remaining < 0.01 ? 'daily budget fully used' : money(plan.remaining) + ' of budget unused') + '</div></div>' +
-    '<div class="stat"><div class="k">Avg EV · avg odds</div><div class="v">' + (placed.length ? (Math.round(placed.reduce(function (s, p) { return s + p.bet['EV %']; }, 0) / placed.length * 10) / 10) + '%' : '–') + '</div><div class="s">' + (placed.length ? fmtOdds(Math.round(placed.reduce(function (s, p) { return s + p.bet.Odds; }, 0) / placed.length)) : '–') + '</div></div>';
+    '<div class="stat"><div class="k">Avg EV · avg odds</div><div class="v">' + (placed.length ? (placed.reduce(function (s, p) { return s + p.bet['EV %']; }, 0) / placed.length).toFixed(1) + '%' : '–') + '</div><div class="s">' + (placed.length ? fmtOdds(Math.round(placed.reduce(function (s, p) { return s + p.bet.Odds; }, 0) / placed.length)) : '–') + '</div></div>';
   lastView = { plan: plan, t: t, bankroll: bankroll };
   if (!placed.length) {
     els.slip.innerHTML = '<div class="state">Nothing qualifies right now' + (cands.length ? ' at these settings' : ' — no un-started games on the board for what you ticked') + '. ' + (state.todayOnly ? 'Try more books or sports, or untick "Only today\'s games".' : 'Try more books or sports, or a lower Min EV.') + '</div>';
