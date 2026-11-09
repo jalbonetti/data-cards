@@ -113,8 +113,8 @@
         <div class="seg"><label>Rank by</label><div class="tg" id="rankTg"><button data-k="kelly" class="on">Bet size</button><button data-k="ev">EV %</button></div></div>
         <div class="seg"><label>Min EV %</label><input class="field" id="minEv" type="number" min="0" max="30" step="0.5" value="3"></div>
         <div class="seg"><label>Max EV %</label><input class="field" id="maxEv" type="number" min="0" max="100" step="0.5" placeholder="none"></div>
-        <div class="seg"><label>Odds floor</label><input class="field" id="minOdds" type="number" min="-1000" max="100" step="5" value="-300"></div>
-        <div class="seg"><label>Odds cap</label><input class="field" id="maxOdds" type="number" min="-300" max="1000" step="5" value="-100"></div>
+        <div class="seg"><label>Odds floor</label><input class="field" id="minOdds" type="text" inputmode="text" value="-300" oninput="this.value=this.value.replace(/[^-0-9]/g,'').replace(/(?!^)-/g,'')"></div>
+        <div class="seg"><label>Odds cap</label><input class="field" id="maxOdds" type="text" inputmode="text" value="125" oninput="this.value=this.value.replace(/[^-0-9]/g,'').replace(/(?!^)-/g,'')"></div>
         <div class="seg"><label>Max bets</label><input class="field" id="maxBets" type="number" min="1" max="100" step="1" placeholder="no limit"></div>
         <div class="seg"><label>Bets per game</label><input class="field" id="perGame" type="number" min="1" max="20" step="1" value="3"></div>
         <div class="seg"><label>Bets per player</label><input class="field" id="perPlayer" type="number" min="1" max="10" step="1" placeholder="no limit"></div>
@@ -372,9 +372,9 @@ function abbrMatchup(sport, s) { var map = TEAM_ABBR[sport]; if (!map) return s;
 var state = loadState();
 function defaults() {
   var sel = {}; SPORTS.forEach(function (s) { sel[s.key] = { prop: true, game: true }; });
-  return { sel: sel, books: DEFAULT_BOOKS.slice(), exchange: false, bankroll: 1000, budget: 25, cap: 5, sizing: 'kelly', rankBy: 'kelly', minEv: 3, maxEv: '', minOdds: -300, maxOdds: -100, maxBets: '', perGame: 3, perPlayer: '', todayOnly: true };
+  return { sel: sel, books: DEFAULT_BOOKS.slice(), exchange: false, bankroll: 1000, budget: 25, cap: 5, sizing: 'kelly', rankBy: 'kelly', minEv: 3, maxEv: '', minOdds: -300, maxOdds: 125, maxBets: '', perGame: 3, perPlayer: '', todayOnly: true };
 }
-function loadState() { try { var s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && s.sel) { var d = defaults(); Object.keys(d).forEach(function (k) { if (s[k] === undefined) s[k] = d[k]; }); if (s.maxOdds === 125 && !s.capV2) { s.maxOdds = -100; s.capV2 = true; } if (s.minEv === 1 && !s.minEvV2) { s.minEv = 3; s.minEvV2 = true; } SPORTS.forEach(function (sp) { if (!s.sel[sp.key]) s.sel[sp.key] = { prop: true, game: true }; }); return s; } } catch (e) {} return defaults(); }
+function loadState() { try { var s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && s.sel) { var d = defaults(); Object.keys(d).forEach(function (k) { if (s[k] === undefined) s[k] = d[k]; }); if (s.maxOdds === 125 && !s.capV2) { s.maxOdds = -100; s.capV2 = true; } if (s.maxOdds === -100 && !s.capV3) { s.maxOdds = 125; s.capV3 = true; } if (s.minEv === 1 && !s.minEvV2) { s.minEv = 3; s.minEvV2 = true; } SPORTS.forEach(function (sp) { if (!s.sel[sp.key]) s.sel[sp.key] = { prop: true, game: true }; }); return s; } } catch (e) {} return defaults(); }
 function saveState() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
 
 var els = {};
@@ -411,7 +411,7 @@ function renderSettings() {
   els.sizingTg.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.s === state.sizing); });
   els.rankTg.querySelectorAll('button').forEach(function (b) { b.classList.toggle('on', b.dataset.k === state.rankBy); });
 }
-['bankroll', 'budget', 'cap', 'minEv', 'maxEv', 'minOdds', 'maxOdds', 'maxBets', 'perGame', 'perPlayer'].forEach(function (k) { els[k].addEventListener('change', function () { var v = els[k].value; state[k] = v === '' ? '' : +v; if (k === 'budget' && state[k] > 25) { state[k] = 25; els[k].value = 25; } saveState(); }); });
+['bankroll', 'budget', 'cap', 'minEv', 'maxEv', 'minOdds', 'maxOdds', 'maxBets', 'perGame', 'perPlayer'].forEach(function (k) { els[k].addEventListener('change', function () { var v = els[k].value; state[k] = (v === '' || isNaN(+v)) ? '' : +v; /* lone '-' mid-entry reads as blank */ if (k === 'budget' && state[k] > 25) { state[k] = 25; els[k].value = 25; } saveState(); }); });
 els.exchange.addEventListener('change', function () { state.exchange = els.exchange.checked; saveState(); });
 els.todayOnly.addEventListener('change', function () { state.todayOnly = els.todayOnly.checked; saveState(); });
 els.sizingTg.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; state.sizing = b.dataset.s; saveState(); renderSettings(); });
