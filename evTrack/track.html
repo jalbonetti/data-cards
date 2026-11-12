@@ -592,10 +592,21 @@ function renderBreakdown(graded){
     return Object.keys(m).map(function(k){ return m[k]; }).sort(function(a, b){ var ia = order.indexOf(a.band), ib = order.indexOf(b.band); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || b.bets - a.bets; });
   };
   var sideRows = catRows(function(b){ return b['Side'] || ''; }, ['Over', 'Under', 'Yes', 'No']);
+  // Plus-money x EV (2026-11-11): the +125..+149 band is flat at flat units as a whole, but the bets the ranking picks
+  // from it keep winning. A ranked system only needs the TOP of a band to carry edge, so split the plus-money bands by
+  // EV at flat units — the ledger-wide version of "what the ranking picks" (~300 bets instead of ~90). Shown only when
+  // the current Max odds lets plus-money bets in; this is the table that decides the cap (THE-RULE-2026-11-09.md).
+  var plusRows = [];
+  if (state.maxOdds === '' || state.maxOdds == null || +state.maxOdds >= 125) {
+    var oddsLbl = function(o){ return o >= 150 ? '+150 to +199' : o >= 125 ? '+125 to +149' : o >= 100 ? '+100 to +124' : ''; };
+    var evLbl = function(e){ return e >= 8 ? 'EV 8%+' : e >= 5 ? 'EV 5-8%' : 'EV 3-5%'; };
+    plusRows = catRows(function(b){ var o = E.num(b['Odds']), e = E.num(b['EV %']); if (o == null || e == null || o < 100 || o > 199) return ''; return oddsLbl(o) + ' · ' + evLbl(e); },
+      ['+100 to +124 · EV 3-5%', '+100 to +124 · EV 5-8%', '+100 to +124 · EV 8%+', '+125 to +149 · EV 3-5%', '+125 to +149 · EV 5-8%', '+125 to +149 · EV 8%+', '+150 to +199 · EV 3-5%', '+150 to +199 · EV 5-8%', '+150 to +199 · EV 8%+']);
+  }
   var gap = '<tr><td colspan="7" style="height:6px;border:none"></td></tr>';
   var sub = function(t){ return '<tr><td colspan="7" style="text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-2);border:none;padding-top:8px">' + t + '</td></tr>'; };
   var head = '<thead><tr><th></th><th>Placed / shown</th><th>Record</th><th>Staked</th><th>Profit</th><th>ROI</th><th>Flat units</th></tr></thead>';
-  els.breakdown.innerHTML = '<table>' + head + '<tbody>' + sportsRows.map(tr).join('') + gap + bookRows.map(tr).join('') + gap + sub('By EV band') + bandRows.map(tr).join('') + gap + sub('By odds band') + oddsRows.map(tr).join('') + gap + sub('By time first seen (ET)') + timeRows.map(tr).join('') + gap + sub('By side') + sideRows.map(tr).join('') + '</tbody></table>';
+  els.breakdown.innerHTML = '<table>' + head + '<tbody>' + sportsRows.map(tr).join('') + gap + bookRows.map(tr).join('') + gap + sub('By EV band') + bandRows.map(tr).join('') + gap + sub('By odds band') + oddsRows.map(tr).join('') + gap + sub('By time first seen (ET)') + timeRows.map(tr).join('') + gap + sub('By side') + sideRows.map(tr).join('') + (plusRows.length ? gap + sub('Plus-money bets by EV') + plusRows.map(tr).join('') : '') + '</tbody></table>';
 }
 var TIME_BANDS = [{ label: 'Before 10 AM', lo: 0, hi: 10 }, { label: '10 AM – 1 PM', lo: 10, hi: 13 }, { label: '1 – 4 PM', lo: 13, hi: 16 }, { label: '4 – 7 PM', lo: 16, hi: 19 }, { label: 'After 7 PM', lo: 19, hi: 24 }];
 function etHour(iso){ if (!iso) return null; var d = new Date(iso); if (isNaN(d.getTime())) return null; var h = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false }).formatToParts(d).find(function(x){ return x.type === 'hour'; }); return h ? (parseInt(h.value, 10) % 24) : null; }
